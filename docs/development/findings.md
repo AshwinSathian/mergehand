@@ -204,3 +204,17 @@ The second review found where a stranger gets stuck: init leaves a dirty tree an
 Decisions taken by the maintainer: MIT license; keep the name with a line saying it is not affiliated with the Workdeck product at workdeck.com; publish privately first; keep the history and its co-author trailers; cut the plugin eval cases from 0.1; run one card through the real loop against the hosted repository before claiming the tool was built with itself.
 
 Fixed in cards S-01 to S-03 and DOC-01. The plugin eval tool was cut because it is built for skills the model chooses to invoke with a no-plugin baseline, and all four of these skills are typed by the user.
+
+## 13. First CI runs (2026-10-06)
+
+**Status:** closed. **Evidence:** GitHub Actions runs 37366925623 and 37368262005 on the private repository.
+
+The first run passed on macOS and failed on Ubuntu at the shellcheck step: Ubuntu 24.04 ships an older shellcheck that reports SC2015 on three chained conditions that 0.11.0 accepts. Fixed by writing them as `if` statements (card Q-2610060140). The second run passed on both.
+
+What that settles, which had only been argued before:
+
+- The suite passes on Linux with GNU tools, and again with `awk` as mawk and as gawk. The gawk escape warning from finding 11 does not appear.
+- `claude plugin validate --strict` runs in CI with no credentials, on the current Claude Code release, for both manifests, `agents/` and `skills/`.
+- The suite passes under bash 3.2 on a machine other than the one it was written on.
+
+Still not shown: the pull request path against the host, and a handoff under the permission entries. The first card run through the plugin against this repository (DOC-02) covers both.
