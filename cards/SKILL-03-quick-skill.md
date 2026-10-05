@@ -3,7 +3,7 @@ id: SKILL-03
 title: Quick skill
 size: XS
 depends: SKILL-01
-done: false
+done: true
 ---
 
 ## Read
