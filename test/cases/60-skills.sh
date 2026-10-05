@@ -71,3 +71,24 @@ test_quick_creates_an_xs_card_with_a_time_based_id() {
   # A counter would give two people the same id on separate branches.
   ! grep -n -i -E 'next (free )?number|increment' "$f" || fail 'quick uses a counter for the id'
 }
+
+test_handoff_runs_the_gates_in_order() {
+  local f="$ROOT/skills/handoff/SKILL.md" a b c d e
+  a=$(grep -n 'card conf check' "$f" | head -1 | cut -d: -f1)
+  b=$(grep -n '`card lint`' "$f" | head -1 | cut -d: -f1)
+  c=$(grep -n '`card touched <id>`' "$f" | head -1 | cut -d: -f1)
+  d=$(grep -n '`card tests <id>`' "$f" | head -1 | cut -d: -f1)
+  e=$(grep -n 'workdeck:reviewer' "$f" | head -1 | cut -d: -f1)
+  [ -n "$a" ] && [ -n "$b" ] && [ -n "$c" ] && [ -n "$d" ] && [ -n "$e" ] || fail "a step is missing: check=$a lint=$b touched=$c tests=$d reviewer=$e"
+  [ "$a" -lt "$b" ] && [ "$b" -lt "$c" ] && [ "$c" -lt "$d" ] && [ "$d" -lt "$e" ] ||
+    fail "order is check=$a lint=$b touched=$c tests=$d reviewer=$e"
+  # done and the log come after the review, and the commit after both.
+  local done_line log_line commit_line
+  done_line=$(grep -n '`card done <id>`' "$f" | head -1 | cut -d: -f1)
+  log_line=$(grep -n 'card log-new <id>' "$f" | head -1 | cut -d: -f1)
+  commit_line=$(grep -n 'git commit' "$f" | head -1 | cut -d: -f1)
+  [ "$e" -lt "$done_line" ] && [ "$done_line" -lt "$log_line" ] && [ "$log_line" -lt "$commit_line" ] ||
+    fail "order is reviewer=$e done=$done_line log=$log_line commit=$commit_line"
+  grep -q 'gh pr merge' "$f" && fail 'handoff mentions merging'
+  return 0
+}

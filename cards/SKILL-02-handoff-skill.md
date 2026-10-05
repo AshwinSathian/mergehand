@@ -3,7 +3,7 @@ id: SKILL-02
 title: Handoff skill
 size: M
 depends: SKILL-01
-done: false
+done: true
 ---
 
 ## Read
@@ -15,6 +15,7 @@ done: false
 ## Touch
 - skills/handoff/SKILL.md (new)
 - test/cases/60-skills.sh
+- agents/reviewer.md (added during the card: the manual run showed its full-path and command-substitution calls being denied)
 
 ## Tests
 - handoff runs the gates in order

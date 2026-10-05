@@ -151,3 +151,19 @@ The same run confirmed what the plan left open: the plugin loads with `--plugin-
 The allow rule `Bash(git push origin card/*)` is a prefix match, so it also allows `git push origin card/x:main` and `git push origin card/x main`. Deny rules are evaluated before allow rules, so the template now denies any push with a colon refspec (`Bash(git push *:*)`) and any push with a second refspec after the card branch.
 
 The permissions page is explicit that these rules match the command as written and are not a security boundary: `git -C . push` is not matched at all. The real protection for the base branch is branch protection on the host. The README must say so (DOC-01).
+
+## 10. The full loop ran in a real session; the reviewer's commands were denied
+
+**Status:** fixed in SKILL-02. **Evidence:** manual run of `/workdeck:handoff` in the scratch repository (Claude Code 2.1.261, Haiku 4.5, non-interactive, 24 turns, $0.23).
+
+What the run proved, which no shell test can:
+
+- The reviewer launches under its scoped name. The session spawned one subagent for `workdeck:reviewer`. This was the open item in the plan's interface table.
+- Measurement works end to end. The log has `baseline_tokens: 36917`, `peak_tokens: 40334`, `growth_tokens: 3417`, `compacted: false`. So the session-start hook ran, `CLAUDE_ENV_FILE` carried the transcript path and session id into the Bash tool, and `card log-new` read both.
+- The gates, `card done`, the log, the commit and the "no remote, stop here" branch all happened in order, and `card lint` passes on the result. The card shows as `active`, not `done`, because the branch has not merged.
+
+What went wrong: four of the reviewer's commands were denied. It called `card` by the plugin's full path, and wrapped `git merge-base` in a command substitution. Neither matches the permission entries init writes (`Bash(card *)`, `Bash(git diff *)`), and a non-interactive session cannot ask. The reviewer still returned findings, working from what it could read.
+
+The reviewer now uses the bare `card` command and runs `git merge-base` and `git diff` as two commands.
+
+A baseline of 36,917 tokens with only this plugin loaded is useful to know: the spec's budgets assume a baseline near 60,000 with a typical set of plugins.
