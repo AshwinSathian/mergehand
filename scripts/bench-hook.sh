@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Measures the wall time the PostToolUse hook adds to a tool call.
-# Usage: test/bench-hook.sh [runs]     (default 50 runs per path)
+# Usage: scripts/bench-hook.sh [runs]     (default 50 runs per path)
 # Prints median and 95th percentile in milliseconds for each path the hook
 # can take. Not part of the test suite: timings are not pass/fail.
 set -u

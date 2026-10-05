@@ -96,7 +96,7 @@ Sorting `id<TAB>path` lines with `sort -V` puts `AUTH-03b` before `AUTH-03`, bec
 
 ## 6. The post-tool-use hook costs 45 ms per tool call on a card branch, and grows with the transcript
 
-**Status:** decided (finding 11): documented, nothing built. If it is ever felt, first let `card` skip its own repository lookup when run from the root. **Evidence:** `/bin/bash test/bench-hook.sh` on this machine (Apple silicon, macOS, bash 3.2.57), 50 runs per path.
+**Status:** decided (finding 11): documented, nothing built. If it is ever felt, first let `card` skip its own repository lookup when run from the root. **Evidence:** `/bin/bash scripts/bench-hook.sh` on this machine (Apple silicon, macOS, bash 3.2.57), 50 runs per path.
 
 | Path | Median | 95th percentile |
 |---|---|---|

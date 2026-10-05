@@ -24,7 +24,7 @@ Work through these steps in order. Stop where a step says stop.
 
 3. **Clean tree.** Run `git status --porcelain`. If it prints anything, stop and ask the user what to do with the changes.
 
-4. **Update the base branch.** Run `card conf base` for its name, check it out, and if the repository has a remote run `git pull --ff-only`. If the pull is not a fast-forward, stop and say so.
+4. **Update the base branch.** Run `card conf base` for its name, check it out, and if the repository has a remote run `git pull --ff-only`. If the pull is not a fast-forward, stop: the local base branch has commits that are not on the remote, usually cards committed locally and never pushed, followed by a squash merge. Tell the user to push those commits or land them through a pull request, and not to start a card until the base branch matches the remote.
 
 5. **Pick the card.** Use the requested id, or run `card next`. Run `card list` and find the card's state.
    - `ready`: continue with step 6.
@@ -34,7 +34,7 @@ Work through these steps in order. Stop where a step says stop.
 
    Other people's open pull requests do not prevent a start; only an unmerged dependency does.
 
-6. **Read the card** with `card show <id>`. If it has a `## Blocked` section, ask the user that question and wait for the answer before writing any code. Once it is answered, remove the `## Blocked` section from the card and put the answer under `Notes`; a card that keeps the section shows as blocked as soon as its branch exists.
+6. **Read the card** with `card show <id>`, and run `card lint`. If lint reports an error in this card (an empty `Touch`, `Tests` or `Acceptance` section is the usual one, in a card that `card new` created and nobody filled in), stop and show the user the errors: an unfinished card is not started. If the card has a `## Blocked` section, ask the user that question and wait for the answer before writing any code. Once it is answered, remove the `## Blocked` section from the card and put the answer under `Notes`; a card that keeps the section shows as blocked as soon as its branch exists.
 
 7. **Create the branch.** Its name is `card/` followed by the card's file name without `.md`: the file `AUTH-03-token-refresh.md` gives `card/AUTH-03-token-refresh`. Take the name from the file in the cards directory (`card conf cards_dir`), not from the title. Only the `card/<id>` prefix matters to Workdeck; the rest is for people. Run `git checkout -b <branch>`.
 

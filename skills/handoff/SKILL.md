@@ -38,7 +38,7 @@ Work through the steps in order. Each gate must pass before the next step starts
 6. **Write the session log.** Run `card log-new <id> <outcome>`, where the outcome is `done`, `split`, or `review-fixes` for a session that addressed review comments. The command prints the file and fills in the measured fields; do not edit those. Fill in the four sections, 40 lines at most in total: `Done`, `Tests`, `Deviations` (anything that differs from the card), `Follow-ups`. Run `card lint`.
 
 7. **Commit, push, open the pull request.**
-   - `git add -A` and `git commit` with a message that starts with the card id.
+   - `git add -A` and `git commit` with a message that names the card id, in the style the project's history uses.
    - If the repository has no remote, stop here and tell the user what remains: push the branch and open a pull request against `<base>`.
    - `git push -u origin <branch>`.
    - Fill in the project's pull request template (`.github/pull_request_template.md`, if there is one): the card, what changed, the tests, the review findings left open with reasons, and the measured tokens from the log. Write it to a file, run `gh pr create --base <base> --title "<id>: <title>" --body-file <file>`, then delete the file so the tree stays clean.
