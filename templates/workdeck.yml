@@ -1,0 +1,15 @@
+# Checks card and log files on every pull request with the same `card`
+# command the plugin uses. card is one bash file with no dependencies.
+name: workdeck
+on: pull_request
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch card
+        run: |
+          curl -fsSL "https://raw.githubusercontent.com/<repo>/<tag>/bin/card" -o "$RUNNER_TEMP/card"
+          chmod +x "$RUNNER_TEMP/card"
+      - name: Lint cards and logs
+        run: '"$RUNNER_TEMP/card" lint'
