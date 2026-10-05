@@ -3,7 +3,7 @@ id: HOOK-02
 title: Post-tool-use budget warning and timing
 size: M
 depends: TOK-01
-done: false
+done: true
 ---
 
 ## Read
