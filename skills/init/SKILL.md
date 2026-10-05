@@ -20,7 +20,7 @@ Work through these steps in order.
 3. **Write the project files.**
    - `workdeck.conf` from `templates/workdeck.conf`, with `<check>` and `<base>` replaced by the confirmed values.
    - `cards/REVIEW.md` from `templates/REVIEW.md`. It has headings only; the project fills in its own rules.
-   - The `cards/` and `log/` directories. Put an empty `.gitkeep` in `log/` so git keeps it.
+   - Nothing for `log/`: the first `card log-new` creates it.
    - `.github/pull_request_template.md` from `templates/pull_request_template.md`, only if the project has no pull request template anywhere (`.github/`, `docs/` or the root, any letter case).
 
 4. **Add the session protocol to `CLAUDE.md`.** Append the content of `templates/claude-md-section.md`, creating `CLAUDE.md` if needed. If the file already has a `## Workdeck session protocol` heading, leave it alone.

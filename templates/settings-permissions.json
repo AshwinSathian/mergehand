@@ -10,7 +10,8 @@
       "Bash(git merge-base *)",
       "Bash(git push -u origin card/*)",
       "Bash(git push origin card/*)",
-      "Bash(gh pr create *)"
+      "Bash(gh pr create *)",
+      "Bash(date +%y%m%d%H%M)"
     ],
     "deny": [
       "Bash(git push *:*)",
@@ -20,6 +21,10 @@
       "Bash(git push -f *)",
       "Bash(git push * --force*)",
       "Bash(git push * -f *)",
+      "Bash(git push * -f)",
+      "Bash(git push --delete *)",
+      "Bash(git push -d *)",
+      "Bash(git push * -d *)",
       "Bash(git push * +*)",
       "Bash(git push * --delete *)",
       "Bash(git reset --hard*)",
