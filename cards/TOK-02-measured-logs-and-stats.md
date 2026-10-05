@@ -3,7 +3,7 @@ id: TOK-02
 title: Measured fields in log-new and card stats
 size: S
 depends: TOK-01
-done: false
+done: true
 ---
 
 ## Read
