@@ -40,5 +40,52 @@ test_plugin_validates_strictly() {
   run claude plugin validate --strict "$ROOT"
   [ "$RC" -eq 0 ] || fail 'claude plugin validate --strict failed for the marketplace'
   run claude plugin validate --strict "$ROOT/.claude-plugin/plugin.json"
+  [ "$RC" -eq 0 ] || fail 'claude plugin validate --strict failed for the plugin manifest'
+  # Agents and skills are validated as component directories.
+  local d
+  for d in agents skills; do
+    [ -d "$ROOT/$d" ] || continue
+    run claude plugin validate --strict "$ROOT/$d"
+    [ "$RC" -eq 0 ] || fail "claude plugin validate --strict failed for $d/"
+  done
+  RC=0
   [ "$RC" -eq 0 ] || fail 'claude plugin validate --strict failed'
+}
+
+test_template_conf_parses() {
+  new_repo
+  sed 's|<check>|make check VAR=1|; s|<base>|trunk|' "$ROOT/templates/workdeck.conf" > workdeck.conf
+  card conf check; assert_rc 0; assert_eq 'make check VAR=1' "$OUT" check
+  card conf base; assert_eq trunk "$OUT" base
+  card conf budget.M; assert_eq 100000 "$OUT" 'default budget'
+  # Unfilled, it must fail loudly, not run a placeholder.
+  cp "$ROOT/templates/workdeck.conf" workdeck.conf
+  card conf base; assert_rc 2
+}
+
+test_claude_md_section_is_short() {
+  local f="$ROOT/templates/claude-md-section.md" n
+  n=$(awk 'END { print NR }' "$f")
+  [ "$n" -le 25 ] || fail "the CLAUDE.md section is $n lines; the spec says about 20"
+  grep -q '^## Workdeck session protocol$' "$f" || fail 'section heading missing'
+  grep -q '/workdeck:handoff' "$f" || fail 'the section does not point at handoff'
+}
+
+test_reviewer_agent_is_read_only() {
+  local f="$ROOT/agents/reviewer.md"
+  assert_eq 'name: reviewer' "$(sed -n 2p "$f")" 'agent name'
+  assert_eq 'tools: Read, Grep, Glob, Bash' "$(grep '^tools:' "$f")" tools
+  grep -q 'must-fix' "$f" || fail 'no must-fix severity in the reviewer'
+  # Plugin agents ignore these fields; listing one would suggest it works.
+  grep -Eq '^(hooks|mcpServers|permissionMode):' "$f" && fail 'field ignored for plugin agents'
+  return 0
+}
+
+test_templates_are_complete() {
+  local f
+  for f in REVIEW.md pull_request_template.md claude-md-section.md workdeck.conf workdeck.yml settings-permissions.json; do
+    [ -s "$ROOT/templates/$f" ] || fail "templates/$f is missing or empty"
+  done
+  # The plugin ships no project rules: the REVIEW template has headings only.
+  ! grep -q -v -E '^(#|<!--|$)' "$ROOT/templates/REVIEW.md" || fail 'templates/REVIEW.md carries rules'
 }
