@@ -861,6 +861,83 @@ FILES
 
 # --- logs ---
 
+# session_compacted: true, false or unknown. The pre-compact hook leaves a
+# marker file named after the session in <git-dir>/workdeck/. The session id
+# comes from the environment and becomes part of a file name, so it is
+# checked first.
+session_compacted() {
+  local session=${WORKDECK_SESSION-} dir
+  case $session in
+    '' | *[!A-Za-z0-9_-]*)
+      echo unknown
+      return 0
+      ;;
+  esac
+  dir=$(g rev-parse --absolute-git-dir 2>/dev/null) || { echo unknown; return 0; }
+  if [ -e "$dir/workdeck/$session.compacted" ]; then echo true; else echo false; fi
+}
+
+cmd_stats() {
+  local f s
+  set --
+  for f in "$LOG_DIR"/*.md; do
+    [ -f "$f" ] && set -- "$@" "$f"
+  done
+  if [ "$#" -eq 0 ]; then
+    echo "no session logs in $LOG_DIR"
+    return 0
+  fi
+  # Sizes in budget order, as "size:budget" words.
+  s=$(sizes | while IFS= read -r s; do printf '%s %s\n' "$(conf_get "budget.$s")" "$s"; done |
+    sort -n | awk '{ printf "%s:%s ", $2, $1 }')
+  awk -v sizes="$s" '
+    function flush(   s, g, c) {
+      s = rec["size"]
+      if (s != "") {
+        if (!(s in count)) extra[++nextra] = s
+        count[s]++
+        g = rec["growth_tokens"]
+        if (g ~ /^[0-9]+$/) val[s, ++nval[s]] = g + 0
+        c = rec["compacted"]
+        if (c == "true") comp[s]++
+        if (c == "true" || c == "false") known[s]++
+      }
+      split("", rec)
+    }
+    function row(s, budget,   n, i, j, t, med, max) {
+      n = nval[s]
+      # Insertion sort: a size has at most a few hundred sessions.
+      for (i = 2; i <= n; i++) {
+        t = val[s, i]
+        for (j = i - 1; j >= 1 && val[s, j] > t; j--) val[s, j + 1] = val[s, j]
+        val[s, j + 1] = t
+      }
+      med = "-"; max = "-"
+      if (n > 0) {
+        max = val[s, n]
+        med = (n % 2) ? val[s, (n + 1) / 2] : int((val[s, n / 2] + val[s, n / 2 + 1]) / 2)
+      }
+      printf "%-6s %8d %8s %8s %8s %9s\n", s, count[s], budget, med, max, \
+        (known[s] > 0 ? int(comp[s] * 100 / known[s] + 0.5) "%" : "-")
+    }
+    BEGIN {
+      n = split(sizes, w, " ")
+      for (i = 1; i <= n; i++) { split(w[i], p, ":"); order[i] = p[1]; budget[p[1]] = p[2]; count[p[1]] = 0 }
+    }
+    FNR == 1 { flush(); infm = ($0 == "---"); next }
+    infm && $0 == "---" { infm = 0; next }
+    infm {
+      i = index($0, ":")
+      if (i) { k = substr($0, 1, i - 1); v = substr($0, i + 1); gsub(/^ +| +$|\r$/, "", v); rec[k] = v }
+    }
+    END {
+      flush()
+      printf "%-6s %8s %8s %8s %8s %9s\n", "size", "sessions", "budget", "median", "max", "compacted"
+      for (i = 1; i <= n; i++) row(order[i], budget[order[i]])
+      for (i = 1; i <= nextra; i++) row(extra[i], "-")
+    }' "$@"
+}
+
 cmd_log_new() {
   local id outcome path size budget date n=1 file branch
   [ "$#" -eq 2 ] || die 2 "usage: card log-new <id> <outcome>"
@@ -882,7 +959,13 @@ cmd_log_new() {
   {
     printf -- '---\ncard: %s\ndate: %s\noutcome: %s\nbranch: %s\nsize: %s\nbudget_tokens: %s\n' \
       "$id" "$date" "$outcome" "$branch" "$size" "$budget"
-    printf 'baseline_tokens: unknown\npeak_tokens: unknown\ngrowth_tokens: unknown\ncompacted: unknown\n---\n'
+    measure "${WORKDECK_TRANSCRIPT-}" | awk '
+      $1 == "baseline" || $1 == "peak" || $1 == "growth" { v[$1] = $2 }
+      END {
+        if (!("baseline" in v)) v["baseline"] = v["peak"] = v["growth"] = "unknown"
+        printf "baseline_tokens: %s\npeak_tokens: %s\ngrowth_tokens: %s\n", v["baseline"], v["peak"], v["growth"]
+      }'
+    printf 'compacted: %s\n---\n' "$(session_compacted)"
     printf '\n## Done\n\n## Tests\n\n## Deviations\n\n## Follow-ups\n'
   } > "$file" || die 2 "cannot write $file"
   printf '%s\n' "$file"
@@ -992,6 +1075,7 @@ case $cmd in
   touched) cmd_touched "$@" ;;
   tests) cmd_tests "$@" ;;
   log-new) cmd_log_new "$@" ;;
+  stats) cmd_stats "$@" ;;
   tokens) cmd_tokens "$@" ;;
   *) die 2 "command '$cmd' is not implemented yet" ;;
 esac
