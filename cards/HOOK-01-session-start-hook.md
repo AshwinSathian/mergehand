@@ -3,7 +3,7 @@ id: HOOK-01
 title: Session-start hook
 size: S
 depends:
-done: false
+done: true
 ---
 
 ## Read
