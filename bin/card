@@ -12,6 +12,8 @@ set -u
 LC_ALL=C
 export LC_ALL
 
+TAB=$(printf '\t')
+
 
 usage() {
   cat <<'USAGE'
@@ -215,6 +217,170 @@ cmd_show() {
   cat "$path"
 }
 
+# --- lint ---
+
+# Shared awk helpers for the two lint programs. err() prints one finding;
+# the caller sends stdout to stderr and uses the exit status.
+# shellcheck disable=SC2016
+LINT_LIB='
+function err(msg) { print "card: " file ": " msg; bad = 1 }
+function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
+function has_control(s,   i, c) {
+  for (i = 1; i <= length(s); i++) { c = substr(s, i, 1); if (c < " " || c == "\177") return 1 }
+  return 0
+}
+# front_matter_line: returns 1 when the line was stored in fm[].
+function front_matter_line(   i, k, v, c) {
+  if ($0 !~ /^[a-z_]+:( .*)?$/) { err("line " FNR ": front matter must be flat key: value lines"); return 0 }
+  i = index($0, ":"); k = substr($0, 1, i - 1); v = trim(substr($0, i + 1))
+  if (index(allowed, " " k " ") == 0) { err("line " FNR ": unknown front matter key " k); return 0 }
+  if (k in fm) err("line " FNR ": " k " appears twice")
+  c = substr(v, 1, 1)
+  if (c == "\"" || c == "\047") err("line " FNR ": " k " is quoted; write the value bare")
+  if (v == "|" || v == ">" || v ~ /^[|>][+-]$/) err("line " FNR ": " k " starts a multi-line value")
+  if (c == "[" || c == "{") err("line " FNR ": " k " is a nested value")
+  fm[k] = v
+  return 1
+}
+function require(keys,   i, n, k) {
+  n = split(keys, k, " ")
+  for (i = 1; i <= n; i++) if (!(k[i] in fm)) err("front matter has no " k[i])
+}
+function reset() {
+  file = FILENAME; opened = 0; closed = 0; crlf = 0; cur = ""; body = 0
+  split("", fm); split("", seen); split("", items)
+}
+{ if (sub(/\r$/, "")) crlf = 1 }
+FNR == 1 { finish(); reset(); if ($0 == "---") opened = 1; next }
+opened && !closed { if ($0 == "---") closed = 1; else front_matter_line(); next }
+closed {
+  body++
+  if ($0 ~ /^## /) { cur = trim(substr($0, 4)); seen[cur] = 1 }
+  else if (cur != "" && $0 ~ /^- *[^ ]/) items[cur]++
+}
+function shape_ok() {
+  if (file == "") return 0
+  if (crlf) err("has CRLF line endings; convert to LF")
+  if (!opened) { err("does not start with a --- front matter line"); return 0 }
+  if (!closed) { err("front matter is not closed with ---"); return 0 }
+  return 1
+}
+'
+
+lint_cards() {
+  local known
+  known=$(wt_cards | cut -f1 | tr '\n' ' ')
+  [ "$#" -gt 0 ] || return 0
+  awk -v sizes=" $(sizes | tr '\n' ' ')" -v known=" $known" \
+    -v allowed=" id title size depends done " "$LINT_LIB"'
+    function finish(   i, n, d, x, s, sec) {
+      if (!shape_ok()) return
+      n = split(file, d, "/"); match(d[n], /^[A-Z][A-Z0-9]*-[0-9]+[a-z]?/); fid = substr(d[n], 1, RLENGTH)
+      if (fid in first) err("id " fid " is also used by " first[fid]); else first[fid] = file
+      require("id title size depends done")
+      if ("id" in fm) {
+        if (fm["id"] !~ /^[A-Z][A-Z0-9]*-[0-9]+[a-z]?$/) err("id is not valid (expected something like AUTH-03)")
+        else if (fm["id"] != fid) err("id " fm["id"] " does not match the file name")
+      }
+      if ("title" in fm) {
+        if (fm["title"] == "") err("title is empty")
+        if (length(fm["title"]) > 80) err("title is longer than 80 characters")
+        if (has_control(fm["title"])) err("title has a control character")
+      }
+      if ("size" in fm && index(sizes, " " fm["size"] " ") == 0) err("size " fm["size"] " has no budget in workdeck.conf")
+      if ("done" in fm && fm["done"] != "true" && fm["done"] != "false") err("done must be true or false")
+      deps[fid] = ""
+      if (fm["depends"] != "") {
+        n = split(fm["depends"], d, ",")
+        for (i = 1; i <= n; i++) {
+          x = trim(d[i])
+          if (x !~ /^[A-Z][A-Z0-9]*-[0-9]+[a-z]?$/) err("depends has an invalid id")
+          else if (index(known, " " x " ") == 0) err("depends on " x ", which is not a card")
+          else deps[fid] = deps[fid] " " x
+        }
+      }
+      n = split("Read Touch Tests Acceptance", sec, " ")
+      for (i = 1; i <= n; i++) {
+        s = sec[i]
+        if (!(s in seen)) err("has no ## " s " section")
+        else if (items[s] == 0 && !(s == "Read" && fm["size"] == "XS")) err("## " s " has no items")
+      }
+    }
+    END {
+      finish()
+      # Remove cards whose dependencies are all removed; what stays is a cycle
+      # or depends on one.
+      do {
+        changed = 0
+        for (id in deps) {
+          if (id in gone) continue
+          free = 1; n = split(deps[id], d, " ")
+          for (i = 1; i <= n; i++) if ((d[i] in deps) && !(d[i] in gone)) free = 0
+          if (free) { gone[id] = 1; changed = 1 }
+        }
+      } while (changed)
+      for (id in deps) if (!(id in gone)) { file = first[id]; err("is in, or depends on, a dependency cycle") }
+      exit bad
+    }' "$@"
+}
+
+lint_logs() {
+  [ "$#" -gt 0 ] || return 0
+  awk -v allowed=" card date outcome branch pr size budget_tokens baseline_tokens peak_tokens growth_tokens compacted " "$LINT_LIB"'
+    function measured(k) {
+      if ((k in fm) && fm[k] !~ /^[0-9]+$/ && fm[k] != "unknown") err(k " must be a number or unknown")
+    }
+    function finish(   i, n, d, name, sec) {
+      if (!shape_ok()) return
+      n = split(file, d, "/"); name = d[n]
+      if (name !~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-[A-Z][A-Z0-9]*-[0-9]+[a-z]?-[0-9]+\.md$/) {
+        err("is not named <date>-<id>-<n>.md"); return
+      }
+      require("card date outcome branch size budget_tokens baseline_tokens peak_tokens growth_tokens compacted")
+      sub(/-[0-9]+\.md$/, "", name)
+      if (("date" in fm) && fm["date"] != substr(name, 1, 10)) err("date " fm["date"] " does not match the file name")
+      if (("card" in fm) && fm["card"] != substr(name, 12)) err("card " fm["card"] " does not match the file name")
+      if (("outcome" in fm) && fm["outcome"] !~ /^(done|split|blocked|review-fixes)$/) err("outcome must be done, split, blocked or review-fixes")
+      measured("budget_tokens"); measured("baseline_tokens"); measured("peak_tokens"); measured("growth_tokens")
+      if (("compacted" in fm) && fm["compacted"] !~ /^(true|false|unknown)$/) err("compacted must be true, false or unknown")
+      if (("pr" in fm) && fm["pr"] !~ /^[0-9]*$/) err("pr must be a number")
+      if (body > 40) err("is longer than 40 lines after the front matter (" body ")")
+      n = split("Done Tests Deviations Follow-ups", sec, " ")
+      for (i = 1; i <= n; i++) if (!(sec[i] in seen)) err("has no ## " sec[i] " section")
+    }
+    END { finish(); exit bad }' "$@"
+}
+
+cmd_lint() {
+  local f rc=0 index
+  need_check
+  index=$(wt_cards)
+  for f in "$CARDS_DIR"/*.md; do
+    [ -f "$f" ] || continue
+    [ "$f" != "$CARDS_DIR/REVIEW.md" ] || continue
+    printf '%s\n' "$index" | F="$f" awk -F '\t' '$2 == ENVIRON["F"] { found = 1 } END { exit !found }' && continue
+    printf 'card: %s: file name does not start with a card id\n' "$f" >&2
+    rc=1
+  done
+
+  # Card and log paths cannot contain spaces or glob characters by the time
+  # they are in an index or match the log name, but quote through set -- anyway.
+  set --
+  while IFS="$TAB" read -r _ f; do
+    [ -n "$f" ] && set -- "$@" "$f"
+  done <<INDEX
+$index
+INDEX
+  lint_cards "$@" >&2 || rc=1
+
+  set --
+  for f in "$LOG_DIR"/*.md; do
+    [ -f "$f" ] && set -- "$@" "$f"
+  done
+  lint_logs "$@" >&2 || rc=1
+  return "$rc"
+}
+
 # --- commands above this line ---
 
 FETCH=0
@@ -244,5 +410,6 @@ esac
 case $cmd in
   conf) cmd_conf "$@" ;;
   show) cmd_show "$@" ;;
+  lint) cmd_lint "$@" ;;
   *) die 2 "command '$cmd' is not implemented yet" ;;
 esac
