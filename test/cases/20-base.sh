@@ -87,3 +87,10 @@ test_base_detached_head() {
   assert_rc 0
   assert_eq ready "$(state_of A-1)" state
 }
+
+test_base_done_ignores_user_grep_config() {
+  new_repo; mk_conf; mk_card A-1; set_done A-1; commit_all
+  git config grep.patternType fixed; git config grep.column true; git config grep.lineNumber false
+  card list
+  assert_eq done "$(state_of A-1)" state
+}

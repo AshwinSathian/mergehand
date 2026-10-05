@@ -47,7 +47,7 @@ die() {
 
 # Every git call goes through here so user configuration cannot change the
 # shape of the output.
-g() { git -c core.quotepath=off -c color.ui=false "$@"; }
+g() { git -c core.quotepath=off -c color.ui=false -c grep.patternType=basic -c grep.column=false -c grep.lineNumber=false "$@"; }
 
 enter_repo() {
   local root
@@ -58,7 +58,7 @@ enter_repo() {
 
 # --- configuration ---
 
-CONF_KEYS='version|check|base|cards_dir|log_dir|touch_ignore|status_max_chars|reviewer|budget\.[A-Z][A-Z0-9]*'
+CONF_KEYS='version|check|base|cards_dir|log_dir|touch_ignore|status_max_chars|reviewer|budget[.][A-Z][A-Z0-9]*'
 CONF=""
 
 # conf_get <key>: prints the value; fails when the key has none. Pure bash:
@@ -88,7 +88,9 @@ load_conf() {
   local parsed
   parsed=$(awk -v keys="^($CONF_KEYS)\$" '
     function bad(msg) { if (!failed) { failed = 1; print "!" msg } }
-    function dir_ok(v) { return v ~ /^[A-Za-z0-9._][A-Za-z0-9._\/-]*$/ && v !~ /(^|\/)\.\.(\/|$)/ }
+    function dir_ok(v) {
+      return v ~ /^[A-Za-z0-9._][A-Za-z0-9._\/-]*$/ && v !~ /(^|\/)\.\.?(\/|$)/ && v !~ /\/\// && v !~ /\/$/
+    }
     function branch_ok(v) {
       return v ~ /^[A-Za-z0-9_][A-Za-z0-9._\/-]*$/ && v !~ /\.\./ && v !~ /\/$/ && v !~ /\/\// && v !~ /\/\./ && v !~ /\.lock$/
     }
@@ -112,7 +114,9 @@ load_conf() {
       if (!dir_ok(c["cards_dir"])) bad(": cards_dir must be a relative path inside the repository")
       if (!dir_ok(c["log_dir"])) bad(": log_dir must be a relative path inside the repository")
       if (!branch_ok(c["base"])) bad(": base is not a valid branch name")
-      if (c["status_max_chars"] !~ /^[0-9]+$/) bad(": status_max_chars must be a number")
+      if (c["cards_dir"] == c["log_dir"]) bad(": cards_dir and log_dir must differ")
+      # 10000 is the harness limit for text a hook injects.
+      if (c["status_max_chars"] !~ /^[0-9]+$/ || length(c["status_max_chars"]) > 5 || c["status_max_chars"] + 0 > 10000) bad(": status_max_chars must be a number up to 10000")
       if (c["reviewer"] != "on" && c["reviewer"] != "off") bad(": reviewer must be on or off")
       for (k in c) if (k ~ /^budget\./ && c[k] !~ /^[0-9]+$/) bad(": " k " must be a number of tokens")
       for (k in c) print k "=" c[k]
