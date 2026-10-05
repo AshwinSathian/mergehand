@@ -3,7 +3,7 @@ id: PLUG-01
 title: Plugin and marketplace manifests, hooks.json
 size: S
 depends: HOOK-01, HOOK-02, HOOK-03, HOOK-04
-done: false
+done: true
 ---
 
 ## Read
@@ -16,6 +16,8 @@ done: false
 - hooks/hooks.json (new)
 - .github/workflows/ci.yml
 - test/cases/02-plugin.sh (new)
+- .shellcheckrc (added during the card: the new grep test word-splits on purpose)
+- docs/findings.md (added during the card: finding 7, what validate does not check)
 
 ## Tests
 - hooks json names existing executable scripts
