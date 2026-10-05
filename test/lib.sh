@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# Test helpers: an isolated temporary repository per case, and assertions.
+# Sourced by test/run.sh with ROOT set. Scripts under test run as "$BASH" <script>
+# so macOS exercises them with /bin/bash 3.2.
+# shellcheck disable=SC2034
+
+CARD="$ROOT/bin/card"
+FIX="$ROOT/test/fixtures"
+
+setup_env() {
+  T=$(mktemp -d) || exit 1
+  T=$(cd "$T" && pwd -P)
+  trap 'cd /; rm -rf "$T"' EXIT
+  export HOME="$T/home" GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
+  export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@example.invalid
+  export GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@example.invalid
+  export GH_STUB_DIR="$T/gh" PATH="$ROOT/test/stubs:$PATH"
+  unset WORKDECK_TRANSCRIPT WORKDECK_SESSION CLAUDE_ENV_FILE CLAUDE_PROJECT_DIR CLAUDE_PLUGIN_ROOT
+  mkdir -p "$HOME" "$GH_STUB_DIR"
+  cd "$T" || exit 1
+}
+
+# new_repo: a repository at $T/repo with one commit on main; cd into it.
+new_repo() {
+  mkdir -p "$T/repo" && cd "$T/repo" || exit 1
+  git init -q . && git symbolic-ref HEAD refs/heads/main
+  echo seed > README.md
+  git add README.md && git commit -q -m seed
+}
+
+# add_remote: a bare repository at $T/remote.git as origin, with main pushed.
+add_remote() {
+  git init -q --bare "$T/remote.git"
+  git remote add origin "$T/remote.git"
+  git push -q -u origin main 2>/dev/null
+}
+
+# mk_conf [line...]: workdeck.conf with a passing check plus the given lines.
+mk_conf() {
+  local l
+  echo 'check = true' > workdeck.conf
+  for l in "$@"; do printf '%s\n' "$l" >> workdeck.conf; done
+}
+
+# mk_card <id> [size] [depends] [done] [slug]: a valid card in cards/.
+mk_card() {
+  local id=$1 size=${2:-S} dep=${3:-} done=${4:-false} slug=${5:-thing}
+  mkdir -p "${CARDS_DIR:-cards}"
+  cat > "${CARDS_DIR:-cards}/$id-$slug.md" <<CARD
+---
+id: $id
+title: Card $id
+size: $size
+depends: $dep
+done: $done
+---
+
+## Read
+- README.md
+
+## Touch
+- src/$slug.txt (new)
+
+## Tests
+- $slug works
+
+## Acceptance
+- It works.
+CARD
+}
+
+commit_all() { git add -A && git commit -q -m "${1:-change}"; }
+
+# run <cmd...>: sets OUT, ERR, RC.
+run() {
+  OUT=$("$@" 2>"$T/stderr")
+  RC=$?
+  ERR=$(cat "$T/stderr")
+}
+
+card() { run "$BASH" "$CARD" "$@"; }
+
+fail() {
+  printf '  %s\n' "$1"
+  printf '  rc=%s\n  stdout: %s\n  stderr: %s\n' "${RC-}" "${OUT-}" "${ERR-}"
+  exit 1
+}
+
+assert_rc() { [ "$RC" -eq "$1" ] || fail "expected exit $1, got $RC"; }
+assert_eq() { [ "$1" = "$2" ] || fail "${3:-values differ}: expected [$1], got [$2]"; }
+assert_contains() { case $1 in *"$2"*) ;; *) fail "expected to find [$2]" ;; esac; }
+assert_not_contains() { case $1 in *"$2"*) fail "did not expect [$2]" ;; esac; }
+assert_empty() { [ -z "$1" ] || fail "${2:-value} should be empty, got [$1]"; }
+assert_file() { [ -e "$1" ] || fail "missing file $1"; }
+assert_no_file() { [ ! -e "$1" ] || fail "unexpected file $1"; }
