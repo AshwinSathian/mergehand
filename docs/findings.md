@@ -6,7 +6,7 @@ Findings 1 to 3 answer the challenge list in the build brief. Each is pinned by 
 
 ## 1. The tests gate gives false failures on idiomatic nested tests
 
-**Status:** open. **Evidence:** `test/cases/33-tests.sh`, fixtures in `test/fixtures/lang/`. Run `/bin/bash test/run.sh test_lang`.
+**Status:** decided (finding 11): documented, and the gate message now says nested names are not joined. No windowed match. **Evidence:** `test/cases/33-tests.sh`, fixtures in `test/fixtures/lang/`. Run `/bin/bash test/run.sh test_lang`.
 
 The gate lowercases a `Tests` line and each line of the changed files, strips everything but letters and digits, and looks for the first inside the second. Sixteen cases across four languages:
 
@@ -40,7 +40,7 @@ Each false failure costs one edit to the card line, and the edit shows in the PR
 
 ## 2. `Touch` entries are shell `case` patterns, and four cases surprise a gitignore user
 
-**Status:** open. **Evidence:** `test/cases/32-touched.sh`. Run `/bin/bash test/run.sh touch_pattern`.
+**Status:** fixed in R-03 (finding 11): an entry ending in `/` now covers the directory and a leading `/` or `./` is ignored, so rows 1 and 4 of the table below now match. The other rows stand. **Evidence:** `test/cases/32-touched.sh`. Run `/bin/bash test/run.sh touch_pattern`.
 
 | Entry | Changed file | A gitignore user expects | `case` gives |
 |---|---|---|---|
@@ -63,7 +63,7 @@ The dangerous direction is safe: every surprise but one makes the gate stricter 
 
 ## 3. State from branches: squash merges are fine, abandoned branches are not noticed
 
-**Status:** open. **Evidence:** `test/cases/21-state.sh` (`test_squash_*`, `test_branch_deleted_*`), `test/cases/22-fetch.sh`.
+**Status:** fixed in R-02 (finding 11): `done` is read from both base refs, and `card next` says how to release a card held by a branch. The last two rows of the table below describe the behavior before the fix. **Evidence:** `test/cases/21-state.sh` (`test_squash_*`, `test_branch_deleted_*`), `test/cases/22-fetch.sh`.
 
 | Situation | State | Right? |
 |---|---|---|
@@ -82,7 +82,7 @@ Two gaps:
 
 ## 4. Process start-up dominates everything on macOS
 
-**Status:** open, informational. **Evidence:** measured on this machine (Apple silicon, macOS, `/usr/bin/git`).
+**Status:** informational. **Evidence:** measured on this machine (Apple silicon, macOS, `/usr/bin/git`).
 
 Starting any process costs about 5 ms; starting git costs about 17 ms, because `/usr/bin/git` is a shim. A `card` command is a few dozen processes. Measured: `card conf base` 54 ms before configuration loading was rewritten as one awk pass; `card list` 112 ms and `card status` 189 ms on a nine-card deck; `card status` 0.6 s on a deck of 300 cards with 30 active branches. All are far inside the 10-second hook timeout.
 
@@ -96,7 +96,7 @@ Sorting `id<TAB>path` lines with `sort -V` puts `AUTH-03b` before `AUTH-03`, bec
 
 ## 6. The post-tool-use hook costs 45 ms per tool call on a card branch, and grows with the transcript
 
-**Status:** open. **Evidence:** `/bin/bash test/bench-hook.sh` on this machine (Apple silicon, macOS, bash 3.2.57), 50 runs per path.
+**Status:** decided (finding 11): documented, nothing built. If it is ever felt, first let `card` skip its own repository lookup when run from the root. **Evidence:** `/bin/bash test/bench-hook.sh` on this machine (Apple silicon, macOS, bash 3.2.57), 50 runs per path.
 
 | Path | Median | 95th percentile |
 |---|---|---|
@@ -123,7 +123,7 @@ Recommendation: option 1 now if 45 ms bothers anyone, option 2 only if long sess
 
 ## 7. `claude plugin validate --strict` checks less than its documentation says
 
-**Status:** open, informational. **Evidence:** Claude Code 2.1.261, run on this repository and on a copy with one deliberate fault.
+**Status:** decided (finding 11): the spec now says what validate covers. **Evidence:** Claude Code 2.1.261, run on this repository and on a copy with one deliberate fault.
 
 - `claude plugin validate --strict .` on a directory that holds both manifests validates the marketplace manifest and stops. The plugin manifest needs its own call with the path to `plugin.json`. CI and `test_plugin_validates_strictly` run both.
 - The manifest reference says an unquoted `${CLAUDE_PLUGIN_ROOT}` in a shell-form hook command draws a warning. A copy of `hooks/hooks.json` with the quotes removed passed both calls. On this version nothing in validate reads `hooks/hooks.json`.
@@ -136,7 +136,7 @@ The marketplace entry's source is `"./"` as the spec says; validate accepts it.
 
 ## 8. The agent names the card branch from the title, not the file
 
-**Status:** open. **Evidence:** manual run of `/workdeck:next-card` in a scratch repository (Claude Code 2.1.261, Haiku 4.5, `--plugin-dir`, 9 turns).
+**Status:** decided (finding 11): `card branch` rejected. Only the `card/<id>` prefix matters, and a branch with no slug is now recognised (R-02). **Evidence:** manual run of `/workdeck:next-card` in a scratch repository (Claude Code 2.1.261, Haiku 4.5, `--plugin-dir`, 9 turns).
 
 The card file was `GREET-01-fix-greeting.md` with the title "Fix the greeting". The skill said the branch is `card/` plus the file name without `.md`. The agent created `card/GREET-01-fix-the-greeting`. State still works, because it matches `card/<id>-*`, but the rule "the branch is named after the file" is an instruction, and the spec's own goal 4 says a rule a script can check should be checked by a script.
 

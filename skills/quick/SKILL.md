@@ -24,10 +24,10 @@ Work through these steps in order. Stop where a step says stop.
 
 3. **Read the relevant code**, and only that: enough to know which files change and how the change will be tested.
 
-4. **Create the card.** The id comes from the current time, so two people on separate branches cannot get the same one:
+4. **Create the card.** The id comes from the current time, so two people on separate branches cannot get the same one. Run `date +%y%m%d%H%M` as its own command, then use the digits it prints:
 
    ```
-   card new "Q-$(date +%y%m%d%H%M)" "<title, at most 80 characters>" --size XS
+   card new Q-<digits> "<title, at most 80 characters>" --size XS
    ```
 
    The command prints the card's path. Fill in the file:
@@ -36,9 +36,9 @@ Work through these steps in order. Stop where a step says stop.
    - `Acceptance`: statements that are true or false, all of which must hold.
    - Leave `Read` empty.
 
-5. **Show the card to the user** and ask for a yes or an edit. Do not write code before the answer.
+5. **Show the card to the user** and ask for a yes or an edit. Do not write code before the answer. If the user says no, delete the card file and stop: an untracked card left on the base branch would stop the next card from starting.
 
-6. **Create the branch.** Its name is `card/` followed by the card's file name without `.md`. Take it from the path `card new` printed, not from the title. Run `git checkout -b <branch>`.
+6. **Create the branch.** Its name is `card/` followed by the card's file name without `.md`. Take it from the path `card new` printed, not from the title. Only the `card/<id>` prefix matters to Workdeck; the rest is for people. Run `git checkout -b <branch>`.
 
 7. **Implement.** Read `${CLAUDE_PLUGIN_ROOT}/reference/implement.md` and follow it step by step.
 

@@ -41,7 +41,7 @@ Work through the steps in order. Each gate must pass before the next step starts
    - `git add -A` and `git commit` with a message that starts with the card id.
    - If the repository has no remote, stop here and tell the user what remains: push the branch and open a pull request against `<base>`.
    - `git push -u origin <branch>`.
-   - Fill in the project's pull request template (`.github/pull_request_template.md`, if there is one): the card, what changed, the tests, the review findings left open with reasons, and the measured tokens from the log. Run `gh pr create --base <base> --title "<id>: <title>" --body-file <file>`.
+   - Fill in the project's pull request template (`.github/pull_request_template.md`, if there is one): the card, what changed, the tests, the review findings left open with reasons, and the measured tokens from the log. Write it to a file, run `gh pr create --base <base> --title "<id>: <title>" --body-file <file>`, then delete the file so the tree stays clean.
    - If `gh` is missing or not signed in, stop after the push and print the URL where the user can open the pull request by hand.
 
 8. **Report and stop.** Give the user: the pull request URL; the findings left open; growth tokens against the budget and whether the session compacted, from the log; and the next ready card from `card next`. Then stop. A session does not start a second card, and a person merges the pull request.
