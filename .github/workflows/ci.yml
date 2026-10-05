@@ -16,3 +16,5 @@ jobs:
       # /bin/bash is 3.2 on macOS, so a bash 4 feature fails here.
       - name: Test
         run: /bin/bash test/run.sh
+      - name: Lint this repository's own cards
+        run: /bin/bash bin/card lint

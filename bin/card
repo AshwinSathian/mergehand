@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2034  # ponytail: globals land before their readers while the file is built; drop when stage 4 is done
 # card: the Workdeck command-line tool.
 #
 # One file, so people and CI can fetch it without the plugin. It must run on
