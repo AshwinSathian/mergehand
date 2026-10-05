@@ -39,3 +39,11 @@ test_own_deck_lints() {
   card lint
   assert_rc 0
 }
+
+# gawk processes escapes in -v values and warns about "\." on every call.
+test_conf_keys_pattern_has_no_backslash() {
+  local line
+  line=$(grep -n "^CONF_KEYS=" "$CARD")
+  case $line in *\\*) fail "CONF_KEYS has a backslash: $line" ;; esac
+  ! grep -n -E 'awk .*-v [a-z]+="[^"]*\\\\[^$"]' "$CARD" || fail 'a backslash escape is passed through awk -v'
+}
