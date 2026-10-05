@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034  # ponytail: globals land before their readers while the file is built; drop when stage 4 is done
 # card: the Workdeck command-line tool.
 #
 # One file, so people and CI can fetch it without the plugin. It must run on
@@ -54,6 +55,94 @@ enter_repo() {
   [ -f workdeck.conf ] || die 2 "no workdeck.conf in $root; run /workdeck:init"
 }
 
+# --- configuration ---
+
+CONF_KEYS='version|check|base|cards_dir|log_dir|touch_ignore|status_max_chars|reviewer|budget\.[A-Z][A-Z0-9]*'
+CONF='version=1
+base=main
+cards_dir=cards
+log_dir=log
+budget.XS=35000
+budget.S=70000
+budget.M=100000
+touch_ignore=
+status_max_chars=6000
+reviewer=on'
+
+# conf_get <key>: prints the value; fails when the key has none.
+conf_get() {
+  printf '%s\n' "$CONF" | K="$1" awk '
+    BEGIN { k = ENVIRON["K"] "=" }
+    index($0, k) == 1 { v = substr($0, length(k) + 1); found = 1 }
+    END { if (!found) exit 1; print v }'
+}
+
+conf_die() { die 2 "workdeck.conf: $*"; }
+
+is_number() {
+  case $1 in '' | *[!0-9]*) return 1 ;; esac
+}
+
+# A directory setting must stay inside the repository and must not look like
+# an option: it is handed to git and used to build file names.
+check_dir_setting() {
+  local key=$1 v
+  v=$(conf_get "$key")
+  case $v in
+    '' | [!A-Za-z0-9._]* | *[!A-Za-z0-9._/-]* | .. | ../* | */.. | */../*)
+      conf_die "$key must be a relative path inside the repository, got '$v'"
+      ;;
+  esac
+}
+
+load_conf() {
+  local parsed err v size
+  parsed=$(awk -v keys="^($CONF_KEYS)\$" '
+    { sub(/\r$/, "") }
+    /^[ \t]*(#|$)/ { next }
+    {
+      i = index($0, "=")
+      if (i == 0) { printf "!%d: expected key = value\n", NR; next }
+      k = substr($0, 1, i - 1); v = substr($0, i + 1)
+      gsub(/^[ \t]+|[ \t]+$/, "", k); gsub(/^[ \t]+|[ \t]+$/, "", v)
+      if (k !~ keys) { printf "!%d: unknown key\n", NR; next }
+      print k "=" v
+    }' workdeck.conf)
+  err=$(printf '%s\n' "$parsed" | grep '^!' | head -1)
+  [ -z "$err" ] || die 2 "workdeck.conf:${err#!}"
+  CONF="$CONF
+$parsed"
+
+  v=$(conf_get version)
+  [ "$v" = 1 ] || conf_die "unsupported version '$v' (this card understands version 1)"
+  check_dir_setting cards_dir
+  check_dir_setting log_dir
+  v=$(conf_get base)
+  case $v in -*) conf_die "base is not a valid branch name: '$v'" ;; esac
+  g check-ref-format "refs/heads/$v" 2>/dev/null || conf_die "base is not a valid branch name: '$v'"
+  is_number "$(conf_get status_max_chars)" || conf_die "status_max_chars must be a number"
+  case $(conf_get reviewer) in on | off) ;; *) conf_die "reviewer must be on or off" ;; esac
+  for size in $(sizes); do
+    is_number "$(conf_get "budget.$size")" || conf_die "budget.$size must be a number of tokens"
+  done
+
+  BASE=$(conf_get base)
+  CARDS_DIR=$(conf_get cards_dir)
+  LOG_DIR=$(conf_get log_dir)
+}
+
+# sizes: the card sizes that have a budget, one per line.
+sizes() { printf '%s\n' "$CONF" | sed -n 's/^budget\.\([A-Z][A-Z0-9]*\)=.*/\1/p' | sort -u; }
+
+need_check() { [ -n "$(conf_get check)" ] || conf_die "check is not set"; }
+
+cmd_conf() {
+  [ "$#" -eq 1 ] || die 2 "usage: card conf <key>"
+  printf '%s\n' "$1" | grep -Eq "^($CONF_KEYS)\$" || die 2 "workdeck.conf has no key '$1'"
+  [ "$1" != check ] || need_check
+  conf_get "$1" || die 2 "workdeck.conf: no value for '$1'"
+}
+
 # --- commands above this line ---
 
 FETCH=0
@@ -62,7 +151,6 @@ while [ "$n" -gt 0 ]; do
   a=$1
   shift
   n=$((n - 1))
-  # shellcheck disable=SC2034  # read by state commands from stage 3
   if [ "$a" = --fetch ]; then FETCH=1; else set -- "$@" "$a"; fi
 done
 
@@ -76,7 +164,12 @@ case $cmd in
     ;;
   next | show | list | status | new | done | lint | touched | tests | tokens | log-new | stats | conf)
     enter_repo
-    die 2 "command '$cmd' is not implemented yet"
+    load_conf
     ;;
   *) die 2 "unknown command '$cmd'; run 'card help'" ;;
+esac
+
+case $cmd in
+  conf) cmd_conf "$@" ;;
+  *) die 2 "command '$cmd' is not implemented yet" ;;
 esac
