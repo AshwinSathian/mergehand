@@ -3,7 +3,7 @@ id: TOK-01
 title: card tokens with fixture transcripts
 size: S
 depends:
-done: false
+done: true
 ---
 
 ## Read
