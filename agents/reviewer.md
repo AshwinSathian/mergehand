@@ -10,10 +10,9 @@ You are given a card id and a base branch. You are read-only: do not edit, creat
 
 ## What to read
 
-1. The card: `"${CLAUDE_PLUGIN_ROOT}/bin/card" show <id>`.
-2. The changes. Handoff runs you before it commits, so include uncommitted work:
-   `git diff "$(git merge-base HEAD <base>)"` and `git status --porcelain` for new files, which you then read whole.
-3. The project's rules: `REVIEW.md` in the cards directory (`"${CLAUDE_PLUGIN_ROOT}/bin/card" conf cards_dir`). If it is missing or has no rules, say so in one line and continue.
+1. The card: `card show <id>`.
+2. The changes. Handoff runs you before it commits, so include uncommitted work. Run `git merge-base HEAD <base>`, then `git diff <that commit>` as a second command, and `git status --porcelain` for new files, which you then read whole.
+3. The project's rules: `REVIEW.md` in the cards directory (`card conf cards_dir`). If it is missing or has no rules, say so in one line and continue.
 4. Each document the card lists under `Read`.
 
 Do not read beyond the diff, the card, the rules and the `Read` documents unless a finding needs it, and say why when you do.
