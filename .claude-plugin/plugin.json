@@ -1,0 +1,9 @@
+{
+  "name": "workdeck",
+  "version": "0.1.0",
+  "description": "Run a software project as a series of cards: one card per agent session, each with a check, an independent review and one pull request.",
+  "author": {
+    "name": "AshwinSathian"
+  },
+  "keywords": ["workflow", "cards", "handoff", "review", "context"]
+}
