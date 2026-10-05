@@ -14,7 +14,7 @@ case $input in *'"hook_event_name"'*) ;; *) exit 0 ;; esac
 printf '%s' "$input" | grep -Eq '"stop_hook_active"[[:space:]]*:[[:space:]]*true' && exit 0
 
 branch=$(git symbolic-ref -q --short HEAD 2>/dev/null) || exit 0
-[[ $branch =~ ^card/([A-Z][A-Z0-9]*-[0-9]+[a-z]?)- ]] || exit 0
+[[ $branch =~ ^card/([A-Z][A-Z0-9]*-[0-9]+[a-z]?)(-|$) ]] || exit 0
 id=${BASH_REMATCH[1]}
 
 card() { "${BASH:-bash}" "$(dirname "$0")/../bin/card" "$@" 2>/dev/null; }
@@ -33,8 +33,9 @@ ahead=$(git rev-list --count HEAD --not "$@" 2>/dev/null) || exit 0
 [ -z "$(git status --porcelain --untracked-files=normal 2>/dev/null)" ] || exit 0
 
 # A log for this card that was added on the branch satisfies the guard.
-git -c core.quotepath=off log --diff-filter=A --name-only --format= HEAD --not "$@" -- "$log_dir" 2>/dev/null |
-  grep -Eq "^$log_dir/[0-9]{4}-[0-9]{2}-[0-9]{2}-$id-[0-9]+\.md\$" && exit 0
+# If git fails here, leave: an internal error must never block a session.
+added=$(git -c core.quotepath=off log --no-renames --diff-filter=A --name-only --format= HEAD --not "$@" -- "$log_dir" 2>/dev/null) || exit 0
+printf '%s\n' "$added" | grep -Eq "^$log_dir/[0-9]{4}-[0-9]{2}-[0-9]{2}-$id-[0-9]+\.md\$" && exit 0
 
 printf 'Workdeck: card %s has commits on this branch and no session log.\n' "$id" >&2
 printf 'Tell the user the work is ready and ask them to run /workdeck:handoff.\n' >&2
