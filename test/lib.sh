@@ -93,3 +93,38 @@ assert_not_contains() { case $1 in *"$2"*) fail "did not expect [$2]" ;; esac; }
 assert_empty() { [ -z "$1" ] || fail "${2:-value} should be empty, got [$1]"; }
 assert_file() { [ -e "$1" ] || fail "missing file $1"; }
 assert_no_file() { [ ! -e "$1" ] || fail "unexpected file $1"; }
+
+# mk_log <id> [date] [n] [outcome] [size] [growth] [compacted]: a valid log entry in log/.
+mk_log() {
+  local id=$1 date=${2:-2026-10-05} n=${3:-1} outcome=${4:-done} size=${5:-S} growth=${6:-1000} compacted=${7:-false}
+  mkdir -p "${LOG_DIR:-log}"
+  cat > "${LOG_DIR:-log}/$date-$id-$n.md" <<LOG
+---
+card: $id
+date: $date
+outcome: $outcome
+branch: card/$id-thing
+size: $size
+budget_tokens: 70000
+baseline_tokens: 50000
+peak_tokens: $((50000 + growth))
+growth_tokens: $growth
+compacted: $compacted
+---
+
+## Done
+- Did the thing for $id.
+
+## Tests
+- thing works
+
+## Deviations
+
+## Follow-ups
+LOG
+}
+
+# edit <file> <sed expression>: portable in-place edit.
+edit() {
+  sed "$2" "$1" > "$1.tmp" && mv "$1.tmp" "$1"
+}
