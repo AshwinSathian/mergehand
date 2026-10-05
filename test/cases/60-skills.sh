@@ -62,3 +62,12 @@ test_implement_reference_says_not_to_commit() {
   grep -q -i 'do not commit' "$ROOT/reference/implement.md" || fail 'reference/implement.md does not say not to commit'
   grep -q '/workdeck:handoff' "$ROOT/reference/implement.md" || fail 'reference/implement.md does not point at handoff'
 }
+
+test_quick_creates_an_xs_card_with_a_time_based_id() {
+  local f="$ROOT/skills/quick/SKILL.md"
+  grep -q 'Q-$(date +%y%m%d%H%M)' "$f" || fail 'quick does not build the id from the time'
+  grep -q -- '--size XS' "$f" || fail 'quick does not create an XS card'
+  grep -q 'reference/implement.md' "$f" || fail 'quick does not follow the shared implementation steps'
+  # A counter would give two people the same id on separate branches.
+  ! grep -n -i -E 'next (free )?number|increment' "$f" || fail 'quick uses a counter for the id'
+}
