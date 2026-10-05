@@ -1,6 +1,6 @@
 # Workdeck 0.1 Implementation Plan
 
-> **For agentic workers:** execute one step at a time, in order. Each step is test-first: write the listed cases, watch them fail, implement, watch them pass, run the whole suite, commit. Steps use checkbox (`- [ ]`) syntax for tracking. From step 4.6 onward the remaining work also exists as cards in `cards/`; the card is the unit of work and this plan is the index.
+> This is the build plan as the coding agent wrote it for the maintainer, kept as a record. "I" is the agent; "you" is the maintainer. It was followed in order, one test-first step at a time. From step 4.6 onward the remaining work also existed as cards in `cards/`. The checkboxes were never ticked: the git history and `log/` are the record of what was done. Later decisions that override it are in `findings.md`.
 
 **Goal:** Build the Workdeck 0.1 Claude Code plugin: a single-file `card` command, four hooks, a reviewer agent, four skills and the templates init copies into a project.
 
@@ -8,7 +8,7 @@
 
 **Tech stack:** bash 3.2, awk, sed, grep, sort, git. `gh` only for `--fetch` and the PR step. Tests are plain bash.
 
-**Spec:** `docs/specs/2026-10-05-workdeck-0.1-design.md`. Section numbers below (§) refer to it.
+**Spec:** `docs/design.md`. Section numbers below (§) refer to it.
 
 **Status:** approved 2026-10-05. Section A is resolved as proposed, with A4 tightened (see section G). Section G lists what the final adversarial pass added; where G and a step disagree, G wins.
 
@@ -83,7 +83,7 @@ Every step inherits these.
 - No reference to any other project anywhere in the repository.
 - Local work only. No push, no GitHub repository, no publishing without asking.
 - Full suite before every commit; the summary line goes in the step report. Conventional Commit messages.
-- Ideas outside 0.1 go to `docs/later.md`. Anything awkward found after step 4.6 goes to `docs/findings.md` with what happened and a proposed fix, and is not fixed silently.
+- Ideas outside 0.1 go to `docs/development/later.md`. Anything awkward found after step 4.6 goes to `docs/development/findings.md` with what happened and a proposed fix, and is not fixed silently.
 
 ## D. File map
 
@@ -110,7 +110,7 @@ test/fixtures/                 transcripts, hook JSON, language test files
 test/bench-hook.sh             PostToolUse timing
 .github/workflows/ci.yml
 workdeck.conf, cards/, log/    this repository's own deck, from step 4.6
-docs/findings.md, docs/later.md
+docs/development/findings.md, docs/development/later.md
 ```
 
 `bin/card` internal functions that later steps rely on: `die <code> <msg>`, `conf_get <key>`, `valid_id <id>`, `repo_root`, `base_ref` (prints `origin/<base>` if that ref exists, else `<base>`), `fm_get <file> <key>`, `card_path <id>`, `all_ids` (natural-sorted union of base and working tree), `state_of <id>`, `changed_files` (merge base to working tree plus untracked).
@@ -247,7 +247,7 @@ Inputs the spec does not mention that a user will hit. Each has a test in the st
 
 - [ ] **Files:** modify `bin/card`; create `test/cases/32-touched.sh`.
 - [ ] **Tests first:** all changed files listed, exit 0; an unlisted changed file is printed, exit 1; a listed but unchanged file is printed, exit 0; files under `cards_dir` and `log_dir` are skipped; `touch_ignore` globs are skipped; text after the first space is a comment (`src/a.ts (new)`); uncommitted and untracked files count, ignored files do not (A6); a path with a space is reported correctly and matches `src/my?file.ts` (review focus 4); a `Touch` entry of `$(touch pwned)` or `*) echo hi ;;` is used only as a pattern and runs nothing.
-- [ ] **Challenge tests (gitignore expectations).** Each pins the actual `case` behavior and is copied into `docs/findings.md` with a verdict:
+- [ ] **Challenge tests (gitignore expectations).** Each pins the actual `case` behavior and is copied into `docs/development/findings.md` with a verdict:
 
   | Entry | File | gitignore user expects | `case` gives |
   |---|---|---|---|
@@ -266,8 +266,8 @@ Inputs the spec does not mention that a user will hit. Each has a test in the st
 ### Step 4.4: `card tests` (tests gate, A2)
 
 - [ ] **Files:** modify `bin/card`; create `test/cases/33-tests.sh`, `test/fixtures/lang/` (Go, Python, TypeScript, Rust test files).
-- [ ] **Tests first:** `refresh rotates the token` matches `test_refresh_rotates_the_token`, `TestRefreshRotatesTheToken` and `it('refresh rotates the token')` (§11); a missing test is listed, exit 1; only files changed on the branch are searched (a matching test in an untouched file does not count); a `Tests` line that normalises to nothing is an error naming the card; card and log files are not searched (the card's own `Tests` line must not satisfy itself).
-- [ ] **Challenge tests (false failures by language).** Fixtures and the expected outcome, recorded in `docs/findings.md` with pass/fail evidence:
+- [ ] **Tests first:** `refresh rotates the token` matches `test_refresh_rotates_the_token`, `TestRefreshRotatesTheToken` and `it('refresh rotates the token')` (§11); a missing test is listed, exit 1; only files changed on the branch are searched (a matching test in an untouched file does not count); a `Tests` line that normalizes to nothing is an error naming the card; card and log files are not searched (the card's own `Tests` line must not satisfy itself).
+- [ ] **Challenge tests (false failures by language).** Fixtures and the expected outcome, recorded in `docs/development/findings.md` with pass/fail evidence:
   - Go: `func TestRefreshRotatesTheToken`, `t.Run("refresh rotates the token", …)`, and a table-driven case `{name: "rotates the token"}` under `TestRefresh` (expected false failure).
   - Python: `def test_refresh_rotates_the_token`, a class `TestRefresh` with `def test_rotates_the_token` (expected false failure), `pytest.mark.parametrize` ids.
   - TypeScript: `it('refresh rotates the token')`, `describe('refresh')` wrapping `it('rotates the token')` (expected false failure), a name split across two lines by a formatter.
@@ -288,7 +288,7 @@ Inputs the spec does not mention that a user will hit. Each has a test in the st
 
 ### Step 4.6: bootstrap this repository
 
-- [ ] **Files:** create `workdeck.conf` (`check = /bin/bash test/run.sh`), `cards/REVIEW.md`, `cards/*.md` as listed below, `log/.gitkeep`, `docs/findings.md`, `docs/later.md`; modify `.github/workflows/ci.yml` to run `bin/card lint`; add `test_own_deck_lints` to `test/cases/01-portability.sh`.
+- [ ] **Files:** create `workdeck.conf` (`check = /bin/bash test/run.sh`), `cards/REVIEW.md`, `cards/*.md` as listed below, `log/.gitkeep`, `docs/development/findings.md`, `docs/development/later.md`; modify `.github/workflows/ci.yml` to run `bin/card lint`; add `test_own_deck_lints` to `test/cases/01-portability.sh`.
 - [ ] **Cards** (ids, sizes and dependencies; bodies follow §5 and are derived from stages 5 to 9 below):
 
   | Id | Size | Depends | Title |
@@ -349,7 +349,7 @@ All four share one shape, tested in each: read stdin; find the repository root f
 
 - [ ] **Files:** create `hooks/post-tool-use.sh`, `test/cases/51-hook-post-tool-use.sh`, `test/bench-hook.sh`, fixture JSON.
 - [ ] **Tests first:** no config: silent, exit 0; on `main`: silent; on a card branch under budget: silent; over budget: stdout is exactly `{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"…"}}`, the text contains the growth figure, the budget and `/workdeck:handoff split`, and `<git-dir>/workdeck/<session>.warned` now exists; a second call the same session: silent; `unknown` tokens: silent; branch whose id has no card: silent; malformed stdin: silent, exit 0.
-- [ ] **Challenge (delay per tool call):** `test/bench-hook.sh` builds a 2 MB transcript and reports the median and 95th percentile wall time over 50 runs for three paths: no config, card branch under budget, and warned-already. The numbers from macOS go in the step report and `docs/findings.md`. If the under-budget median is above 50 ms I stop and report options instead of optimising silently.
+- [ ] **Challenge (delay per tool call):** `test/bench-hook.sh` builds a 2 MB transcript and reports the median and 95th percentile wall time over 50 runs for three paths: no config, card branch under budget, and warned-already. The numbers from macOS go in the step report and `docs/development/findings.md`. If the under-budget median is above 50 ms I stop and report options instead of optimizing silently.
 - [ ] **Proof:** `/bin/bash test/run.sh hook-post-tool-use` and `/bin/bash test/bench-hook.sh`.
 - [ ] **Out of scope:** blocking; a `matcher` narrower than all tools; caching offsets into the transcript.
 - [ ] **Commit:** `feat(hooks): add post-tool-use budget warning`
@@ -422,7 +422,7 @@ Skills cannot be unit tested (§17). Each step's proof is `claude plugin validat
 - [ ] **Files:** create `skills/init/SKILL.md`; extend `test/cases/60-skills.sh`.
 - [ ] **Content:** the eight steps of §10.1, copying from `${CLAUDE_PLUGIN_ROOT}/templates/`. It shows the permission diff before writing and does not commit.
 - [ ] **Manual run:** an empty repository and one with an existing `CLAUDE.md`, `.claude/settings.json` and PR template; confirm nothing existing is overwritten and that a second run stops at step 1.
-- [ ] **Out of scope:** writing a first card from a description (§20 question 2, noted in `docs/later.md`).
+- [ ] **Out of scope:** writing a first card from a description (§20 question 2, noted in `docs/development/later.md`).
 - [ ] **Commit:** `feat(skills): add init`
 
 After 8.4 I stop. You load the plugin with `claude --plugin-dir .` and run the DOC cards yourself.
@@ -491,4 +491,4 @@ Each item names the step that owns its test.
 20. Superseded on 2026-10-06 (spec §19.2 item 22): `done` is read from both `origin/<base>` and the local base branch. The original rule made `card next` offer a card that had been merged locally and not pushed.
 21. Whether a skill's `` !`...` `` injection needs an `allowed-tools` grant to run `card status --fetch` is not clear from the skills page. Settled by the manual run in 8.1.
 22. Two branches for the same card that each add a log on the same day produce the same file name and an add/add conflict. One card has one branch, so this is left alone.
-23. Marker files in `<git-dir>/workdeck/` are never removed. They are empty files; cleanup is in `docs/later.md`.
+23. Marker files in `<git-dir>/workdeck/` are never removed. They are empty files; cleanup is in `docs/development/later.md`.

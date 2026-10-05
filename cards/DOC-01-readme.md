@@ -7,8 +7,8 @@ done: false
 ---
 
 ## Read
-- docs/specs/2026-10-05-workdeck-0.1-design.md (sections 1, 2, 4.1, 14 and 18)
-- docs/findings.md
+- docs/design.md (sections 1, 2, 4.1, 14 and 18)
+- docs/development/findings.md
 
 ## Touch
 - README.md

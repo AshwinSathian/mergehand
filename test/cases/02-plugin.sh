@@ -181,3 +181,36 @@ test_plugin_manifest_names_its_repository() {
   done
   grep -q "$(sed -n 's/^  "repository": "\(.*\)",$/\1/p' "$f")" "$CARD" || fail 'the URL in bin/card differs from plugin.json'
 }
+
+test_example_deck_lints_and_lists() {
+  mkdir "$T/ex"
+  cp -R "$ROOT/examples/hello-deck/." "$T/ex/" || fail 'no example deck'
+  cd "$T/ex" || exit 1
+  git init -q . && git symbolic-ref HEAD refs/heads/main && git add -A && git commit -q -m example
+  card lint; assert_rc 0
+  card list
+  assert_contains "$OUT" 'done     GREET-01'
+  assert_contains "$OUT" 'ready    GREET-02'
+  card stats
+  assert_contains "$OUT" '3417'
+  # The output shown in the example README is real.
+  card list
+  assert_contains "$(cat README.md)" "$OUT"
+}
+
+test_docs_have_one_design_file_and_a_development_folder() {
+  local f
+  for f in docs/design.md docs/evidence.md docs/development/README.md docs/development/plan-0.1.md docs/development/findings.md docs/development/later.md; do
+    [ -s "$ROOT/$f" ] || fail "$f is missing"
+  done
+  # No tracked file still points at the old locations.
+  cd "$ROOT" || exit 1
+  ! git grep -n -E 'docs/(specs|plans)/|docs/(findings|later)\.md' -- . ':!test/cases/02-plugin.sh' || fail 'a file names an old docs path'
+}
+
+test_nothing_claims_evals_that_do_not_exist() {
+  cd "$ROOT" || exit 1
+  [ -d evals ] && return 0
+  ! git grep -n -i 'ships three plugin eval' -- docs/design.md || fail 'the design says eval cases ship'
+  ! ls cards/DOC-03-* 2>/dev/null || fail 'the eval card is still in the deck'
+}

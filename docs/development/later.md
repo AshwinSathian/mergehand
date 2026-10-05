@@ -12,3 +12,5 @@ Ideas that came up while building 0.1 and are outside it. Nothing here is built.
 - A first card written by init from a one-paragraph description (spec section 20, question 2).
 - A card file renamed between the local and the remote base branch is looked up under both names.
 - `card new` cuts the slug at 40 characters, mid-word. Cosmetic.
+- Plugin eval cases for the skills. Cut from 0.1: `claude plugin eval` is built for skills the model chooses to invoke, and these four are typed by the user. Worth one probe case if the tool gains a way to run a typed skill.
+- Rename commands for consistency (`card log`, `card config`, `card check scope`), keeping the old names as aliases; a man page, shell completions and `--json`.

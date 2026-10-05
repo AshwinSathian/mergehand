@@ -7,8 +7,8 @@ done: true
 ---
 
 ## Read
-- docs/specs/2026-10-05-workdeck-0.1-design.md (sections 10.3, 11 and 12)
-- docs/plans/2026-10-05-workdeck-0.1-plan.md (step 8.3, section B last row)
+- docs/design.md (sections 10.3, 11 and 12)
+- docs/development/plan-0.1.md (step 8.3, section B last row)
 - reference/implement.md
 - agents/reviewer.md
 

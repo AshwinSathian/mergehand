@@ -7,8 +7,8 @@ done: true
 ---
 
 ## Read
-- docs/findings.md (findings 3, 8 and 11)
-- docs/specs/2026-10-05-workdeck-0.1-design.md (section 6)
+- docs/development/findings.md (findings 3, 8 and 11)
+- docs/design.md (section 6)
 - bin/card (base_ref, base_done, deck_table, card_branches, id_of_branch, cmd_next)
 - hooks/stop.sh
 

@@ -7,8 +7,8 @@ done: true
 ---
 
 ## Read
-- docs/specs/2026-10-05-workdeck-0.1-design.md (section 4.1)
-- docs/plans/2026-10-05-workdeck-0.1-plan.md (section B, step 7.1)
+- docs/design.md (section 4.1)
+- docs/development/plan-0.1.md (section B, step 7.1)
 
 ## Touch
 - .claude-plugin/plugin.json (new)
@@ -17,7 +17,7 @@ done: true
 - .github/workflows/ci.yml
 - test/cases/02-plugin.sh (new)
 - .shellcheckrc (added during the card: the new grep test word-splits on purpose)
-- docs/findings.md (added during the card: finding 7, what validate does not check)
+- docs/development/findings.md (added during the card: finding 7, what validate does not check)
 
 ## Tests
 - hooks json names existing executable scripts

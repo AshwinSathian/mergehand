@@ -7,8 +7,8 @@ done: true
 ---
 
 ## Read
-- docs/specs/2026-10-05-workdeck-0.1-design.md (section 13, budget warning)
-- docs/plans/2026-10-05-workdeck-0.1-plan.md (step 6.2, section G items 2 and 16)
+- docs/design.md (section 13, budget warning)
+- docs/development/plan-0.1.md (step 6.2, section G items 2 and 16)
 - bin/card (cmd_tokens)
 
 ## Touch
@@ -17,7 +17,7 @@ done: true
 - test/bench-hook.sh (new)
 - test/fixtures/hooks/*
 - bin/card
-- docs/findings.md
+- docs/development/findings.md
 
 ## Tests
 - post tool use is silent without config
@@ -31,10 +31,10 @@ done: true
 - Over budget, stdout is the documented hookSpecificOutput JSON with the growth, the budget and /workdeck:handoff split.
 - The warning appears once per session; the marker is written before the warning is printed.
 - Tool calls that carry agent_id are ignored.
-- test/bench-hook.sh reports median and 95th percentile for the no-config, under-budget and already-warned paths, with 2 MB and 20 MB transcripts, and the numbers are in docs/findings.md.
+- test/bench-hook.sh reports median and 95th percentile for the no-config, under-budget and already-warned paths, with 2 MB and 20 MB transcripts, and the numbers are in docs/development/findings.md.
 
 ## Out of scope
 - Blocking, a narrower matcher, caching an offset into the transcript.
 
 ## Notes
-- If the under-budget median is above 50 ms, stop and report options. Do not optimise silently.
+- If the under-budget median is above 50 ms, stop and report options. Do not optimize silently.
