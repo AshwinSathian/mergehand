@@ -133,3 +133,21 @@ So "CI runs validate against the current release" (spec section 18) guards the m
 **Proposed fix:** none needed in the code. The spec's risk table should say what validate covers.
 
 The marketplace entry's source is `"./"` as the spec says; validate accepts it.
+
+## 8. The agent names the card branch from the title, not the file
+
+**Status:** open. **Evidence:** manual run of `/workdeck:next-card` in a scratch repository (Claude Code 2.1.261, Haiku 4.5, `--plugin-dir`, 9 turns).
+
+The card file was `GREET-01-fix-greeting.md` with the title "Fix the greeting". The skill said the branch is `card/` plus the file name without `.md`. The agent created `card/GREET-01-fix-the-greeting`. State still works, because it matches `card/<id>-*`, but the rule "the branch is named after the file" is an instruction, and the spec's own goal 4 says a rule a script can check should be checked by a script.
+
+The same run confirmed what the plan left open: the plugin loads with `--plugin-dir`; a skill with `disable-model-invocation: true` runs when typed; the `` !`...` `` injection of `card status --fetch` ran and its output reached the prompt; the agent wrote the test first, named `test_greet_says_hello_with_the_name`, and did not commit.
+
+**Proposed fix:** add `card branch <id>`, which prints `card/<file name without .md>`, and have the skills run `git checkout -b "$(card branch <id>)"`. One small command, no judgment left to the agent. Not built: it adds a command to section 9. The skill text now says "from the file, not from the title", which is a weaker fix.
+
+## 9. The permission template let a card branch be pushed onto another branch
+
+**Status:** fixed by card Q-2610052330 (the first use of the quick lane on this repository). **Evidence:** automated security review of the commit that added `templates/settings-permissions.json`.
+
+The allow rule `Bash(git push origin card/*)` is a prefix match, so it also allows `git push origin card/x:main` and `git push origin card/x main`. Deny rules are evaluated before allow rules, so the template now denies any push with a colon refspec (`Bash(git push *:*)`) and any push with a second refspec after the card branch.
+
+The permissions page is explicit that these rules match the command as written and are not a security boundary: `git -C . push` is not matched at all. The real protection for the base branch is branch protection on the host. The README must say so (DOC-01).

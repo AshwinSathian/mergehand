@@ -3,7 +3,7 @@ id: SKILL-01
 title: reference/implement.md and the next-card skill
 size: S
 depends: PLUG-02
-done: false
+done: true
 ---
 
 ## Read
@@ -14,6 +14,7 @@ done: false
 - reference/implement.md (new)
 - skills/next-card/SKILL.md (new)
 - test/cases/60-skills.sh (new)
+- docs/findings.md (added during the card: finding 8 from the manual run, finding 9 from the security review)
 
 ## Tests
 - skills disable model invocation
