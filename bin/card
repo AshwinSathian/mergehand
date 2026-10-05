@@ -415,38 +415,71 @@ wt_meta() {
   awk "$META_AWK" "$@"
 }
 
-# base_ref: sets BASE_REF, the ref that done is read from: origin/<base> when
-# it exists, else the local base branch. Call it from the main shell, not
+# base_ref: sets BASE_REF (origin/<base> when it exists, else the local base
+# branch) and BASE_REFS, every base ref that state is read from: both of them
+# when they point at different commits. A merge made locally and not pushed
+# counts, and so does one fetched while the local branch is behind; done
+# never reverts, so done on either is done. Call it from the main shell, not
 # inside $(...), so that die ends the command.
 base_ref() {
+  local remote local_
   [ -z "${BASE_REF-}" ] || return 0
-  if g rev-parse -q --verify "refs/remotes/origin/$BASE" >/dev/null 2>&1; then
+  remote=$(g rev-parse -q --verify "refs/remotes/origin/$BASE" 2>/dev/null) || remote=""
+  local_=$(g rev-parse -q --verify "refs/heads/$BASE" 2>/dev/null) || local_=""
+  if [ -n "$remote" ]; then
     BASE_REF="refs/remotes/origin/$BASE"
-  elif g rev-parse -q --verify "refs/heads/$BASE" >/dev/null 2>&1; then
+  elif [ -n "$local_" ]; then
     BASE_REF="refs/heads/$BASE"
   else
     die 2 "base branch '$BASE' not found; set base in workdeck.conf, or make a first commit"
   fi
+  BASE_REFS=$BASE_REF
+  if [ -n "$remote" ] && [ -n "$local_" ] && [ "$remote" != "$local_" ]; then
+    BASE_REFS="$BASE_REF refs/heads/$BASE"
+  fi
 }
 
-# base_done: paths of the cards that are done on the base branch. One git
-# call for the whole deck. A card counts only when "done: true" sits between
-# a --- on line 1 and the next ---, so text in a card body cannot flip it.
+# base_done: paths of the cards that are done on a base branch. One git call
+# per base ref for the whole deck. A card counts only when "done: true" sits
+# between a --- on line 1 and the next ---, so text in a card body cannot
+# flip it.
+# ponytail: a card file renamed between the two base refs is looked up under
+# both names and counts under the one that says done.
 base_done() {
-  g grep -n -e '^done: true$' -e '^---$' "$BASE_REF" -- "$CARDS_DIR" 2>/dev/null |
-    P="$BASE_REF:" awk '
-      BEGIN { p = ENVIRON["P"] }
-      index($0, p) == 1 { $0 = substr($0, length(p) + 1) }
-      !match($0, /:[0-9]+:(---|done: true)$/) { next }
-      {
-        path = substr($0, 1, RSTART - 1); rest = substr($0, RSTART + 1)
-        if (rest ~ /---$/) { if (++seps[path] == 1 && rest + 0 != 1) bad[path] = 1 }
-        else if (seps[path] == 1 && !(path in bad)) print path
-      }'
+  local ref
+  for ref in $BASE_REFS; do
+    g grep -n -e '^done:[[:space:]]*true[[:space:]]*$' -e '^---$' "$ref" -- "$CARDS_DIR" 2>/dev/null |
+      P="$ref:" awk '
+        BEGIN { p = ENVIRON["P"] }
+        index($0, p) == 1 { $0 = substr($0, length(p) + 1) }
+        !match($0, /:[0-9]+:(---|done:[ \t]*true[ \t]*)$/) { next }
+        {
+          path = substr($0, 1, RSTART - 1); rest = substr($0, RSTART + 1)
+          if (rest ~ /---$/) { if (++seps[path] == 1 && rest + 0 != 1) bad[path] = 1 }
+          else if (seps[path] == 1 && !(path in bad)) print path
+        }'
+  done
+}
+
+# base_cards: the card files on the base refs, as an index.
+base_cards() {
+  local ref
+  for ref in $BASE_REFS; do
+    g ls-tree --name-only "$ref" "$CARDS_DIR/" 2>/dev/null
+  done | sort -u | to_index
+}
+
+# base_show <path>: the file from the first base ref that has it.
+base_show() {
+  local ref
+  for ref in $BASE_REFS; do
+    g show "$ref:$1" 2>/dev/null && return 0
+  done
+  return 1
 }
 
 # card_branches: "<id> <ref>", tab-separated, for every local or remote
-# branch named card/<id>-<slug>. Local branches come first.
+# branch named card/<id> or card/<id>-<slug>. Local branches come first.
 card_branches() {
   g for-each-ref --format='%(refname)' refs/heads/card refs/remotes 2>/dev/null | awk '
     {
@@ -456,7 +489,8 @@ card_branches() {
       if (index(name, "card/") != 1) next
       name = substr(name, 6)
       if (!match(name, /^[A-Z][A-Z0-9]*-[0-9]+[a-z]?/)) next
-      if (substr(name, RLENGTH + 1, 1) == "-") print substr(name, 1, RLENGTH) "\t" $0
+      c = substr(name, RLENGTH + 1, 1)
+      if (c == "-" || c == "") print substr(name, 1, RLENGTH) "\t" $0
     }'
 }
 
@@ -480,7 +514,7 @@ has_blocked() {
 deck_table() {
   local wt base tagged f p id ref seen
   wt=$(wt_cards)
-  base=$(g ls-tree --name-only "$BASE_REF" "$CARDS_DIR/" 2>/dev/null | to_index)
+  base=$(base_cards)
   tagged=$(
     printf '%s\n' "$wt" | awk 'NF { print "W\t" $0 }'
     printf '%s\n' "$base" | awk 'NF { print "G\t" $0 }'
@@ -499,7 +533,7 @@ INDEX
     # tree. That set is normally empty; batch with cat-file if it ever is not.
     printf '%s\n' "$tagged" | awk -F '\t' '$1 == "W" { w[$2] = 1 } $1 == "G" && !($2 in w) { print $3 }' |
       while IFS= read -r p; do
-        g show "$BASE_REF:$p" 2>/dev/null | awk -v name="$p" "$META_AWK" | awk '{ print "M\t" $0 }'
+        base_show "$p" | awk -v name="$p" "$META_AWK" | awk '{ print "M\t" $0 }'
       done
     seen=" "
     card_branches | while IFS="$TAB" read -r id ref; do
@@ -551,11 +585,16 @@ cmd_next() {
     $1 == "ready" { print $2, $3, $4; found = 1; exit }
     $1 == "waiting" { open[++o] = $2 " waiting on " $5 }
     $1 == "active" || $1 == "blocked" || $1 == "review" { open[++o] = $2 " " $1 }
+    $1 == "active" || $1 == "blocked" { held = 1 }
     END {
       if (found) exit 0
       if (n == 0) print "no cards in " ENVIRON["D"] "; create one with: card new <id> <title>"
       else if (o == 0) print "every card is done"
-      else { print "no card is ready"; for (i = 1; i <= o; i++) print "  " open[i] }
+      else {
+        print "no card is ready"
+        for (i = 1; i <= o; i++) print "  " open[i]
+        if (held) print "active and blocked cards have a branch named card/<id>-*; deleting it releases the card. List them: git branch -a --list \047card/*\047 (card list --fetch drops stale remote refs)"
+      }
       exit 1
     }'
 }
@@ -569,13 +608,14 @@ cmd_list() {
 # --- remote ---
 
 # id_of_branch: reads branch names, prints the card id of each one named
-# card/<id>-<slug>.
+# card/<id> or card/<id>-<slug>.
 id_of_branch() {
   awk '{
     if (index($0, "card/") != 1) next
     name = substr($0, 6)
     if (!match(name, /^[A-Z][A-Z0-9]*-[0-9]+[a-z]?/)) next
-    if (substr(name, RLENGTH + 1, 1) == "-") print substr(name, 1, RLENGTH)
+    c = substr(name, RLENGTH + 1, 1)
+    if (c == "-" || c == "") print substr(name, 1, RLENGTH)
   }'
 }
 

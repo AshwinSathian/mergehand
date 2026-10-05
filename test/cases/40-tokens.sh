@@ -86,3 +86,10 @@ budget 100000 M' "$OUT" 'unknown still shows the budget'
   assert_rc 0
   assert_not_contains "$OUT" budget
 }
+
+test_tokens_prints_the_budget_on_a_branch_without_slug() {
+  new_repo; mk_conf; card new AUTH-9 '???' --size M; commit_all
+  git checkout -q -b card/AUTH-9
+  card tokens "$TX/normal.jsonl"
+  assert_contains "$OUT" 'budget 100000 M'
+}
