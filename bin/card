@@ -727,6 +727,98 @@ cmd_done() {
   [ "$rc" -eq 0 ] || die 2 "$path: cannot write"
 }
 
+# --- gates ---
+
+# section_items <file> <section>: the "- " items of one section, dash removed.
+section_items() {
+  S="$2" awk '
+    BEGIN { h = "## " ENVIRON["S"] }
+    { sub(/\r$/, "") }
+    /^## / { on = ($0 == h); next }
+    on && /^- */ { sub(/^- */, ""); if ($0 != "") print }' "$1"
+}
+
+# fork_point: the commit where the current branch left the base branch.
+# With a remote, a branch may have been cut from a local base that is ahead of
+# origin/<base>; measuring from the remote one would blame this branch for
+# every unpushed commit. So take whichever merge base is later.
+fork_point() {
+  local a b=""
+  a=$(g merge-base HEAD "$BASE_REF" 2>/dev/null)
+  if g rev-parse -q --verify "refs/heads/$BASE" >/dev/null 2>&1; then
+    b=$(g merge-base HEAD "refs/heads/$BASE" 2>/dev/null)
+  fi
+  if [ -z "$a" ] || { [ -n "$b" ] && g merge-base --is-ancestor "$a" "$b"; }; then a=$b; fi
+  [ -n "$a" ] || die 2 "the current branch shares no history with $BASE"
+  printf '%s\n' "$a"
+}
+
+# changed_files <fork point>: every path that differs from the fork point,
+# including uncommitted and untracked files, because handoff runs the gates
+# before it commits. Files under cards_dir and log_dir are left out: the
+# card and its log always change.
+changed_files() {
+  {
+    g diff --name-only --no-renames "$1" --
+    g ls-files --others --exclude-standard
+  } | sort -u | C="$CARDS_DIR/" L="$LOG_DIR/" awk '
+    index($0, ENVIRON["C"]) != 1 && index($0, ENVIRON["L"]) != 1'
+}
+
+# matches_any <path> <patterns, one per line>: shell case patterns, so "*"
+# also matches "/". The pattern is only ever a pattern; nothing is evaluated.
+matches_any() {
+  local pat
+  while IFS= read -r pat; do
+    [ -n "$pat" ] || continue
+    # shellcheck disable=SC2254
+    case $1 in $pat) return 0 ;; esac
+  done <<PATTERNS
+$2
+PATTERNS
+  return 1
+}
+
+cmd_touched() {
+  local path fp entries ignore files f pat stray="" unused=""
+  need_id "$@"
+  path=$(card_path "$1") || exit $?
+  base_ref
+  fp=$(fork_point) || exit $?
+  # The text after the first space of an entry is a comment.
+  entries=$(section_items "$path" Touch | sed 's/ .*//')
+  ignore=$(conf_get touch_ignore | tr ',' '\n' | sed 's/^ *//; s/ *$//')
+  files=$(changed_files "$fp")
+
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    matches_any "$f" "$ignore" && continue
+    matches_any "$f" "$entries" || stray="$stray  $f
+"
+  done <<FILES
+$files
+FILES
+
+  while IFS= read -r pat; do
+    [ -n "$pat" ] || continue
+    while IFS= read -r f; do
+      # shellcheck disable=SC2254
+      case $f in $pat) continue 2 ;; esac
+    done <<FILES
+$files
+FILES
+    unused="$unused  $pat
+"
+  done <<ENTRIES
+$entries
+ENTRIES
+
+  [ -z "$unused" ] || printf 'in Touch but not changed:\n%s' "$unused"
+  [ -n "$stray" ] || return 0
+  printf 'changed but not in Touch (revert it, or add it to Touch with a reason):\n%s' "$stray"
+  return 1
+}
+
 # --- commands above this line ---
 
 FETCH=0
@@ -762,5 +854,6 @@ case $cmd in
   status) cmd_status "$@" ;;
   new) cmd_new "$@" ;;
   done) cmd_done "$@" ;;
+  touched) cmd_touched "$@" ;;
   *) die 2 "command '$cmd' is not implemented yet" ;;
 esac
