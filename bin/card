@@ -501,6 +501,7 @@ INDEX
       printf 'B\t%s\n' "$id"
       has_blocked "$id" "$ref" && printf 'K\t%s\n' "$id"
     done
+    printf '%s\n' "$PR_IDS" | awk 'NF { print "P\t" $0 }'
   } | awk -F '\t' '
     $1 == "W" { if (!($2 in wpath)) wpath[$2] = $3; ids[$2] = 1 }
     $1 == "G" { if (!($2 in gpath)) gpath[$2] = $3; ids[$2] = 1 }
@@ -508,6 +509,7 @@ INDEX
     $1 == "M" { size[$2] = $3; title[$2] = $4; deps[$2] = $5; if ($6 == "true") wdone[$2] = 1 }
     $1 == "B" { branch[$2] = 1 }
     $1 == "K" { blocked[$2] = 1 }
+    $1 == "P" { review[$2] = 1 }
     END {
       for (id in ids) {
         path[id] = (id in wpath) ? wpath[id] : gpath[id]
@@ -522,6 +524,7 @@ INDEX
           if (x != "" && !(x in isdone)) why = why (why == "" ? "" : " ") x
         }
         if (id in isdone) state = "done"
+        else if (id in review) state = "review"
         else if ((id in branch) && (id in blocked)) state = "blocked"
         else if (id in branch) state = "active"
         else if (why == "") state = "ready"
@@ -533,6 +536,7 @@ INDEX
 
 cmd_next() {
   local table
+  sync_remote
   base_ref
   table=$(deck_table)
   printf '%s\n' "$table" | D="$CARDS_DIR" awk -F '\t' '
@@ -550,8 +554,39 @@ cmd_next() {
 }
 
 cmd_list() {
+  sync_remote
   base_ref
   deck_table | awk -F '\t' '{ printf "%-8s %-12s %-3s %s\n", $1, $2, $3, $4 }'
+}
+
+# --- remote ---
+
+# id_of_branch: reads branch names, prints the card id of each one named
+# card/<id>-<slug>.
+id_of_branch() {
+  awk '{
+    if (index($0, "card/") != 1) next
+    name = substr($0, 6)
+    if (!match(name, /^[A-Z][A-Z0-9]*-[0-9]+[a-z]?/)) next
+    if (substr(name, RLENGTH + 1, 1) == "-") print substr(name, 1, RLENGTH)
+  }'
+}
+
+# sync_remote: with --fetch, update remote-tracking refs and read the head
+# branches of open pull requests into PR_IDS. The only network access in card.
+# Prompts are disabled so a missing credential fails instead of hanging.
+PR_IDS=""
+sync_remote() {
+  local heads
+  [ "$FETCH" -eq 1 ] || return 0
+  g remote get-url origin >/dev/null 2>&1 || return 0
+  GIT_TERMINAL_PROMPT=0 g fetch --prune --quiet origin 2>/dev/null ||
+    printf 'card: git fetch failed; state comes from the refs already here\n' >&2
+  if heads=$(GH_PROMPT_DISABLED=1 gh pr list --state open --limit 500 --json headRefName --jq '.[].headRefName' 2>/dev/null); then
+    PR_IDS=$(printf '%s\n' "$heads" | id_of_branch)
+  else
+    printf 'card: gh is missing or not signed in; cards in review are shown as active\n' >&2
+  fi
 }
 
 # --- commands above this line ---
