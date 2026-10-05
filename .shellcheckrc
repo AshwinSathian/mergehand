@@ -1,3 +1,4 @@
 # SC2016: awk programs are kept in single-quoted strings on purpose.
 # SC1010: tests pass the word "done" as a card state.
-disable=SC2016,SC1010
+# SC2013: word-splitting command output is intended where the words cannot contain spaces.
+disable=SC2016,SC1010,SC2013

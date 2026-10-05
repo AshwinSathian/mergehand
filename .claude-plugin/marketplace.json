@@ -1,0 +1,14 @@
+{
+  "name": "workdeck",
+  "description": "Workdeck: run a software project as a series of cards.",
+  "owner": {
+    "name": "AshwinSathian"
+  },
+  "plugins": [
+    {
+      "name": "workdeck",
+      "source": "./",
+      "description": "Cards, a card command, hooks, a reviewer agent and the skills that run the loop."
+    }
+  ]
+}

@@ -120,3 +120,16 @@ The card for this work said to stop and report if the under-budget median passed
 3. **Measure less often.** Run the measurement on every tenth call, or only when the transcript has grown by some amount. One line of code; a warning can arrive up to nine tool calls late.
 
 Recommendation: option 1 now if 45 ms bothers anyone, option 2 only if long sessions turn out to be common.
+
+## 7. `claude plugin validate --strict` checks less than its documentation says
+
+**Status:** open, informational. **Evidence:** Claude Code 2.1.261, run on this repository and on a copy with one deliberate fault.
+
+- `claude plugin validate --strict .` on a directory that holds both manifests validates the marketplace manifest and stops. The plugin manifest needs its own call with the path to `plugin.json`. CI and `test_plugin_validates_strictly` run both.
+- The manifest reference says an unquoted `${CLAUDE_PLUGIN_ROOT}` in a shell-form hook command draws a warning. A copy of `hooks/hooks.json` with the quotes removed passed both calls. On this version nothing in validate reads `hooks/hooks.json`.
+
+So "CI runs validate against the current release" (spec section 18) guards the manifests and not the hook registration. `test_hooks_json_names_existing_executable_scripts` covers the gap with grep: four events, four executable scripts, quoted root, 10-second timeouts, top-level `hooks` key.
+
+**Proposed fix:** none needed in the code. The spec's risk table should say what validate covers.
+
+The marketplace entry's source is `"./"` as the spec says; validate accepts it.
