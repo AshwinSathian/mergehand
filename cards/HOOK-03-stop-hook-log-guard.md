@@ -3,7 +3,7 @@ id: HOOK-03
 title: Stop hook log guard
 size: S
 depends:
-done: false
+done: true
 ---
 
 ## Read
