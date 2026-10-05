@@ -2,7 +2,7 @@
   "name": "workdeck",
   "description": "Workdeck: run a software project as a series of cards.",
   "owner": {
-    "name": "AshwinSathian"
+    "name": "Ashwin Sathian"
   },
   "plugins": [
     {

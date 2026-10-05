@@ -153,3 +153,31 @@ git branch -D card/A-1-x
 gh pr merge 42
 COMMANDS
 }
+
+test_permission_template_allows_what_next_card_runs() {
+  local c
+  for c in 'gh pr list --author @me --state open --json number,headRefName,reviewDecision' 'gh pr view 12 --comments' 'git branch --list card/A-1*' 'card status --fetch' 'date +%y%m%d%H%M'; do
+    matches allow "$c" || fail "not allowed: $c"
+    matches deny "$c" && fail "denied: $c"
+  done
+  return 0
+}
+
+test_repository_has_the_files_a_stranger_looks_for() {
+  local f
+  for f in .gitattributes .gitignore .editorconfig SECURITY.md CHANGELOG.md CONTRIBUTING.md Makefile; do
+    [ -s "$ROOT/$f" ] || fail "$f is missing"
+  done
+  grep -q 'eol=lf' "$ROOT/.gitattributes" || fail '.gitattributes does not pin LF; card rejects CRLF'
+  grep -q '^test:' "$ROOT/Makefile" || fail 'Makefile has no test target'
+  grep -q '^lint:' "$ROOT/Makefile" || fail 'Makefile has no lint target'
+  grep -q "$("$BASH" "$CARD" version | sed 's/^card //')" "$ROOT/CHANGELOG.md" || fail 'CHANGELOG has no entry for this version'
+}
+
+test_plugin_manifest_names_its_repository() {
+  local f="$ROOT/.claude-plugin/plugin.json" k
+  for k in displayName homepage repository; do
+    grep -q "\"$k\":" "$f" || fail "plugin.json has no $k"
+  done
+  grep -q "$(sed -n 's/^  "repository": "\(.*\)",$/\1/p' "$f")" "$CARD" || fail 'the URL in bin/card differs from plugin.json'
+}

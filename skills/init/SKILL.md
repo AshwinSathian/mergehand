@@ -20,7 +20,7 @@ Work through these steps in order.
 3. **Write the project files.**
    - `workdeck.conf` from `templates/workdeck.conf`, with `<check>` and `<base>` replaced by the confirmed values.
    - `cards/REVIEW.md` from `templates/REVIEW.md`. It has headings only; the project fills in its own rules.
-   - Nothing for `log/`: the first `card log-new` creates it.
+   - Nothing for `log/`: the first `card log-new` creates it. But run `git check-ignore -q log`; if it succeeds, the project ignores `log/` and session logs would never be committed. In that case add `log_dir = cards/log` to `workdeck.conf` and tell the user why.
    - `.github/pull_request_template.md` from `templates/pull_request_template.md`, only if the project has no pull request template anywhere (`.github/`, `docs/` or the root, any letter case).
 
 4. **Add the session protocol to `CLAUDE.md`.** Append the content of `templates/claude-md-section.md`, creating `CLAUDE.md` if needed. If the file already has a `## Workdeck session protocol` heading, leave it alone.
@@ -42,4 +42,4 @@ Work through these steps in order.
 
    People who open the repository then get the marketplace and the plugin from the project settings.
 
-8. **Say what is next.** List the files written and changed, remind the user that nothing is committed, and give the next step: write a card with `card new <id> "<title>"` and fill in its sections, or type `/workdeck:quick "<description>"` for a small change. Workdeck 0.1 runs cards; it does not write them from a specification.
+8. **Say what is next.** List the files written and changed. Nothing is committed, and the next skill stops on a dirty tree, so tell the user to review and commit these files on the base branch before the next command, and to push if the repository has a remote. Then give the next step: type `/workdeck:quick "<description>"` for a small change, or write a card with `card new <id> "<title>"`, fill in its sections, and commit and push it on the base branch before starting it. Workdeck 0.1 runs cards; it does not write them from a specification.
