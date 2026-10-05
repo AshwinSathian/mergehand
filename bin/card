@@ -589,6 +589,69 @@ sync_remote() {
   fi
 }
 
+# --- status ---
+
+# last_log_done <id>: the Done section of the newest log entry for the card.
+last_log_done() {
+  local f last=""
+  for f in "$LOG_DIR"/*-"$1"-[0-9]*.md; do
+    [ -f "$f" ] && last="$last$f
+"
+  done
+  last=$(printf '%s' "$last" | sort -V | tail -1)
+  [ -n "$last" ] || return 0
+  printf 'Last log for %s (%s):\n' "$1" "${last##*/}"
+  awk '
+    /^## / { on = ($0 == "## Done"); next }
+    on && NF { gsub(/[\001-\037\177]/, ""); print "  " substr($0, 1, 200) }' "$last"
+}
+
+# cmd_status prints front matter fields and one log section, never a card
+# body and never the name of a branch other than the current one: this text
+# is injected into an agent's context at session start.
+cmd_status() {
+  local table branch id out max note
+  sync_remote
+  base_ref
+  table=$(deck_table)
+  branch=$(g symbolic-ref -q --short HEAD) || branch=""
+  id=$(printf '%s\n' "$branch" | id_of_branch)
+  out=$(
+    if [ -z "$branch" ]; then
+      echo 'Workdeck: detached HEAD (no card)'
+    elif [ -z "$id" ]; then
+      printf 'Workdeck: on %s (no card)\n' "$branch"
+    else
+      printf '%s\n' "$table" | B="$branch" I="$id" awk -F '\t' '
+        $2 == ENVIRON["I"] { printf "Workdeck: on %s: %s %s %s (%s)\n", ENVIRON["B"], $2, $3, $4, $1; found = 1 }
+        END { if (!found) printf "Workdeck: on %s: no card %s in the deck\n", ENVIRON["B"], ENVIRON["I"] }'
+    fi
+    if [ -z "$table" ]; then
+      echo 'No cards yet. Create one with: card new <id> <title>, or use /workdeck:quick.'
+    else
+      printf '%s\n' "$table" | awk -F '\t' '
+        $1 == "active" || $1 == "review" || $1 == "blocked" {
+          if (!n++) print "In progress:"
+          printf "  %-8s %-12s %-3s %s\n", $1, $2, $3, $4
+        }
+        $1 == "ready" && next_ready == "" { next_ready = $2 " " $3 " " $4 }
+        END { print "Next ready: " (next_ready == "" ? "none" : next_ready) }'
+    fi
+    [ -z "$id" ] || last_log_done "$id"
+  )
+  max=$(conf_get status_max_chars)
+  note='[truncated: longer than status_max_chars]'
+  if [ "${#out}" -gt "$max" ]; then
+    if [ "$max" -gt "$((${#note} + 1))" ]; then
+      printf '%s\n%s\n' "${out:0:$((max - ${#note} - 1))}" "$note"
+    else
+      printf '%s\n' "${out:0:$max}"
+    fi
+  else
+    printf '%s\n' "$out"
+  fi
+}
+
 # --- commands above this line ---
 
 FETCH=0
@@ -621,5 +684,6 @@ case $cmd in
   lint) cmd_lint "$@" ;;
   list) cmd_list "$@" ;;
   next) cmd_next "$@" ;;
+  status) cmd_status "$@" ;;
   *) die 2 "command '$cmd' is not implemented yet" ;;
 esac
