@@ -44,3 +44,15 @@ test_stats_without_logs() {
   assert_rc 0
   assert_contains "$OUT" 'no session logs in log'
 }
+
+test_stats_says_how_many_sessions_are_unmeasured() {
+  new_repo; mk_conf
+  mk_log A-1 2026-10-01 1 done S 30000 false; mk_log A-2 2026-10-01 1; mk_log A-3 2026-10-01 1
+  local k
+  for k in baseline_tokens peak_tokens growth_tokens; do edit log/2026-10-01-A-2-1.md "s/^$k:.*\$/$k: unknown/"; edit log/2026-10-01-A-3-1.md "s/^$k:.*\$/$k: unknown/"; done
+  card stats
+  assert_contains "$OUT" '2 of 3 sessions have no measurement'
+  edit log/2026-10-01-A-2-1.md 's/^growth_tokens:.*$/growth_tokens: 5/'; edit log/2026-10-01-A-3-1.md 's/^growth_tokens:.*$/growth_tokens: 5/'
+  card stats
+  assert_not_contains "$OUT" 'no measurement'
+}

@@ -56,3 +56,10 @@ test_show_does_not_confuse_neighbouring_ids() {
   assert_not_contains "$OUT" 'AUTH-10'
   assert_not_contains "$OUT" 'AUTH-1b'
 }
+
+test_show_unknown_prefix_has_no_dangling_colon() {
+  new_repo; mk_conf; mk_card DB-01
+  card show AUTH-99
+  assert_rc 1
+  assert_eq "card: no card AUTH-99 in cards (no cards with prefix AUTH; run 'card list')" "$ERR" message
+}
