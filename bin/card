@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# card: the Workdeck command-line tool.
+#
+# One file, so people and CI can fetch it without the plugin. It must run on
+# bash 3.2 (macOS /bin/bash) with BSD or GNU awk, sed, grep and sort, plus git.
+# workdeck.conf and card files are parsed as text and are never sourced or
+# evaluated.
+set -u
+# ponytail: bytewise ranges and sort order everywhere; the cost is that length
+# limits count bytes, not characters. Revisit if non-ASCII titles matter.
+LC_ALL=C
+export LC_ALL
+
+
+usage() {
+  cat <<'USAGE'
+usage: card <command> [arguments] [--fetch]
+
+  next                      print the first ready card
+  show <id>                 print one card
+  list                      one line per card: state, id, size, title
+  status                    current card, open work, next ready card
+  new <id> <title> [--size S] [--depends ids]
+                            create a card file
+  done <id>                 set done: true in the card file
+  lint                      check every card and log file
+  touched <id>              compare changed files with the card's Touch list
+  tests <id>                check that each Tests line names a test that exists
+  tokens [transcript]       baseline, peak and growth for a session transcript
+  log-new <id> <outcome>    create a session log entry
+  stats                     growth per card size across session logs
+  conf <key>                print one configuration value
+
+--fetch runs git fetch --prune and reads open pull requests with gh first.
+Exit codes: 0 ok, 1 a check failed, 2 usage or configuration error.
+USAGE
+}
+
+die() {
+  local code=$1
+  shift
+  printf 'card: %s\n' "$*" >&2
+  exit "$code"
+}
+
+# Every git call goes through here so user configuration cannot change the
+# shape of the output.
+g() { git -c core.quotepath=off -c color.ui=false "$@"; }
+
+enter_repo() {
+  local root
+  root=$(g rev-parse --show-toplevel 2>/dev/null) || die 2 "not a git repository"
+  cd "$root" || die 2 "cannot enter $root"
+  [ -f workdeck.conf ] || die 2 "no workdeck.conf in $root; run /workdeck:init"
+}
+
+# --- commands above this line ---
+
+FETCH=0
+n=$#
+while [ "$n" -gt 0 ]; do
+  a=$1
+  shift
+  n=$((n - 1))
+  # shellcheck disable=SC2034  # read by state commands from stage 3
+  if [ "$a" = --fetch ]; then FETCH=1; else set -- "$@" "$a"; fi
+done
+
+[ "$#" -gt 0 ] || { usage >&2; exit 2; }
+cmd=$1
+shift
+case $cmd in
+  help | -h | --help)
+    usage
+    exit 0
+    ;;
+  next | show | list | status | new | done | lint | touched | tests | tokens | log-new | stats | conf)
+    enter_repo
+    die 2 "command '$cmd' is not implemented yet"
+    ;;
+  *) die 2 "unknown command '$cmd'; run 'card help'" ;;
+esac
