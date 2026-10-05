@@ -24,3 +24,5 @@ done: false
 
 ## Notes
 - Ask the owner which license before writing anything.
+- The license is MIT, copyright Ashwin Sathian (decided 2026-10-06). `README.md` already says MIT in its last section; link that line to `LICENSE` and add a license badge beside the CI badge. Add `README.md` to Touch with that reason, or leave the README alone.
+- `bin/card` has a header line with the version and URL; add `# SPDX-License-Identifier: MIT` under it (then `bin/card` joins Touch).
