@@ -26,11 +26,17 @@ Work through these steps in order. Stop where a step says stop.
 
 4. **Update the base branch.** Run `card conf base` for its name, check it out, and if the repository has a remote run `git pull --ff-only`. If the pull is not a fast-forward, stop and say so.
 
-5. **Pick the card.** Use the requested id, or run `card next`. Run `card list` and find the card's state. It must be `ready`. If it is `waiting`, name the dependency that is not done. If it is `active`, `review` or `blocked`, say that a branch or pull request already exists for it. In either case stop. Other people's open pull requests do not prevent a start; only an unmerged dependency does.
+5. **Pick the card.** Use the requested id, or run `card next`. Run `card list` and find the card's state.
+   - `ready`: continue with step 6.
+   - `waiting`: name the dependency that is not done, and stop.
+   - `active` or `blocked`: run `git branch --list "card/<id>*"`. If a local branch is listed, the card was started here: ask the user whether to resume it, check that branch out, and continue with step 6, skipping step 7. If no local branch is listed, the work is on someone else's branch: say so and stop.
+   - `review`: a pull request is open for it. Say so and stop.
 
-6. **Read the card** with `card show <id>`. If it has a `## Blocked` section, ask the user that question and wait for the answer before writing any code.
+   Other people's open pull requests do not prevent a start; only an unmerged dependency does.
 
-7. **Create the branch.** Its name is `card/` followed by the card's file name without `.md`: the file `AUTH-03-token-refresh.md` gives `card/AUTH-03-token-refresh`. Take the name from the file in the cards directory (`card conf cards_dir`), not from the title. Run `git checkout -b <branch>`.
+6. **Read the card** with `card show <id>`. If it has a `## Blocked` section, ask the user that question and wait for the answer before writing any code. Once it is answered, remove the `## Blocked` section from the card and put the answer under `Notes`; a card that keeps the section shows as blocked as soon as its branch exists.
+
+7. **Create the branch.** Its name is `card/` followed by the card's file name without `.md`: the file `AUTH-03-token-refresh.md` gives `card/AUTH-03-token-refresh`. Take the name from the file in the cards directory (`card conf cards_dir`), not from the title. Only the `card/<id>` prefix matters to Workdeck; the rest is for people. Run `git checkout -b <branch>`.
 
 8. **Implement.** Read `${CLAUDE_PLUGIN_ROOT}/reference/implement.md` and follow it step by step.
 
