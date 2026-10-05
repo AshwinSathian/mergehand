@@ -26,6 +26,7 @@ for file in "$CASES_DIR"/*.sh; do
     fail=$((fail + 1))
     continue
   fi
+  # shellcheck disable=SC2013
   for name in $(sed -n 's/^\(test_[A-Za-z0-9_]*\)().*/\1/p' "$file"); do
     wanted "$base:$name" "$@" || continue
     # shellcheck disable=SC2016
