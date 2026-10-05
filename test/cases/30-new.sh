@@ -116,3 +116,27 @@ test_new_quick_id_and_custom_dir() {
   assert_rc 0
   assert_eq work/cards/Q-2610051432-fix-typo.md "$OUT" path
 }
+
+test_new_rejects_a_size_that_is_a_regex() {
+  new_repo; mk_conf
+  local s
+  for s in . '.*' -e 'S|M' ''; do
+    card new AUTH-03 'Title' --size "$s"
+    assert_rc 2
+    assert_contains "$ERR" 'card: '
+    assert_not_contains "$ERR" 'usage: grep'
+  done
+  assert_no_file cards
+}
+
+test_new_rejects_titles_lint_would_reject() {
+  new_repo; mk_conf
+  local t
+  for t in '[WIP] thing' '{x} y' '|' '>' '>-' '|+'; do
+    card new AUTH-03 "$t"
+    assert_rc 2
+  done
+  assert_no_file cards
+  card new AUTH-03 'Fix > and | in [brackets]'
+  assert_rc 0
+}
