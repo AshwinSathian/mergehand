@@ -7,8 +7,8 @@ done: true
 ---
 
 ## Read
-- docs/findings.md (finding 12)
-- docs/specs/2026-10-05-workdeck-0.1-design.md (sections 3, 4.1, 6, 17, 20)
+- docs/development/findings.md (finding 12)
+- docs/design.md (sections 3, 4.1, 6, 17, 20)
 
 ## Touch
 - docs/*
