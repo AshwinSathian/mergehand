@@ -1,0 +1,3 @@
+# SC2016: awk programs are kept in single-quoted strings on purpose.
+# SC1010: tests pass the word "done" as a card state.
+disable=SC2016,SC1010
