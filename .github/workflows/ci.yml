@@ -1,31 +1,35 @@
 name: ci
 on:
   push:
+    branches: [main]
   pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   test:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest]
+        os: [macos-15, ubuntu-24.04]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      # Unproven until the first CI run: whether validate works without credentials.
-      - name: Install Claude Code
-        run: npm install -g @anthropic-ai/claude-code
       - name: Install shellcheck
         run: command -v shellcheck || brew install shellcheck
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+      - name: Shellcheck
+        run: make lint
       # /bin/bash is 3.2 on macOS, so a bash 4 feature fails here.
       - name: Test
-        run: /bin/bash test/run.sh
+        run: make test
       - name: Lint this repository's own cards
         run: /bin/bash bin/card lint
       - name: Validate the plugin and marketplace manifests
-        run: |
-          claude plugin validate --strict .
-          claude plugin validate --strict .claude-plugin/plugin.json
-          for d in agents skills; do [ ! -d "$d" ] || claude plugin validate --strict "$d"; done
+        run: make validate
       # Ubuntu's default awk is mawk; other distributions ship gawk. They
       # differ from each other and from the awk on macOS.
       - name: Test with awk as mawk and as gawk

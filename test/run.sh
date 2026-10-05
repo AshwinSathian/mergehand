@@ -21,6 +21,7 @@ wanted() {
 for file in "$CASES_DIR"/*.sh; do
   [ -f "$file" ] || continue
   base=$(basename "$file" .sh)
+  printf '# %s\n' "$base"
   if ! out=$("$BASH" -n "$file" 2>&1); then
     printf 'FAIL %s (does not parse)\n%s\n' "$base" "$out"
     fail=$((fail + 1))

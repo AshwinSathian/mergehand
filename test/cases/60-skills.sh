@@ -122,3 +122,17 @@ test_next_card_can_resume_a_card_in_progress() {
   grep -q -i 'remove the `## Blocked` section' "$f" || fail 'next-card never removes the Blocked section'
   grep -q -i 'remove the `## Blocked` section\|delete the `## Blocked` section' "$ROOT/reference/implement.md" || fail 'implement.md never removes the Blocked section'
 }
+
+test_init_tells_the_user_to_commit_before_the_next_command() {
+  local f="$ROOT/skills/init/SKILL.md"
+  grep -q -i 'commit .* before' "$f" || fail 'init does not say to commit what it wrote before the next command'
+  grep -q 'git check-ignore' "$f" || fail 'init does not check whether the project ignores the log directory'
+}
+
+test_next_card_lints_the_card_before_it_starts() {
+  local f="$ROOT/skills/next-card/SKILL.md" lint branch
+  lint=$(grep -n '`card lint`' "$f" | head -1 | cut -d: -f1)
+  branch=$(grep -n 'git checkout -b' "$f" | head -1 | cut -d: -f1)
+  [ -n "$lint" ] || fail 'next-card never runs card lint'
+  [ "$lint" -lt "$branch" ] || fail 'next-card lints after it creates the branch'
+}

@@ -10,6 +10,9 @@
       "Bash(git merge-base *)",
       "Bash(git push -u origin card/*)",
       "Bash(git push origin card/*)",
+      "Bash(git branch --list *)",
+      "Bash(gh pr list *)",
+      "Bash(gh pr view *)",
       "Bash(gh pr create *)",
       "Bash(date +%y%m%d%H%M)"
     ],
