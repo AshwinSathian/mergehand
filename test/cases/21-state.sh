@@ -59,12 +59,12 @@ test_state_branch_beats_waiting() {
 
 test_state_neighbouring_ids_do_not_match() {
   new_repo; mk_conf; mk_card A-1; mk_card A-10; mk_card A-1b; mk_card A-2; commit_all
-  git branch card/A-10-thing; git branch card/A-1b-thing; git branch card/A-2; git branch feature/A-2-x
+  git branch card/A-10-thing; git branch card/A-1b-thing; git branch card/A-2; git branch feature/A-1-x; git branch card/A-1x
   card list
   assert_eq ready "$(state_of A-1)" 'A-1'
   assert_eq active "$(state_of A-10)" 'A-10'
   assert_eq active "$(state_of A-1b)" 'A-1b'
-  assert_eq ready "$(state_of A-2)" 'branch without slug or outside card/'
+  assert_eq active "$(state_of A-2)" 'branch without slug'
 }
 
 test_next_prints_first_ready_in_natural_order() {
@@ -133,4 +133,31 @@ test_squash_merged_remotely_stays_active_until_fetch() {
   is A-1 active
   git fetch -q --prune
   is A-1 done
+}
+
+# A card whose title has no letters or digits gets no slug, so its branch is card/<id>.
+test_state_branch_without_slug_is_active() {
+  new_repo; mk_conf; card new Q-2610061200 '???' --size XS; commit_all
+  git checkout -q -b card/Q-2610061200
+  card list
+  assert_eq active "$(state_of Q-2610061200)" state
+  card status
+  assert_contains "$OUT" 'on card/Q-2610061200: Q-2610061200 XS'
+}
+
+test_next_none_ready_says_how_to_release_an_active_card() {
+  deck; git branch card/A-1-secret-slug; git branch card/A-3-thing
+  card next
+  assert_rc 1
+  assert_contains "$OUT" 'deleting it releases the card'
+  assert_contains "$OUT" "git branch -a --list 'card/*'"
+  assert_not_contains "$OUT" 'secret-slug'
+}
+
+test_next_none_ready_without_active_cards_has_no_hint() {
+  new_repo; mk_conf; mk_card A-1 S A-9; commit_all
+  card next
+  assert_rc 1
+  assert_contains "$OUT" 'A-1 waiting on A-9'
+  assert_not_contains "$OUT" 'releases'
 }

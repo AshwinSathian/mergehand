@@ -90,3 +90,9 @@ test_stop_exits_zero_on_bad_input_or_config() {
   echo 'not a setting' >> workdeck.conf; git add -A; git commit -q -m conf
   stop; assert_silent
 }
+
+test_stop_blocks_on_a_branch_without_slug() {
+  new_repo; mk_conf; mk_card A-1; commit_all; git checkout -q -b card/A-1; work
+  stop; assert_blocked
+  git checkout -q -b card/A-1xy; stop; assert_silent
+}
