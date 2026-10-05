@@ -438,12 +438,40 @@ base_done() {
       }'
 }
 
+# card_branches: "<id> <ref>", tab-separated, for every local or remote
+# branch named card/<id>-<slug>. Local branches come first.
+card_branches() {
+  g for-each-ref --format='%(refname)' refs/heads/card refs/remotes 2>/dev/null | awk '
+    {
+      name = $0
+      if (index(name, "refs/heads/") == 1) name = substr(name, 12)
+      else { name = substr(name, 14); name = substr(name, index(name, "/") + 1) }
+      if (index(name, "card/") != 1) next
+      name = substr(name, 6)
+      if (!match(name, /^[A-Z][A-Z0-9]*-[0-9]+[a-z]?/)) next
+      if (substr(name, RLENGTH + 1, 1) == "-") print substr(name, 1, RLENGTH) "\t" $0
+    }'
+}
+
+# has_blocked <id> <ref>: does the card carry a ## Blocked section on that
+# branch? The current branch is read from the working tree.
+has_blocked() {
+  local id=$1 ref=$2 f
+  if [ "$ref" = "$(g symbolic-ref -q HEAD)" ]; then
+    for f in "$CARDS_DIR/$id.md" "$CARDS_DIR/$id"-*.md; do
+      [ -f "$f" ] && grep -q '^## Blocked' "$f" && return 0
+    done
+    return 1
+  fi
+  g grep -q -e '^## Blocked' "$ref" -- "$CARDS_DIR/$id.md" "$CARDS_DIR/$id-*.md" 2>/dev/null
+}
+
 # deck_table: one line per card in natural id order, tab-separated:
 # "<state> <id> <size> <title> <why>". <why> lists unmet dependencies.
 # The deck is the union of the cards on the base branch and in the working
 # tree. Needs BASE_REF.
 deck_table() {
-  local wt base tagged f p
+  local wt base tagged f p id ref seen
   wt=$(wt_cards)
   base=$(g ls-tree --name-only "$BASE_REF" "$CARDS_DIR/" 2>/dev/null | to_index)
   tagged=$(
@@ -466,11 +494,20 @@ INDEX
       while IFS= read -r p; do
         g show "$BASE_REF:$p" 2>/dev/null | awk -v name="$p" "$META_AWK" | awk '{ print "M\t" $0 }'
       done
+    seen=" "
+    card_branches | while IFS="$TAB" read -r id ref; do
+      case $seen in *" $id "*) continue ;; esac
+      seen="$seen$id "
+      printf 'B\t%s\n' "$id"
+      has_blocked "$id" "$ref" && printf 'K\t%s\n' "$id"
+    done
   } | awk -F '\t' '
     $1 == "W" { if (!($2 in wpath)) wpath[$2] = $3; ids[$2] = 1 }
     $1 == "G" { if (!($2 in gpath)) gpath[$2] = $3; ids[$2] = 1 }
     $1 == "D" { bdone[$2] = 1 }
     $1 == "M" { size[$2] = $3; title[$2] = $4; deps[$2] = $5; if ($6 == "true") wdone[$2] = 1 }
+    $1 == "B" { branch[$2] = 1 }
+    $1 == "K" { blocked[$2] = 1 }
     END {
       for (id in ids) {
         path[id] = (id in wpath) ? wpath[id] : gpath[id]
@@ -485,11 +522,31 @@ INDEX
           if (x != "" && !(x in isdone)) why = why (why == "" ? "" : " ") x
         }
         if (id in isdone) state = "done"
+        else if ((id in branch) && (id in blocked)) state = "blocked"
+        else if (id in branch) state = "active"
         else if (why == "") state = "ready"
         else state = "waiting"
         print id "\t" state "\t" size[p] "\t" title[p] "\t" why
       }
     }' | sort -t "$TAB" -k1,1V | awk -F '\t' '{ print $2 "\t" $1 "\t" $3 "\t" $4 "\t" $5 }'
+}
+
+cmd_next() {
+  local table
+  base_ref
+  table=$(deck_table)
+  printf '%s\n' "$table" | D="$CARDS_DIR" awk -F '\t' '
+    NF { n++ }
+    $1 == "ready" { print $2, $3, $4; found = 1; exit }
+    $1 == "waiting" { open[++o] = $2 " waiting on " $5 }
+    $1 == "active" || $1 == "blocked" || $1 == "review" { open[++o] = $2 " " $1 }
+    END {
+      if (found) exit 0
+      if (n == 0) print "no cards in " ENVIRON["D"] "; create one with: card new <id> <title>"
+      else if (o == 0) print "every card is done"
+      else { print "no card is ready"; for (i = 1; i <= o; i++) print "  " open[i] }
+      exit 1
+    }'
 }
 
 cmd_list() {
@@ -528,5 +585,6 @@ case $cmd in
   show) cmd_show "$@" ;;
   lint) cmd_lint "$@" ;;
   list) cmd_list "$@" ;;
+  next) cmd_next "$@" ;;
   *) die 2 "command '$cmd' is not implemented yet" ;;
 esac

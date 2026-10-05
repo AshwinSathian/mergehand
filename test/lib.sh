@@ -31,6 +31,7 @@ new_repo() {
 # add_remote: a bare repository at $T/remote.git as origin, with main pushed.
 add_remote() {
   git init -q --bare "$T/remote.git"
+  git --git-dir="$T/remote.git" symbolic-ref HEAD refs/heads/main
   git remote add origin "$T/remote.git"
   git push -q -u origin main 2>/dev/null
 }
