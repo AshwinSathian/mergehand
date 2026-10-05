@@ -3,7 +3,7 @@
 
 shipped_scripts() {
   local f
-  for f in "$ROOT/bin/card" "$ROOT"/hooks/*.sh; do
+  for f in "$ROOT/bin/card" "$ROOT"/hooks/*.sh "$ROOT"/scripts/*.sh; do
     [ -f "$f" ] && printf '%s\n' "$f"
   done
 }

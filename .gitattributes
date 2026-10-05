@@ -1,0 +1,7 @@
+# card rejects CRLF, and the scripts are bash: keep LF on every platform.
+* text=auto eol=lf
+bin/card text eol=lf
+*.sh text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.jsonl text eol=lf
