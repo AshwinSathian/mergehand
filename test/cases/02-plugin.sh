@@ -89,3 +89,13 @@ test_templates_are_complete() {
   # The plugin ships no project rules: the REVIEW template has headings only.
   ! grep -q -v -E '^(#|<!--|$)' "$ROOT/templates/REVIEW.md" || fail 'templates/REVIEW.md carries rules'
 }
+
+# The allow rule for pushing card branches is a prefix match, so the deny
+# list must close the refspec forms that would land a card branch elsewhere.
+test_permission_template_denies_refspec_pushes() {
+  local f="$ROOT/templates/settings-permissions.json" deny r
+  deny=$(awk '/"deny"/ { on = 1 } on' "$f")
+  for r in 'Bash(git push *:*)' 'Bash(git push origin card/* *)' 'Bash(git push -u origin card/* *)'; do
+    assert_contains "$deny" "\"$r\""
+  done
+}
