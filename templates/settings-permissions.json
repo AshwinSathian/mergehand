@@ -13,6 +13,9 @@
       "Bash(gh pr create *)"
     ],
     "deny": [
+      "Bash(git push *:*)",
+      "Bash(git push origin card/* *)",
+      "Bash(git push -u origin card/* *)",
       "Bash(git push --force*)",
       "Bash(git push -f *)",
       "Bash(git push * --force*)",
