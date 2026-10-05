@@ -3,7 +3,7 @@ id: DOC-01
 title: README and known limits
 size: S
 depends: SKILL-02, SKILL-03, SKILL-04
-done: false
+done: true
 ---
 
 ## Read
@@ -12,16 +12,24 @@ done: false
 
 ## Touch
 - README.md
+- cards/DOC-02-license.md (a note: add the license badge and link when the file exists)
 - test/cases/02-plugin.sh
 
 ## Tests
 - readme names every card command
+- readme install line matches the manifests
+- readme links resolve
 
 ## Acceptance
-- Install commands, the loop on one screen, the known limits of spec section 14, the Touch matching rule, and the plain statement that 0.1 runs cards and 0.2 writes them.
+- A reader learns what Workdeck is and why in the first screen.
+- The quick start works from an empty repository and leads with the quick lane.
+- Requirements and limits are stated near the top, before the reference sections.
+- Every card command and every configuration key is listed.
+- The claim about how the project was built matches the session logs.
+- It says the project is not affiliated with the Workdeck product at workdeck.com.
 
 ## Out of scope
-- A website, badges.
+- A website, a demo recording and a social preview image.
 
 ## Notes
 - Known limits to state, from the review (finding 11): a transcript path containing a double quote gives `unknown` tokens; a file whose name git quotes (a double quote or a newline in it) cannot be listed in `Touch`; a symlinked card file is followed.
