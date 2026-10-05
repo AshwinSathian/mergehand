@@ -107,7 +107,7 @@ test_next_empty_deck() {
 }
 
 # Challenge cases: does deriving state from branches survive squash merges and
-# deleted branches? Results are recorded in docs/findings.md.
+# deleted branches? Results are recorded in docs/development/findings.md.
 
 test_squash_merged_with_local_branch_left_behind_is_done() {
   deck

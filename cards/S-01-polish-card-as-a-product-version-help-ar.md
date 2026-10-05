@@ -7,7 +7,7 @@ done: true
 ---
 
 ## Read
-- docs/findings.md (finding 12)
+- docs/development/findings.md (finding 12)
 - bin/card (usage, dispatch, card_path, cmd_new, cmd_stats, cmd_tokens, cmd_next)
 
 ## Touch

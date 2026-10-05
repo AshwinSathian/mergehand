@@ -1,7 +1,9 @@
 # Workdeck 0.1 design
 
+This is the design the build followed. Sections 19, 19.1 and 19.2 list every change made to it and why. How the build went is in [`development/`](development/).
+
 Date: 2026-10-05
-Status: approved 2026-10-05 after adversarial review (changes listed in section 19)
+Status: implemented. Approved 2026-10-05 after adversarial review; amended during the build (sections 19 to 19.2)
 Scope: release 0.1 (core, runner, quick lane). The planner (0.2) and team features (0.3) get their own specs.
 
 ## 1. What Workdeck is
@@ -36,7 +38,7 @@ Not in 0.1:
 | Harness | Claude Code only | Hooks and subagents are what make the rules enforceable. |
 | State | One file per card, one file per session log, generated status | A single status file and a single log conflict on every parallel merge, and a hand-edited status file grows without limit. |
 | In-progress state | Derived from branches and PRs, not stored | No commit is needed to claim a card, and a stale claim cannot be left behind in a file. |
-| Scripts | One bash file, `bin/card`, using only awk, sed, grep, sort and git. It must run on bash 3.2, the version macOS ships. | Nothing to install, and one file can be fetched by CI or a person without the plugin. Ceiling: no native Windows. Upgrade path: a single Go binary with the same commands. |
+| Scripts | One bash file, `bin/card`, using only git, awk, sed, grep, sort and the standard POSIX tools. It must run on bash 3.2, the version macOS ships. | Nothing to install, and one file can be fetched by CI or a person without the plugin. Ceiling: no native Windows. Upgrade path: a single Go binary with the same commands. |
 | Handoff trigger | The user types `/workdeck:handoff` | Handoff pushes a branch and opens a PR. A person starts that. Skills with `disable-model-invocation` also cannot call each other. |
 | Command name | `card` | `deck` is taken by two existing command-line tools. |
 
@@ -63,11 +65,13 @@ templates/                           # files init copies into a project
 test/                                # shell tests and fixture repositories
 ```
 
-Users install with `/plugin marketplace add <owner>/workdeck` and `/plugin install workdeck@workdeck`. Skills are invoked as `/workdeck:init`, `/workdeck:next-card`, `/workdeck:handoff` and `/workdeck:quick`. The reviewer agent is addressed as `workdeck:reviewer`.
+Users install with `/plugin marketplace add AshwinSathian/workdeck` and `/plugin install workdeck@workdeck`. Skills are invoked as `/workdeck:init`, `/workdeck:next-card`, `/workdeck:handoff` and `/workdeck:quick`. The reviewer agent is addressed as `workdeck:reviewer`.
+
+This repository is also a Workdeck project: its own `workdeck.conf`, `cards/` and `log/` sit at the root, beside `docs/`, `examples/`, `scripts/` and the usual repository files.
 
 The plugin's `bin/` is on the PATH only for commands Claude runs through the Bash tool. Hooks and the commands a skill injects with `!` call `${CLAUDE_PLUGIN_ROOT}/bin/card` by full path.
 
-People and CI need `card` without Claude Code. Because it is one file with no dependencies, the README gives a one-line download of `bin/card` at a release tag, and init offers a CI workflow that does the same and runs `card lint`.
+People and CI need `card` without Claude Code. Because it is one file that needs only git and standard Unix tools, the README gives a one-line download of `bin/card` at a release tag, and init offers a CI workflow that does the same and runs `card lint`.
 
 ### 4.2 A project that uses Workdeck
 
@@ -139,9 +143,9 @@ A card is in exactly one state, computed by `card` when asked. The first matchin
 | State | Condition |
 |---|---|
 | `done` | `done: true` in the card file as it exists on the base branch |
-| `review` | an open PR exists from a branch named `card/<id>-*` |
-| `blocked` | a branch named `card/<id>-*` exists and the card has a `## Blocked` section on it |
-| `active` | a local or remote branch named `card/<id>-*` exists |
+| `review` | an open PR exists from the card's branch |
+| `blocked` | the card's branch exists and the card has a `## Blocked` section on it |
+| `active` | the card's branch exists, locally or on the remote |
 | `ready` | not done, no branch, every dependency done |
 | `waiting` | not done, no branch, a dependency not done |
 
@@ -369,7 +373,7 @@ Cards, logs and `workdeck.conf` are repository content. In a team repository the
 - CI on macOS runs the suite with `/bin/bash`, which is 3.2, so a bash 4 feature fails there.
 - The hook tests include a project without `workdeck.conf` and assert no output and exit 0.
 - CI runs the suite on macOS and Linux, which covers BSD and GNU versions of sed, awk and grep. CI also runs `shellcheck` and `claude plugin validate --strict` on both manifests and on the `agents/` and `skills/` directories. Validate does not read `hooks/hooks.json`; a shell test checks the hook registration instead. On Linux the suite also runs with `awk` as mawk and as gawk.
-- Skills are prompts and cannot be unit tested. 0.1 ships three plugin eval cases as smoke tests: init on an empty project, next-card on a fixture with one ready card, and quick on a one-line bug. A larger eval suite belongs to the evidence work.
+- Skills are prompts and cannot be unit tested. Shell tests check their mechanics (front matter, that every `card` command they name exists, the order of the gates), and each skill was run once by hand in a scratch repository (`development/findings.md`, findings 8 and 10). Plugin eval cases were planned and then cut: see section 19.2, item 32.
 
 ## 18. Risks
 
@@ -401,7 +405,7 @@ Each was found by checking the draft against the Claude Code documentation or by
 
 ### 19.1 Changes from implementation planning
 
-Found while writing the plan (`docs/plans/2026-10-05-workdeck-0.1-plan.md`) and checking it against the current Claude Code documentation.
+Found while writing the plan (`docs/development/plan-0.1.md`) and checking it against the current Claude Code documentation.
 
 13. `card next` said file-name order, which contradicted item 11. It uses natural id order (section 9).
 14. The tests gate had no command, so the agent would have done the search by hand. Added `card tests` (sections 9 and 11).
@@ -415,10 +419,10 @@ Found while writing the plan (`docs/plans/2026-10-05-workdeck-0.1-plan.md`) and 
 
 ### 19.2 Changes from building it and from the independent review
 
-Found while building 0.1 with its own cards, and by a separate adversarial review of the open findings (`docs/findings.md`, finding 11).
+Found while building 0.1 with its own cards, and by a separate adversarial review of the open findings (`docs/development/findings.md`, finding 11).
 
 22. `done` was read from `origin/<base>` alone, so a card merged locally and not pushed showed as `ready` and `card next` offered it again. It is read from both base refs (section 6). This narrows item 6; the reason for item 6 still holds.
-23. A card with no slug has the branch `card/<id>`, which nothing recognised. The prefix `card/<id>` is what counts (section 6).
+23. A card with no slug has the branch `card/<id>`, which nothing recognized. The prefix `card/<id>` is what counts (section 6).
 24. A `Touch` entry ending in `/` matched nothing. It covers the directory (section 5).
 25. The tests gate does not join nested test names; the spec now says so (section 11).
 26. `card next` says how to release a card held by an abandoned branch (section 9).
@@ -427,8 +431,11 @@ Found while building 0.1 with its own cards, and by a separate adversarial revie
 29. next-card can resume a card in progress, and a `## Blocked` section is removed once answered (section 10.2).
 30. init no longer creates the log directory (section 10.1).
 31. Text that reaches the agent's context is filtered further: a size, a dependency and a log file name are printed only when well formed (section 16).
+32. The three plugin eval cases were cut from 0.1. `claude plugin eval` measures skills that the model chooses to invoke, against a baseline without the plugin; all four Workdeck skills are typed by the user, so the tool would have measured a mismatch, at about eighteen billed agent runs (section 17).
+33. `card` gained `--version`, per-command `--help` and strict argument counts; a usage error prints `usage:` (section 9).
+34. The license is MIT (section 20, question 1).
 
 ## 20. Open questions
 
-1. License. MIT is the common choice among comparable tools.
+1. License. Decided: MIT.
 2. Whether init should offer to write a first card from a one-paragraph description, as a bridge until the planner exists.

@@ -1,8 +1,8 @@
 # Findings
 
-What turned out awkward or wrong while building Workdeck 0.1 with itself, with what happened and a proposed fix. Nothing here has been fixed silently: a finding stays open until the owner decides.
+What turned out awkward or wrong while building Workdeck 0.1 with itself, with what happened and a proposed fix. Nothing here was fixed silently: a finding stayed open until the maintainer decided.
 
-Findings 1 to 3 answer the challenge list in the build brief. Each is pinned by tests, so the evidence can be re-run.
+Findings 1 to 3 and 6 answer four questions the maintainer asked before the build started: does the tests gate give false failures on real test files; does the post-tool-use hook add a noticeable delay; do shell `case` patterns surprise someone used to gitignore globs; and does deriving state from branches survive squash merges and deleted branches. Each is pinned by tests, so the evidence can be re-run.
 
 ## 1. The tests gate gives false failures on idiomatic nested tests
 
@@ -36,7 +36,7 @@ Each false failure costs one edit to the card line, and the edit shows in the PR
 **Proposed fix, in order of preference:**
 
 1. Say it where the card is written. `reference/implement.md` and the README tell the author to write each `Tests` line as the name the test will have on its own line: the innermost `it`, the method name, the table case. No code change.
-2. If that is not enough in practice, match the words of the card line in order within a window of about 20 lines, instead of inside one line. That fixes nesting and wrapped names, and raises false passes. It is in `docs/later.md`, not built.
+2. If that is not enough in practice, match the words of the card line in order within a window of about 20 lines, instead of inside one line. That fixes nesting and wrapped names, and raises false passes. It is in `docs/development/later.md`, not built.
 
 ## 2. `Touch` entries are shell `case` patterns, and four cases surprise a gitignore user
 
@@ -136,7 +136,7 @@ The marketplace entry's source is `"./"` as the spec says; validate accepts it.
 
 ## 8. The agent names the card branch from the title, not the file
 
-**Status:** decided (finding 11): `card branch` rejected. Only the `card/<id>` prefix matters, and a branch with no slug is now recognised (R-02). **Evidence:** manual run of `/workdeck:next-card` in a scratch repository (Claude Code 2.1.261, Haiku 4.5, `--plugin-dir`, 9 turns).
+**Status:** decided (finding 11): `card branch` rejected. Only the `card/<id>` prefix matters, and a branch with no slug is now recognized (R-02). **Evidence:** manual run of `/workdeck:next-card` in a scratch repository (Claude Code 2.1.261, `--plugin-dir`, 9 turns).
 
 The card file was `GREET-01-fix-greeting.md` with the title "Fix the greeting". The skill said the branch is `card/` plus the file name without `.md`. The agent created `card/GREET-01-fix-the-greeting`. State still works, because it matches `card/<id>-*`, but the rule "the branch is named after the file" is an instruction, and the spec's own goal 4 says a rule a script can check should be checked by a script.
 
@@ -154,7 +154,7 @@ The permissions page is explicit that these rules match the command as written a
 
 ## 10. The full loop ran in a real session; the reviewer's commands were denied
 
-**Status:** fixed in SKILL-02. **Evidence:** manual run of `/workdeck:handoff` in the scratch repository (Claude Code 2.1.261, Haiku 4.5, non-interactive, 24 turns, $0.23).
+**Status:** fixed in SKILL-02. **Evidence:** manual run of `/workdeck:handoff` in the scratch repository (Claude Code 2.1.261, non-interactive, 24 turns).
 
 What the run proved, which no shell test can:
 
@@ -175,16 +175,16 @@ A separate reviewer, told to assume the proposals above were wrong, went through
 | Finding | Decision | What changed from the proposal |
 |---|---|---|
 | 1 tests gate | Document, and say it in the gate's message | No windowed match: it trades false failures for false passes with no evidence of the friction yet |
-| 2 Touch patterns | Normalise instead of lint | A trailing `/` now covers the directory and a leading `/` or `./` is ignored. A lint error would only report the problem and would fail decks that pass today |
+| 2 Touch patterns | Normalize instead of lint | A trailing `/` now covers the directory and a leading `/` or `./` is ignored. A lint error would only report the problem and would fail decks that pass today |
 | 3 abandoned branch | One hint line in `card next` | No local/remote classification |
 | 3 unpushed local merge | `done` is read from both the local and the remote base branch | Worse than recorded: `card next` offered a card that had already been merged locally. "Local when strictly ahead" was rejected because state would flip on every fetch |
 | 6 hook timing | Document | 45 ms is under 2% of a tool round trip; all three options add an interface or state |
 | 7 validate | Document | Agreed |
-| 8 branch name | Rejected | Nothing depends on the slug, and a command the agent must choose to run is still an instruction. The real hole was a card with no slug, whose branch `card/<id>` was not recognised at all |
+| 8 branch name | Rejected | Nothing depends on the slug, and a command the agent must choose to run is still an instruction. The real hole was a card with no slug, whose branch `card/<id>` was not recognized at all |
 
 It also found thirteen defects, nine demonstrated by running them. The ones that mattered most: three places where text from a card or a log file name reached the agent's context unfiltered (`size:`, an invalid `depends:`, the log file name); `done: true` with a trailing space passing lint but never counting as done; `cards_dir = cards/` breaking both gates; and a `-v` value with a backslash that makes gawk print a warning on every `card` call, which the macOS and mawk runs would never have shown.
 
-All are fixed in cards R-01 to R-04, each with the tests the reviewer named. Not done: a live handoff against a remote under the permission rules, because the nested sessions used for earlier manual runs draw on the owner's usage limit.
+All are fixed in cards R-01 to R-04, each with the tests the reviewer named. Not done: a live handoff against a remote under the permission rules, because it needs a nested agent session.
 
 ## 12. Comparison with respected repositories, and a review of what waits on the maintainer (2026-10-06)
 

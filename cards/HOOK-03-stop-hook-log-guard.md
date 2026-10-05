@@ -7,8 +7,8 @@ done: true
 ---
 
 ## Read
-- docs/specs/2026-10-05-workdeck-0.1-design.md (section 13, log guard)
-- docs/plans/2026-10-05-workdeck-0.1-plan.md (step 6.3)
+- docs/design.md (section 13, log guard)
+- docs/development/plan-0.1.md (step 6.3)
 - bin/card (fork_point, id_of_branch)
 
 ## Touch

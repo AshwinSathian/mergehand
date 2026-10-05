@@ -1,13 +1,13 @@
 ---
 id: R-03
-title: Filter context text, normalise Touch entries, gate edge cases
+title: Filter context text, normalize Touch entries, gate edge cases
 size: S
 depends:
 done: true
 ---
 
 ## Read
-- docs/findings.md (findings 1, 2 and 11)
+- docs/development/findings.md (findings 1, 2 and 11)
 - bin/card (META_AWK, deck_table, last_log_done, cmd_touched, cmd_tests, section_items, cmd_new, LINT_LIB)
 
 ## Touch

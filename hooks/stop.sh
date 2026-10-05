@@ -8,7 +8,7 @@ root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 [ -f "$root/workdeck.conf" ] || exit 0
 
 input=$(cat)
-# Only act on input we recognise, and never twice in a row: stop_hook_active
+# Only act on input we recognize, and never twice in a row: stop_hook_active
 # is true when this hook already blocked the turn that is ending now.
 case $input in *'"hook_event_name"'*) ;; *) exit 0 ;; esac
 printf '%s' "$input" | grep -Eq '"stop_hook_active"[[:space:]]*:[[:space:]]*true' && exit 0

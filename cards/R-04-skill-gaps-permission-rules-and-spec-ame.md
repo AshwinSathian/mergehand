@@ -7,7 +7,7 @@ done: true
 ---
 
 ## Read
-- docs/findings.md (finding 11)
+- docs/development/findings.md (finding 11)
 - skills/next-card/SKILL.md
 - skills/quick/SKILL.md
 - skills/handoff/SKILL.md
@@ -21,8 +21,8 @@ done: true
 - templates/settings-permissions.json
 - test/cases/02-plugin.sh
 - test/cases/60-skills.sh
-- docs/specs/2026-10-05-workdeck-0.1-design.md
-- docs/plans/2026-10-05-workdeck-0.1-plan.md
+- docs/design.md
+- docs/development/plan-0.1.md
 - cards/DOC-01-readme.md (notes for the README from the review)
 
 ## Tests

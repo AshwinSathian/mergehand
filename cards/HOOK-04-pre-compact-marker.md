@@ -7,7 +7,7 @@ done: true
 ---
 
 ## Read
-- docs/specs/2026-10-05-workdeck-0.1-design.md (section 13)
+- docs/design.md (section 13)
 
 ## Touch
 - hooks/pre-compact.sh (new)
