@@ -93,3 +93,30 @@ It matters for the post-tool-use hook, which runs after every tool call. The spe
 **Status:** fixed before the bootstrap, recorded because the spec names `sort -V`.
 
 Sorting `id<TAB>path` lines with `sort -V` puts `AUTH-03b` before `AUTH-03`, because the version comparison runs on into the path. The index is sorted with `sort -t <TAB> -k1,1V`, which works on BSD and GNU sort. `test_list_natural_order` caught it.
+
+## 6. The post-tool-use hook costs 45 ms per tool call on a card branch, and grows with the transcript
+
+**Status:** open. **Evidence:** `/bin/bash test/bench-hook.sh` on this machine (Apple silicon, macOS, bash 3.2.57), 50 runs per path.
+
+| Path | Median | 95th percentile |
+|---|---|---|
+| Not a Workdeck project | 2 ms | 2 ms |
+| Workdeck project, not on a card branch | 2 ms | 2 ms |
+| Card branch, already warned | 4 ms | 5 ms |
+| Card branch, under budget, 2 MB transcript | 45 ms | 51 ms |
+| Same, with a 1 MB tool result on stdin | 53 ms | 57 ms |
+| Card branch, under budget, 20 MB transcript | 127 ms | 151 ms |
+
+The first three paths start no process or one: the hook reads `.git/HEAD` itself instead of calling git, which is why a project that does not use Workdeck, or a session on `main`, pays 2 ms.
+
+The fourth path is the one that matters, and the spec's "about 10 ms, so running on every tool call costs little" is off by a factor of four to five. Parsing the transcript is the small part. The rest is `card tokens` starting up: about 17 ms for each of two git calls on macOS, plus awk and sort processes to find the card's size. A session of 200 tool calls on a card branch pays about 9 seconds in total at 2 MB. Next to model latency that is not noticeable call by call.
+
+The fifth and sixth rows show the two ways it gets worse: a large tool result has to be read from stdin, and the whole transcript is re-read on every call, so cost grows with session length. This session's own transcript was 2.1 MB after building stages 1 to 5, so 20 MB is a long session, not a typical one.
+
+The card for this work said to stop and report if the under-budget median passed 50 ms. It is 45 ms at 2 MB and over at 20 MB, so here are the options, none built:
+
+1. **Skip the git calls.** The hook already knows the repository root and the branch. Passing them to `card tokens` removes about 34 ms and brings the 2 MB case near 12 ms. Smallest change; adds two internal environment variables to `bin/card`.
+2. **Read only what is new.** Keep the byte offset, baseline and peak in `<git-dir>/workdeck/<session>.state` and read the transcript from that offset. Cost stops growing with session length. More code, and state that can go stale.
+3. **Measure less often.** Run the measurement on every tenth call, or only when the transcript has grown by some amount. One line of code; a warning can arrive up to nine tool calls late.
+
+Recommendation: option 1 now if 45 ms bothers anyone, option 2 only if long sessions turn out to be common.
