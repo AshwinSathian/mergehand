@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(card *)",
+      "Bash(<check>)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(git merge-base *)",
+      "Bash(git push -u origin card/*)",
+      "Bash(git push origin card/*)",
+      "Bash(gh pr create *)"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push -f *)",
+      "Bash(git push * --force*)",
+      "Bash(git push * -f *)",
+      "Bash(git push * +*)",
+      "Bash(git push * --delete *)",
+      "Bash(git reset --hard*)",
+      "Bash(git branch -D *)",
+      "Bash(git branch -d *)",
+      "Bash(git branch --delete *)",
+      "Bash(gh pr merge *)"
+    ]
+  }
+}

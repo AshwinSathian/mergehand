@@ -3,7 +3,7 @@ id: PLUG-02
 title: Reviewer agent and init templates
 size: S
 depends: PLUG-01
-done: false
+done: true
 ---
 
 ## Read
@@ -15,6 +15,7 @@ done: false
 - agents/reviewer.md (new)
 - templates/* (new)
 - test/cases/02-plugin.sh
+- .github/workflows/ci.yml (added during the card: agents are validated as a component directory, not through the manifest)
 
 ## Tests
 - template conf parses
