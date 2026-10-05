@@ -99,3 +99,57 @@ test_permission_template_denies_refspec_pushes() {
     assert_contains "$deny" "\"$r\""
   done
 }
+
+# rules <allow|deny>: the Bash(...) patterns of one list, one per line.
+rules() {
+  awk -v want="$1" '
+    /"allow"/ { cur = "allow" } /"deny"/ { cur = "deny" }
+    cur == want && match($0, /"Bash\(.*\)"/) { print substr($0, RSTART + 6, RLENGTH - 8) }' "$ROOT/templates/settings-permissions.json"
+}
+# matches <allow|deny> <command>: does any rule of the list match the whole
+# command, with * standing for any text? (Claude Code also lets a single
+# trailing " *" match the bare command; none of these cases depends on it.)
+matches() {
+  local pat
+  while IFS= read -r pat; do
+    # shellcheck disable=SC2254
+    case $2 in $pat) return 0 ;; esac
+  done <<RULES
+$(rules "$1")
+RULES
+  return 1
+}
+
+test_permission_template_does_not_deny_the_handoff_push() {
+  local c
+  for c in 'git push -u origin card/AUTH-03-token-refresh' 'git push origin card/Q-2610061200' 'git push -u origin card/X-1-fix-foo'; do
+    matches deny "$c" && fail "denied: $c"
+    matches allow "$c" || fail "not allowed: $c"
+  done
+  matches deny 'gh pr create --base main --title x --body-file body.md' && fail 'gh pr create is denied'
+  return 0
+}
+
+test_permission_template_denies_known_bad_pushes() {
+  local c
+  while IFS= read -r c; do
+    matches deny "$c" || fail "not denied: $c"
+  done <<'COMMANDS'
+git push --force origin card/A-1-x
+git push -f origin card/A-1-x
+git push origin card/A-1-x --force
+git push origin card/A-1-x -f
+git push origin main -f
+git push origin card/A-1-x:main
+git push origin card/A-1-x main
+git push -u origin card/A-1-x main
+git push origin +card/A-1-x
+git push origin --delete card/A-1-x
+git push --delete origin card/A-1-x
+git push -d origin card/A-1-x
+git push origin -d card/A-1-x
+git reset --hard HEAD~1
+git branch -D card/A-1-x
+gh pr merge 42
+COMMANDS
+}

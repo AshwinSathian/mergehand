@@ -65,7 +65,7 @@ test_implement_reference_says_not_to_commit() {
 
 test_quick_creates_an_xs_card_with_a_time_based_id() {
   local f="$ROOT/skills/quick/SKILL.md"
-  grep -q 'Q-$(date +%y%m%d%H%M)' "$f" || fail 'quick does not build the id from the time'
+  grep -q "date +%y%m%d%H%M" "$f" || fail "quick does not build the id from the time"
   grep -q -- '--size XS' "$f" || fail 'quick does not create an XS card'
   grep -q 'reference/implement.md' "$f" || fail 'quick does not follow the shared implementation steps'
   # A counter would give two people the same id on separate branches.
@@ -105,4 +105,20 @@ test_init_names_only_templates_that_exist() {
   for t in '<check>' '<base>' '<repo>' '<tag>'; do
     grep -q -F "$t" "$f" || fail "init never fills in $t"
   done
+}
+
+# A command substitution is denied by prefix permission rules in a session
+# that cannot prompt (finding 10), so skills give each command on its own.
+test_skills_do_not_use_command_substitution() {
+  local f
+  for f in $(skill_files) "$ROOT"/reference/*.md "$ROOT"/agents/*.md; do
+    ! grep -n -F '$(' "$f" || fail "$f uses a command substitution"
+  done
+}
+
+test_next_card_can_resume_a_card_in_progress() {
+  local f="$ROOT/skills/next-card/SKILL.md"
+  grep -q -i 'resume' "$f" || fail 'next-card has no way to resume an active or blocked card'
+  grep -q -i 'remove the `## Blocked` section' "$f" || fail 'next-card never removes the Blocked section'
+  grep -q -i 'remove the `## Blocked` section\|delete the `## Blocked` section' "$ROOT/reference/implement.md" || fail 'implement.md never removes the Blocked section'
 }
