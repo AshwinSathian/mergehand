@@ -3,7 +3,7 @@ id: HOOK-04
 title: Pre-compact marker
 size: XS
 depends:
-done: false
+done: true
 ---
 
 ## Read
