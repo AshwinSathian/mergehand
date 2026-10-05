@@ -60,81 +60,85 @@ enter_repo() {
 # --- configuration ---
 
 CONF_KEYS='version|check|base|cards_dir|log_dir|touch_ignore|status_max_chars|reviewer|budget\.[A-Z][A-Z0-9]*'
-CONF='version=1
-base=main
-cards_dir=cards
-log_dir=log
-budget.XS=35000
-budget.S=70000
-budget.M=100000
-touch_ignore=
-status_max_chars=6000
-reviewer=on'
+CONF=""
 
-# conf_get <key>: prints the value; fails when the key has none.
+# conf_get <key>: prints the value; fails when the key has none. Pure bash:
+# it runs many times per command and a process costs milliseconds.
 conf_get() {
-  printf '%s\n' "$CONF" | K="$1" awk '
-    BEGIN { k = ENVIRON["K"] "=" }
-    index($0, k) == 1 { v = substr($0, length(k) + 1); found = 1 }
-    END { if (!found) exit 1; print v }'
+  local line
+  while IFS= read -r line; do
+    case $line in
+      "$1="*)
+        printf '%s\n' "${line#"$1="}"
+        return 0
+        ;;
+    esac
+  done <<CONF
+$CONF
+CONF
+  return 1
 }
 
 conf_die() { die 2 "workdeck.conf: $*"; }
 
-is_number() {
-  case $1 in '' | *[!0-9]*) return 1 ;; esac
-}
-
-# A directory setting must stay inside the repository and must not look like
-# an option: it is handed to git and used to build file names.
-check_dir_setting() {
-  local key=$1 v
-  v=$(conf_get "$key")
-  case $v in
-    '' | [!A-Za-z0-9._]* | *[!A-Za-z0-9._/-]* | .. | ../* | */.. | */../*)
-      conf_die "$key must be a relative path inside the repository, got '$v'"
-      ;;
-  esac
-}
-
+# load_conf: one awk pass that applies defaults, parses and validates.
+# Directory settings must stay inside the repository and the base branch must
+# be a plain branch name, because both are handed to git and used to build
+# file names. Nothing in the file is ever evaluated.
 load_conf() {
-  local parsed err v size
+  local parsed
   parsed=$(awk -v keys="^($CONF_KEYS)\$" '
+    function bad(msg) { if (!failed) { failed = 1; print "!" msg } }
+    function dir_ok(v) { return v ~ /^[A-Za-z0-9._][A-Za-z0-9._\/-]*$/ && v !~ /(^|\/)\.\.(\/|$)/ }
+    function branch_ok(v) {
+      return v ~ /^[A-Za-z0-9_][A-Za-z0-9._\/-]*$/ && v !~ /\.\./ && v !~ /\/$/ && v !~ /\/\// && v !~ /\/\./ && v !~ /\.lock$/
+    }
+    BEGIN {
+      c["version"] = "1"; c["base"] = "main"; c["cards_dir"] = "cards"; c["log_dir"] = "log"
+      c["budget.XS"] = "35000"; c["budget.S"] = "70000"; c["budget.M"] = "100000"
+      c["touch_ignore"] = ""; c["status_max_chars"] = "6000"; c["reviewer"] = "on"
+    }
     { sub(/\r$/, "") }
     /^[ \t]*(#|$)/ { next }
     {
       i = index($0, "=")
-      if (i == 0) { printf "!%d: expected key = value\n", NR; next }
+      if (i == 0) { bad(":" NR ": expected key = value"); next }
       k = substr($0, 1, i - 1); v = substr($0, i + 1)
       gsub(/^[ \t]+|[ \t]+$/, "", k); gsub(/^[ \t]+|[ \t]+$/, "", v)
-      if (k !~ keys) { printf "!%d: unknown key\n", NR; next }
-      print k "=" v
+      if (k !~ keys) { bad(":" NR ": unknown key"); next }
+      c[k] = v
+    }
+    END {
+      if (c["version"] != "1") bad(": unsupported version \047" c["version"] "\047 (this card understands version 1)")
+      if (!dir_ok(c["cards_dir"])) bad(": cards_dir must be a relative path inside the repository")
+      if (!dir_ok(c["log_dir"])) bad(": log_dir must be a relative path inside the repository")
+      if (!branch_ok(c["base"])) bad(": base is not a valid branch name")
+      if (c["status_max_chars"] !~ /^[0-9]+$/) bad(": status_max_chars must be a number")
+      if (c["reviewer"] != "on" && c["reviewer"] != "off") bad(": reviewer must be on or off")
+      for (k in c) if (k ~ /^budget\./ && c[k] !~ /^[0-9]+$/) bad(": " k " must be a number of tokens")
+      for (k in c) print k "=" c[k]
     }' workdeck.conf)
-  err=$(printf '%s\n' "$parsed" | grep '^!' | head -1)
-  [ -z "$err" ] || die 2 "workdeck.conf:${err#!}"
-  CONF="$CONF
-$parsed"
-
-  v=$(conf_get version)
-  [ "$v" = 1 ] || conf_die "unsupported version '$v' (this card understands version 1)"
-  check_dir_setting cards_dir
-  check_dir_setting log_dir
-  v=$(conf_get base)
-  case $v in -*) conf_die "base is not a valid branch name: '$v'" ;; esac
-  g check-ref-format "refs/heads/$v" 2>/dev/null || conf_die "base is not a valid branch name: '$v'"
-  is_number "$(conf_get status_max_chars)" || conf_die "status_max_chars must be a number"
-  case $(conf_get reviewer) in on | off) ;; *) conf_die "reviewer must be on or off" ;; esac
-  for size in $(sizes); do
-    is_number "$(conf_get "budget.$size")" || conf_die "budget.$size must be a number of tokens"
-  done
-
+  case $parsed in
+    '!'* | *"
+!"*) die 2 "workdeck.conf$(printf '%s\n' "$parsed" | sed -n 's/^!//p' | head -1)" ;;
+  esac
+  CONF=$parsed
   BASE=$(conf_get base)
   CARDS_DIR=$(conf_get cards_dir)
   LOG_DIR=$(conf_get log_dir)
 }
 
 # sizes: the card sizes that have a budget, one per line.
-sizes() { printf '%s\n' "$CONF" | sed -n 's/^budget\.\([A-Z][A-Z0-9]*\)=.*/\1/p' | sort -u; }
+sizes() {
+  local line
+  while IFS= read -r line; do
+    case $line in
+      budget.*) line=${line#budget.} && printf '%s\n' "${line%%=*}" ;;
+    esac
+  done <<CONF
+$CONF
+CONF
+}
 
 need_check() { [ -n "$(conf_get check)" ] || conf_die "check is not set"; }
 
