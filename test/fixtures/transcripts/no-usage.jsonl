@@ -1,0 +1,2 @@
+{"parentUuid":"p","isSidechain":false,"type":"user","message":{"role":"user","content":"go"},"uuid":"u","sessionId":"s"}
+{"isSidechain":false,"message":{"role":"assistant","content":[{"type":"text","text":"hi"}]},"type":"assistant"}
