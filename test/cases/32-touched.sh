@@ -145,7 +145,7 @@ test_touched_bad_arguments() {
 }
 
 # Challenge: how do shell case patterns differ from what a gitignore user
-# expects? These pin the actual behavior; docs/findings.md discusses it.
+# expects? These pin the actual behavior; docs/development/findings.md discusses it.
 test_touch_pattern_directory_entry_covers_the_directory() { assert_eq match "$(verdict 'src/' src/a.ts)"; }
 test_touch_pattern_directory_entry_covers_nested_files() { assert_eq match "$(verdict 'src/' src/x/y.ts)"; }
 test_touch_pattern_directory_entry_is_not_a_prefix() { assert_eq miss "$(verdict 'src/' srcx/a.ts)"; }
@@ -170,7 +170,7 @@ test_touch_ignore_directory_entry() {
   assert_empty "$OUT" stdout
 }
 
-test_touched_reports_the_normalised_unused_entry() {
+test_touched_reports_the_normalized_unused_entry() {
   start 'src/a.ts' 'lib/'
   change src/a.ts
   card touched A-1

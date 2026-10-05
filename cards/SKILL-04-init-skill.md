@@ -7,8 +7,8 @@ done: true
 ---
 
 ## Read
-- docs/specs/2026-10-05-workdeck-0.1-design.md (section 10.1)
-- docs/plans/2026-10-05-workdeck-0.1-plan.md (step 8.4)
+- docs/design.md (section 10.1)
+- docs/development/plan-0.1.md (step 8.4)
 - templates/claude-md-section.md
 - templates/settings-permissions.json
 

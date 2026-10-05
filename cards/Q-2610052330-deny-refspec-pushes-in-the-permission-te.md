@@ -18,9 +18,9 @@ done: true
 
 ## Acceptance
 - The template denies `git push` with a colon refspec and with a second refspec after a card branch.
-- `docs/findings.md` and `docs/later.md` no longer fail the scope gate in this repository.
+- `docs/development/findings.md` and `docs/development/later.md` no longer fail the scope gate in this repository.
 
 ## Out of scope
 
 ## Notes
-- From the automated security review of the PLUG-02 commit; finding 9 in docs/findings.md.
+- From the automated security review of the PLUG-02 commit; finding 9 in docs/development/findings.md.

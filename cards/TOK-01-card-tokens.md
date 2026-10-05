@@ -7,8 +7,8 @@ done: true
 ---
 
 ## Read
-- docs/specs/2026-10-05-workdeck-0.1-design.md (section 14)
-- docs/plans/2026-10-05-workdeck-0.1-plan.md (section B, transcript shape; step 5.1)
+- docs/design.md (section 14)
+- docs/development/plan-0.1.md (section B, transcript shape; step 5.1)
 - bin/card (cmd_log_new, conf_get)
 
 ## Touch

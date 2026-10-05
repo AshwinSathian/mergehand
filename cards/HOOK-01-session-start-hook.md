@@ -7,8 +7,8 @@ done: true
 ---
 
 ## Read
-- docs/specs/2026-10-05-workdeck-0.1-design.md (sections 13 and 16)
-- docs/plans/2026-10-05-workdeck-0.1-plan.md (stage 6 preamble, step 6.1, section G items 16 and 17)
+- docs/design.md (sections 13 and 16)
+- docs/development/plan-0.1.md (stage 6 preamble, step 6.1, section G items 16 and 17)
 - bin/card (cmd_status)
 
 ## Touch
