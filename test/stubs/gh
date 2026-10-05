@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Stub gh for tests. Logs its arguments to $GH_STUB_DIR/calls, exits with the
+# number in $GH_STUB_DIR/rc if that file exists, and prints $GH_STUB_DIR/pr-list
+# for `gh pr list`.
+dir=${GH_STUB_DIR:?}
+printf '%s\n' "$*" >> "$dir/calls"
+[ -f "$dir/rc" ] && exit "$(cat "$dir/rc")"
+if [ "${1-} ${2-}" = "pr list" ] && [ -f "$dir/pr-list" ]; then
+  cat "$dir/pr-list"
+fi
+exit 0
