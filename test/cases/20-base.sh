@@ -4,17 +4,6 @@
 state_of() { printf '%s\n' "$OUT" | awk -v id="$1" '$2 == id { print $1 }'; }
 set_done() { edit "cards/$1-thing.md" 's/^done: false$/done: true/'; }
 
-test_base_done_comes_from_origin_not_local_base() {
-  new_repo; mk_conf; mk_card A-1; mk_card A-2 S A-1; commit_all; add_remote
-  set_done A-1; commit_all 'local only'
-  card list
-  assert_eq ready "$(state_of A-1)" 'unpushed done is not done'
-  assert_eq waiting "$(state_of A-2)" dependent
-  git push -q origin main
-  card list
-  assert_eq done "$(state_of A-1)" 'pushed done'
-  assert_eq ready "$(state_of A-2)" dependent
-}
 
 test_base_without_remote_uses_local_base() {
   new_repo; mk_conf; mk_card A-1; set_done A-1; commit_all
@@ -93,4 +82,58 @@ test_base_done_ignores_user_grep_config() {
   git config grep.patternType fixed; git config grep.column true; git config grep.lineNumber false
   card list
   assert_eq done "$(state_of A-1)" state
+}
+
+# done is read from both base refs: a merge made locally and not yet pushed
+# counts, and so does one fetched from the remote while local base is behind.
+test_base_done_on_local_base_counts_before_push() {
+  new_repo; mk_conf; mk_card A-1; mk_card A-2 S A-1; commit_all; add_remote
+  set_done A-1; commit_all 'merged locally, not pushed'
+  card list
+  assert_eq done "$(state_of A-1)" 'unpushed done'
+  assert_eq ready "$(state_of A-2)" dependent
+}
+
+test_base_done_on_origin_counts_when_local_base_is_behind() {
+  new_repo; mk_conf; mk_card A-1; mk_card A-2 S A-1; commit_all; add_remote
+  set_done A-1; commit_all; git push -q origin main; git reset -q --hard HEAD~1
+  card list
+  assert_eq done "$(state_of A-1)" 'done on origin only'
+  assert_eq ready "$(state_of A-2)" dependent
+}
+
+test_base_done_with_diverged_bases_is_the_union() {
+  new_repo; mk_conf; mk_card A-1; mk_card A-2; mk_card A-3 S 'A-1, A-2'; commit_all; add_remote
+  set_done A-1; commit_all; git push -q origin main; git reset -q --hard HEAD~1
+  set_done A-2; commit_all 'local only'
+  card list
+  assert_eq done "$(state_of A-1)" 'origin side'
+  assert_eq done "$(state_of A-2)" 'local side'
+  assert_eq ready "$(state_of A-3)" dependent
+}
+
+test_next_does_not_offer_a_card_merged_locally() {
+  new_repo; mk_conf; mk_card A-1; mk_card A-2; commit_all; add_remote
+  git checkout -q -b card/A-1-thing; set_done A-1; echo x > f; commit_all work
+  git checkout -q main; git merge -q --no-ff card/A-1-thing -m merge; git branch -q -d card/A-1-thing
+  card next
+  assert_eq 'A-2 S Card A-2' "$OUT" next
+}
+
+test_base_card_on_unpushed_local_base_is_not_branch_only() {
+  new_repo; mk_conf; commit_all; add_remote
+  mk_card B-1; mk_card B-2 S B-1; commit_all 'cards, not pushed'
+  git checkout -q -b card/B-1-thing; set_done B-1
+  card list
+  assert_eq active "$(state_of B-1)" 'done only in the working tree'
+  assert_eq waiting "$(state_of B-2)" dependent
+}
+
+test_base_done_tolerates_spaces_around_true() {
+  new_repo; mk_conf; mk_card A-1; mk_card A-2 S A-1
+  edit cards/A-1-thing.md 's/^done: false$/done:   true  /'; commit_all
+  card lint; assert_rc 0
+  card list
+  assert_eq done "$(state_of A-1)" state
+  assert_eq ready "$(state_of A-2)" dependent
 }
