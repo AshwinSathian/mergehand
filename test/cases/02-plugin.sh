@@ -214,3 +214,30 @@ test_nothing_claims_evals_that_do_not_exist() {
   ! git grep -n -i 'ships three plugin eval' -- docs/design.md || fail 'the design says eval cases ship'
   ! ls cards/DOC-03-* 2>/dev/null || fail 'the eval card is still in the deck'
 }
+
+test_readme_names_every_card_command() {
+  local c
+  for c in $("$BASH" "$CARD" help | awk '/^  [a-z]/ && $1 != "help," { print $1 }'); do
+    grep -q "card $c" "$ROOT/README.md" || fail "README does not mention card $c"
+  done
+  for c in version check base cards_dir log_dir budget.XS touch_ignore status_max_chars reviewer; do
+    grep -q "\`$c\`" "$ROOT/README.md" || fail "README does not document the $c setting"
+  done
+}
+
+test_readme_install_line_matches_the_manifests() {
+  local plugin market repo
+  plugin=$(sed -n 's/^  "name": "\(.*\)",$/\1/p' "$ROOT/.claude-plugin/plugin.json" | head -1)
+  market=$(sed -n 's/^  "name": "\(.*\)",$/\1/p' "$ROOT/.claude-plugin/marketplace.json" | head -1)
+  repo=$(sed -n 's|^  "repository": "https://github.com/\(.*\)",$|\1|p' "$ROOT/.claude-plugin/plugin.json")
+  grep -q "/plugin marketplace add $repo" "$ROOT/README.md" || fail "README does not add the marketplace $repo"
+  grep -q "/plugin install $plugin@$market" "$ROOT/README.md" || fail "README does not install $plugin@$market"
+  grep -q "raw.githubusercontent.com/$repo/v$("$BASH" "$CARD" version | sed 's/^card //')/bin/card" "$ROOT/README.md" || fail 'README download line does not name this version'
+}
+
+test_readme_links_resolve() {
+  local l
+  for l in $(grep -o '](\([^)#]*\)' "$ROOT/README.md" | sed 's/^](//' | grep -v '^http' | sort -u); do
+    [ -e "$ROOT/$l" ] || fail "README links to $l, which does not exist"
+  done
+}
