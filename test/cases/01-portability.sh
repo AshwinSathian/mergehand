@@ -31,3 +31,11 @@ test_shellcheck() {
   run shellcheck -x -s bash $(shipped_scripts) "$ROOT"/test/*.sh "$ROOT"/test/cases/*.sh "$ROOT"/test/stubs/*
   [ "$RC" -eq 0 ] || fail "shellcheck found problems"
 }
+
+# This repository runs on its own cards from stage 4 on.
+test_own_deck_lints() {
+  cd "$ROOT" || exit 1
+  [ -f workdeck.conf ] || fail 'workdeck.conf is missing'
+  card lint
+  assert_rc 0
+}
