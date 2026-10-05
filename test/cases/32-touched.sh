@@ -146,13 +146,34 @@ test_touched_bad_arguments() {
 
 # Challenge: how do shell case patterns differ from what a gitignore user
 # expects? These pin the actual behavior; docs/findings.md discusses it.
-test_touch_pattern_directory_entry_matches_nothing() { assert_eq miss "$(verdict 'src/' src/a.ts)"; }
+test_touch_pattern_directory_entry_covers_the_directory() { assert_eq match "$(verdict 'src/' src/a.ts)"; }
+test_touch_pattern_directory_entry_covers_nested_files() { assert_eq match "$(verdict 'src/' src/x/y.ts)"; }
+test_touch_pattern_directory_entry_is_not_a_prefix() { assert_eq miss "$(verdict 'src/' srcx/a.ts)"; }
 test_touch_pattern_star_crosses_directories() { assert_eq match "$(verdict 'src/*.ts' src/x/y.ts)"; }
 test_touch_pattern_double_star_needs_a_directory() { assert_eq miss "$(verdict '**/a.ts' a.ts)"; }
 test_touch_pattern_double_star_in_a_directory() { assert_eq match "$(verdict '**/a.ts' src/x/a.ts)"; }
-test_touch_pattern_leading_slash_matches_nothing() { assert_eq miss "$(verdict '/src/a.ts' src/a.ts)"; }
+test_touch_pattern_leading_slash_is_ignored() { assert_eq match "$(verdict '/src/a.ts' src/a.ts)"; }
+test_touch_pattern_leading_dot_slash_is_ignored() { assert_eq match "$(verdict './src/a.ts' src/a.ts)"; }
 test_touch_pattern_negation_is_literal() { assert_eq miss "$(verdict '!src/gen.ts' src/gen.ts)"; }
 test_touch_pattern_bare_extension_matches_any_depth() { assert_eq match "$(verdict '*.ts' src/x/y.ts)"; }
 test_touch_pattern_directory_star() { assert_eq match "$(verdict 'src/*' src/x/y.ts)"; }
 test_touch_pattern_bare_name_is_not_a_basename_match() { assert_eq miss "$(verdict 'a.ts' src/a.ts)"; }
 test_touch_pattern_character_class() { assert_eq match "$(verdict 'src/[ab].ts' src/b.ts)"; }
+
+test_touch_ignore_directory_entry() {
+  start 'src/a.ts'
+  mk_conf 'touch_ignore = dist/, ./gen/'
+  git add workdeck.conf; git commit -q -m conf; git checkout -q main; git merge -q card/A-1-thing; git checkout -q card/A-1-thing
+  change src/a.ts dist/x.js dist/deep/y.js gen/z.ts
+  card touched A-1
+  assert_rc 0
+  assert_empty "$OUT" stdout
+}
+
+test_touched_reports_the_normalised_unused_entry() {
+  start 'src/a.ts' 'lib/'
+  change src/a.ts
+  card touched A-1
+  assert_rc 0
+  assert_contains "$OUT" '  lib/*'
+}
