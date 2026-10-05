@@ -37,6 +37,7 @@ test_gate_lists_each_missing_line() {
   assert_rc 1
   assert_contains "$OUT" '  expired refresh token is rejected'
   assert_contains "$OUT" '  third thing happens'
+  assert_contains "$OUT" 'innermost'
   assert_not_contains "$OUT" '  refresh rotates'
 }
 
@@ -109,3 +110,24 @@ test_lang_dropped_article_is_a_false_failure() { assert_eq missing "$(gate refre
 # The gate also passes when it should not: it is a presence check on text.
 test_lang_short_line_is_a_false_pass() { assert_eq found "$(gate refresh.test.ts 'works')"; }
 test_lang_comment_is_a_false_pass() { assert_eq found "$(gate refresh.test.ts 'revokes every session on logout')"; }
+
+test_gate_heading_with_trailing_space() {
+  start 'thing works'
+  edit cards/A-1-thing.md 's/^## Tests$/## Tests  /'; edit cards/A-1-thing.md 's/^## Touch$/## Touch /'
+  card lint; assert_rc 0
+  echo 'def test_thing_works(): pass' > a.py
+  card tests A-1; assert_rc 0
+  mkdir -p src; echo x > src/thing.txt; git rm -q --cached a.py 2>/dev/null; rm -f a.py
+  card touched A-1; assert_rc 0
+}
+
+# awk would read an operand like n=0 as a variable assignment and skip the file.
+test_gate_file_named_like_an_awk_assignment() {
+  start 'thing works'
+  echo 'nothing relevant' > 'n=0'
+  card tests A-1
+  assert_rc 1
+  echo 'def test_thing_works(): pass' > 'n=0'
+  card tests A-1
+  assert_rc 0
+}

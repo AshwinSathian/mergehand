@@ -256,8 +256,9 @@ function reset() {
   file = FILENAME; opened = 0; closed = 0; crlf = 0; cur = ""; body = 0
   split("", fm); split("", seen); split("", items)
 }
-{ if (sub(/\r$/, "")) crlf = 1 }
-FNR == 1 { finish(); reset(); if ($0 == "---") opened = 1; next }
+{ cr = sub(/\r$/, "") }
+FNR == 1 { finish(); reset(); crlf = cr; if ($0 == "---") opened = 1; next }
+cr { crlf = 1 }
 opened && !closed { if ($0 == "---") closed = 1; else front_matter_line(); next }
 closed {
   body++
@@ -395,7 +396,11 @@ INDEX
 # it reads one card from stdin.
 META_AWK='
   function flush() {
-    if (file != "") print file "\t" fm["size"] "\t" substr(fm["title"], 1, 80) "\t" fm["depends"] "\t" fm["done"]
+    if (file == "") return
+    # A size is printed only when it looks like one.
+    size = fm["size"]
+    if (size != "" && (size !~ /^[A-Z][A-Z0-9]*$/ || length(size) > 8)) size = "?"
+    print file "\t" size "\t" substr(fm["title"], 1, 80) "\t" fm["depends"] "\t" fm["done"]
   }
   FNR == 1 { flush(); file = (name != "" ? name : FILENAME); split("", fm); infm = 0 }
   { sub(/\r$/, "") }
@@ -562,6 +567,7 @@ INDEX
         m = split(deps[p], d, ",")
         for (j = 1; j <= m; j++) {
           x = d[j]; gsub(/ /, "", x)
+          if (x != "" && x !~ /^[A-Z][A-Z0-9]*-[0-9]+[a-z]?$/) x = "?"
           if (x != "" && !(x in isdone)) why = why (why == "" ? "" : " ") x
         }
         if (id in isdone) state = "done"
@@ -642,7 +648,10 @@ sync_remote() {
 last_log_done() {
   local f last=""
   for f in "$LOG_DIR"/*-"$1"-[0-9]*.md; do
-    [ -f "$f" ] && last="$last$f
+    [ -f "$f" ] || continue
+    # The name is printed, so it must be a plain log name.
+    case ${f##*/} in *[!0-9A-Za-z.-]*) continue ;; esac
+    last="$last$f
 "
   done
   last=$(printf '%s' "$last" | sort -V | tail -1)
@@ -731,8 +740,10 @@ cmd_new() {
   case $title in
     *[[:cntrl:]]*) die 2 "the title has a control character or a line break" ;;
     \"* | \'*) die 2 "the title starts with a quote, which card lint rejects" ;;
+    "["* | "{"*) die 2 "the title starts with [ or {, which card lint rejects as a nested value" ;;
+    "|" | ">" | [\|\>][+-]) die 2 "the title is a multi-line marker, which card lint rejects" ;;
   esac
-  sizes | grep -qx "$size" || die 2 "size $size has no budget in workdeck.conf"
+  sizes | grep -qxF -- "$size" || die 2 "size $size has no budget in workdeck.conf"
   depends=$(printf '%s' "$depends" | tr ',' '\n' | sed 's/^ *//; s/ *$//; /^$/d')
   printf '%s\n' "$depends" | while IFS= read -r d; do
     [ -z "$d" ] || valid_id "$d" || exit 1
@@ -781,7 +792,7 @@ section_items() {
   S="$2" awk '
     BEGIN { h = "## " ENVIRON["S"] }
     { sub(/\r$/, "") }
-    /^## / { on = ($0 == h); next }
+    /^## / { t = $0; sub(/[ \t]+$/, "", t); on = (t == h); next }
     on && /^- */ { sub(/^- */, ""); if ($0 != "") print }' "$1"
 }
 
@@ -833,8 +844,10 @@ cmd_touched() {
   base_ref
   fp=$(fork_point) || exit $?
   # The text after the first space of an entry is a comment.
-  entries=$(section_items "$path" Touch | sed 's/ .*//')
-  ignore=$(conf_get touch_ignore | tr ',' '\n' | sed 's/^ *//; s/ *$//')
+  # The text after the first space of an entry is a comment. A trailing /
+  # covers the directory, and a leading / or ./ is ignored.
+  entries=$(section_items "$path" Touch | sed 's/ .*//' | sed 's|^\./||; s|^/||; s|/$|/*|; /^$/d')
+  ignore=$(conf_get touch_ignore | tr ',' '\n' | sed 's/^ *//; s/ *$//' | sed 's|^\./||; s|^/||; s|/$|/*|; /^$/d')
   files=$(changed_files "$fp")
 
   while IFS= read -r f; do
@@ -879,7 +892,8 @@ cmd_tests() {
   [ -n "$lines" ] || die 1 "$path: the Tests section has no items"
   set --
   while IFS= read -r f; do
-    [ -f "$f" ] && set -- "$@" "$f"
+    # ./ keeps awk from reading a name like n=0 as an assignment.
+    [ -f "$f" ] && set -- "$@" "./$f"
   done <<FILES
 $(changed_files "$fp")
 FILES
@@ -898,7 +912,7 @@ FILES
         else if (!(i in found)) miss = miss "  " raw[i] "\n"
       }
       if (miss == "") exit 0
-      printf "no test with this name in the files changed (rename the test, or edit the card line):\n%s", miss
+      printf "no test with this name on one line of the files changed (nested names are not joined: use the innermost name, or edit the card line):\n%s", miss
       exit 1
     }' /dev/null "$@"
 }
