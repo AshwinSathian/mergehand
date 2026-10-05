@@ -1,5 +1,6 @@
 # Checks card and log files on every pull request with the same `card`
-# command the plugin uses. card is one bash file with no dependencies.
+# command the plugin uses. card is one bash file; it needs only git and
+# standard Unix tools.
 name: workdeck
 on: pull_request
 jobs:

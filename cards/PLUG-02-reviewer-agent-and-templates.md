@@ -7,8 +7,8 @@ done: true
 ---
 
 ## Read
-- docs/specs/2026-10-05-workdeck-0.1-design.md (sections 10.1 and 12)
-- docs/plans/2026-10-05-workdeck-0.1-plan.md (step 7.2)
+- docs/design.md (sections 10.1 and 12)
+- docs/development/plan-0.1.md (step 7.2)
 - cards/REVIEW.md
 
 ## Touch

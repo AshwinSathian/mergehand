@@ -91,7 +91,7 @@ test_gate_bad_arguments() {
 # Challenge: does the gate produce false failures on real test files?
 # "found" rows are the gate working; "missing" rows are false failures, where
 # the test exists but its name is split across a nesting level or reworded.
-# docs/findings.md has the evidence table.
+# docs/development/findings.md has the evidence table.
 
 test_lang_go_function_name() { assert_eq found "$(gate refresh_test.go 'refresh rotates the token')"; }
 test_lang_go_subtest_string() { assert_eq found "$(gate refresh_test.go 'expired refresh token is rejected')"; }

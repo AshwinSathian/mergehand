@@ -7,7 +7,7 @@ done: true
 ---
 
 ## Read
-- docs/findings.md (finding 12)
+- docs/development/findings.md (finding 12)
 - skills/init/SKILL.md
 - skills/next-card/SKILL.md
 - skills/handoff/SKILL.md

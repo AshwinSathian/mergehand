@@ -7,7 +7,7 @@ done: true
 ---
 
 ## Read
-- docs/findings.md (finding 11)
+- docs/development/findings.md (finding 11)
 - bin/card (load_conf, g)
 
 ## Touch

@@ -7,14 +7,14 @@ done: true
 ---
 
 ## Read
-- docs/specs/2026-10-05-workdeck-0.1-design.md (sections 10 and 10.2)
-- docs/plans/2026-10-05-workdeck-0.1-plan.md (stage 8 preamble, step 8.1, section G items 18, 19 and 21)
+- docs/design.md (sections 10 and 10.2)
+- docs/development/plan-0.1.md (stage 8 preamble, step 8.1, section G items 18, 19 and 21)
 
 ## Touch
 - reference/implement.md (new)
 - skills/next-card/SKILL.md (new)
 - test/cases/60-skills.sh (new)
-- docs/findings.md (added during the card: finding 8 from the manual run, finding 9 from the security review)
+- docs/development/findings.md (added during the card: finding 8 from the manual run, finding 9 from the security review)
 
 ## Tests
 - skills disable model invocation
