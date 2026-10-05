@@ -856,6 +856,35 @@ FILES
     }' /dev/null "$@"
 }
 
+# --- logs ---
+
+cmd_log_new() {
+  local id outcome path size budget date n=1 file branch
+  [ "$#" -eq 2 ] || die 2 "usage: card log-new <id> <outcome>"
+  id=$1
+  outcome=$2
+  need_id "$id"
+  case $outcome in
+    done | split | blocked | review-fixes) ;;
+    *) die 2 "outcome must be done, split, blocked or review-fixes" ;;
+  esac
+  path=$(card_path "$id") || exit $?
+  size=$(fm_get "$path" size)
+  budget=$(conf_get "budget.$size") || budget=unknown
+  branch=$(g symbolic-ref -q --short HEAD) || branch=detached
+  date=$(date +%Y-%m-%d)
+  while [ -e "$LOG_DIR/$date-$id-$n.md" ]; do n=$((n + 1)); done
+  file="$LOG_DIR/$date-$id-$n.md"
+  mkdir -p "$LOG_DIR" || die 2 "cannot create $LOG_DIR"
+  {
+    printf -- '---\ncard: %s\ndate: %s\noutcome: %s\nbranch: %s\nsize: %s\nbudget_tokens: %s\n' \
+      "$id" "$date" "$outcome" "$branch" "$size" "$budget"
+    printf 'baseline_tokens: unknown\npeak_tokens: unknown\ngrowth_tokens: unknown\ncompacted: unknown\n---\n'
+    printf '\n## Done\n\n## Tests\n\n## Deviations\n\n## Follow-ups\n'
+  } > "$file" || die 2 "cannot write $file"
+  printf '%s\n' "$file"
+}
+
 # --- commands above this line ---
 
 FETCH=0
@@ -893,5 +922,6 @@ case $cmd in
   done) cmd_done "$@" ;;
   touched) cmd_touched "$@" ;;
   tests) cmd_tests "$@" ;;
+  log-new) cmd_log_new "$@" ;;
   *) die 2 "command '$cmd' is not implemented yet" ;;
 esac
