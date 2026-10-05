@@ -211,3 +211,13 @@ test_lint_log_missing_section() {
   deck; mk_log AUTH-03; edit "$L" '/^## Deviations$/d'
   lint_fails 'has no ## Deviations section' "$L"
 }
+
+test_lint_crlf_names_only_the_crlf_file() {
+  new_repo; mk_conf; mk_card A-1; mk_card A-2; mk_card A-3
+  awk '{ printf "%s\r\n", $0 }' cards/A-2-thing.md > x && mv x cards/A-2-thing.md
+  card lint
+  assert_rc 1
+  assert_contains "$ERR" 'card: cards/A-2-thing.md: has CRLF'
+  assert_not_contains "$ERR" 'A-1-thing.md'
+  assert_not_contains "$ERR" 'A-3-thing.md'
+}
