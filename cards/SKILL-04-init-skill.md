@@ -3,7 +3,7 @@ id: SKILL-04
 title: Init skill
 size: M
 depends: PLUG-02
-done: false
+done: true
 ---
 
 ## Read
