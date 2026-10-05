@@ -706,6 +706,27 @@ cmd_new() {
   printf '%s\n' "$path"
 }
 
+cmd_done() {
+  local path tmp
+  need_id "$@"
+  path=$(card_path "$1") || exit $?
+  case $(fm_get "$path" done) in
+    true) return 0 ;;
+    false) ;;
+    *) die 1 "$path: front matter has no 'done: false' line; run card lint" ;;
+  esac
+  tmp=$(mktemp) || die 2 "cannot create a temporary file"
+  # Written back with cat so the file keeps its mode.
+  awk '
+    NR == 1 && /^---\r?$/ { infm = 1; print; next }
+    infm && /^---\r?$/ { infm = 0 }
+    infm && /^done:[ \t]*false[ \t]*\r?$/ { sub(/false/, "true") }
+    { print }' "$path" > "$tmp" && cat "$tmp" > "$path"
+  rc=$?
+  rm -f "$tmp"
+  [ "$rc" -eq 0 ] || die 2 "$path: cannot write"
+}
+
 # --- commands above this line ---
 
 FETCH=0
@@ -740,5 +761,6 @@ case $cmd in
   next) cmd_next "$@" ;;
   status) cmd_status "$@" ;;
   new) cmd_new "$@" ;;
+  done) cmd_done "$@" ;;
   *) die 2 "command '$cmd' is not implemented yet" ;;
 esac
