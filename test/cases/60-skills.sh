@@ -92,3 +92,17 @@ test_handoff_runs_the_gates_in_order() {
   grep -q 'gh pr merge' "$f" && fail 'handoff mentions merging'
   return 0
 }
+
+test_init_names_only_templates_that_exist() {
+  local f="$ROOT/skills/init/SKILL.md" t n=0
+  for t in $(grep -o 'templates/[A-Za-z0-9_.-][A-Za-z0-9_.-]*' "$f" | sort -u); do
+    [ -f "$ROOT/$t" ] || fail "init names $t, which does not exist"
+    n=$((n + 1))
+  done
+  assert_eq 6 "$n" 'templates used by init'
+  grep -q -i 'does not commit\|do not commit' "$f" || fail 'init does not say that it leaves committing to the user'
+  # Every placeholder in the templates must be filled in by a step of the skill.
+  for t in '<check>' '<base>' '<repo>' '<tag>'; do
+    grep -q -F "$t" "$f" || fail "init never fills in $t"
+  done
+}
