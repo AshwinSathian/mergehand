@@ -819,6 +819,43 @@ ENTRIES
   return 1
 }
 
+# cmd_tests: the tests gate. Each Tests line and each line of the changed
+# files is lowercased and stripped to letters and digits; the line passes
+# when it is found inside any file line. A presence check, nothing more.
+cmd_tests() {
+  local path fp lines f
+  need_id "$@"
+  path=$(card_path "$1") || exit $?
+  base_ref
+  fp=$(fork_point) || exit $?
+  lines=$(section_items "$path" Tests)
+  [ -n "$lines" ] || die 1 "$path: the Tests section has no items"
+  set --
+  while IFS= read -r f; do
+    [ -f "$f" ] && set -- "$@" "$f"
+  done <<FILES
+$(changed_files "$fp")
+FILES
+  # /dev/null keeps awk from waiting on stdin when nothing changed.
+  LINES="$lines" awk '
+    function norm(s) { s = tolower(s); gsub(/[^a-z0-9]/, "", s); return s }
+    BEGIN { n = split(ENVIRON["LINES"], raw, "\n"); for (i = 1; i <= n; i++) need[i] = norm(raw[i]) }
+    {
+      h = norm($0)
+      if (h == "") next
+      for (i = 1; i <= n; i++) if (!(i in found) && need[i] != "" && index(h, need[i])) found[i] = 1
+    }
+    END {
+      for (i = 1; i <= n; i++) {
+        if (need[i] == "") miss = miss "  " raw[i] " (no letters or digits to match)\n"
+        else if (!(i in found)) miss = miss "  " raw[i] "\n"
+      }
+      if (miss == "") exit 0
+      printf "no test with this name in the files changed (rename the test, or edit the card line):\n%s", miss
+      exit 1
+    }' /dev/null "$@"
+}
+
 # --- commands above this line ---
 
 FETCH=0
@@ -855,5 +892,6 @@ case $cmd in
   new) cmd_new "$@" ;;
   done) cmd_done "$@" ;;
   touched) cmd_touched "$@" ;;
+  tests) cmd_tests "$@" ;;
   *) die 2 "command '$cmd' is not implemented yet" ;;
 esac
