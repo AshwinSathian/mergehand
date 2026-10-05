@@ -166,7 +166,7 @@ to_index() {
     if (!match(name, /^[A-Z][A-Z0-9]*-[0-9]+[a-z]?/)) next
     id = substr(name, 1, RLENGTH); rest = substr(name, RLENGTH + 1)
     if (rest == ".md" || rest ~ /^-.*\.md$/) print id "\t" $0
-  }' | sort -V
+  }' | sort -t "$TAB" -k1,1V -k2,2
 }
 
 # wt_cards: the card files in the working tree, as an index.
@@ -381,6 +381,69 @@ INDEX
   return "$rc"
 }
 
+# --- deck ---
+
+# wt_meta <file...>: "<path> <size> <title> <depends> <done>", tab-separated,
+# from the front matter of each file. Control characters are removed and the
+# title is capped, because these fields are printed into an agent's context.
+wt_meta() {
+  [ "$#" -gt 0 ] || return 0
+  awk '
+    function flush() {
+      if (file != "") print file "\t" fm["size"] "\t" substr(fm["title"], 1, 80) "\t" fm["depends"] "\t" fm["done"]
+    }
+    FNR == 1 { flush(); file = FILENAME; split("", fm); infm = 0 }
+    { sub(/\r$/, "") }
+    FNR == 1 { infm = ($0 == "---"); next }
+    infm && $0 == "---" { infm = 0; next }
+    infm {
+      i = index($0, ":")
+      if (i == 0) next
+      k = substr($0, 1, i - 1); v = substr($0, i + 1)
+      gsub(/[\001-\037\177]/, "", v); gsub(/^ +| +$/, "", v)
+      if (!(k in fm)) fm[k] = v
+    }
+    END { flush() }' "$@"
+}
+
+# deck_table: one line per card in natural id order, tab-separated:
+# "<state> <id> <size> <title> <why>". <why> lists unmet dependencies.
+deck_table() {
+  local index f
+  index=$(wt_cards)
+  set --
+  while IFS="$TAB" read -r _ f; do
+    [ -n "$f" ] && set -- "$@" "$f"
+  done <<INDEX
+$index
+INDEX
+  {
+    printf '%s\n' "$index" | awk 'NF { print "C\t" $0 }'
+    wt_meta "$@" | awk '{ print "M\t" $0 }'
+  } | awk -F '\t' '
+    $1 == "C" { if (!($2 in path)) { order[++n] = $2; path[$2] = $3 } }
+    $1 == "M" { size[$2] = $3; title[$2] = $4; deps[$2] = $5; if ($6 == "true") done[$2] = 1 }
+    END {
+      for (i = 1; i <= n; i++) if (path[order[i]] in done) isdone[order[i]] = 1
+      for (i = 1; i <= n; i++) {
+        id = order[i]; p = path[id]; why = ""
+        m = split(deps[p], d, ",")
+        for (j = 1; j <= m; j++) {
+          x = d[j]; gsub(/ /, "", x)
+          if (x != "" && !(x in isdone)) why = why (why == "" ? "" : " ") x
+        }
+        if (id in isdone) state = "done"
+        else if (why == "") state = "ready"
+        else state = "waiting"
+        print state "\t" id "\t" size[p] "\t" title[p] "\t" why
+      }
+    }'
+}
+
+cmd_list() {
+  deck_table | awk -F '\t' '{ printf "%-8s %-12s %-3s %s\n", $1, $2, $3, $4 }'
+}
+
 # --- commands above this line ---
 
 FETCH=0
@@ -411,5 +474,6 @@ case $cmd in
   conf) cmd_conf "$@" ;;
   show) cmd_show "$@" ;;
   lint) cmd_lint "$@" ;;
+  list) cmd_list "$@" ;;
   *) die 2 "command '$cmd' is not implemented yet" ;;
 esac
