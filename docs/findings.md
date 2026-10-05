@@ -185,3 +185,22 @@ A separate reviewer, told to assume the proposals above were wrong, went through
 It also found thirteen defects, nine demonstrated by running them. The ones that mattered most: three places where text from a card or a log file name reached the agent's context unfiltered (`size:`, an invalid `depends:`, the log file name); `done: true` with a trailing space passing lint but never counting as done; `cards_dir = cards/` breaking both gates; and a `-v` value with a backslash that makes gawk print a warning on every `card` call, which the macOS and mawk runs would never have shown.
 
 All are fixed in cards R-01 to R-04, each with the tests the reviewer named. Not done: a live handoff against a remote under the permission rules, because the nested sessions used for earlier manual runs draw on the owner's usage limit.
+
+## 12. Comparison with respected repositories, and a review of what waits on the maintainer (2026-10-06)
+
+Two more independent reviews. One compared every part of the repository a person meets against twelve well-regarded repositories of the same kind: Claude Code plugins, small shell tools, and task trackers for agents. The other went through everything that was waiting on the maintainer and walked a stranger's first ten minutes.
+
+The comparison's verdict was "a well-tested agent build log, not yet a product". What it rested on:
+
+- No README and no license, so the purpose could not be read and the code could not be used.
+- The central claim was not shown in the repository's own data. Every session log said `unknown` and there were no pull requests, because the cards had been driven by hand in one long session, without the plugin loaded.
+- `bin/card` carried three comments with another tool's marker, an unreachable "not implemented yet" branch and a duplicated comment line.
+- `card` had no `--version`, ignored surplus arguments (`card list --help` printed the list), and one message ended in a dangling colon.
+- The plan was written in the build agent's first person, addressed to the maintainer.
+- No `.gitattributes` for a tool that rejects CRLF, no security policy for a plugin that installs hooks, no changelog, no way stated to run the tests.
+
+The second review found where a stranger gets stuck: init leaves a dirty tree and both entry skills stop on a dirty tree; `card new` writes a card that fails lint but shows as `ready`; a card committed on the local base branch and not pushed makes the fast-forward pull fail after a squash merge; and the permission template did not allow three commands that next-card runs.
+
+Decisions taken by the maintainer: MIT license; keep the name with a line saying it is not affiliated with the Workdeck product at workdeck.com; publish privately first; keep the history and its co-author trailers; cut the plugin eval cases from 0.1; run one card through the real loop against the hosted repository before claiming the tool was built with itself.
+
+Fixed in cards S-01 to S-03 and DOC-01. The plugin eval tool was cut because it is built for skills the model chooses to invoke with a no-plugin baseline, and all four of these skills are typed by the user.

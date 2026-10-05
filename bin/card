@@ -1,28 +1,38 @@
 #!/usr/bin/env bash
 # card: the Workdeck command-line tool.
+# Version 0.1.0. https://github.com/AshwinSathian/workdeck
 #
 # One file, so people and CI can fetch it without the plugin. It must run on
-# bash 3.2 (macOS /bin/bash) with BSD or GNU awk, sed, grep and sort, plus git.
+# bash 3.2 (macOS /bin/bash) with BSD or GNU awk, sed, grep and sort (with
+# -V), git, and the usual POSIX tools (cut, tr, head, tail, mktemp, date).
 # workdeck.conf and card files are parsed as text and are never sourced or
 # evaluated.
+#
+# Reports go to stdout. Errors go to stderr and start with "card:".
+
+# No -e: most commands collect several findings before they fail, and every
+# pipeline's status is checked where it matters.
 set -u
-# ponytail: bytewise ranges and sort order everywhere; the cost is that length
-# limits count bytes, not characters. Revisit if non-ASCII titles matter.
+# Bytewise ranges and sort order everywhere. The trade-off: length limits
+# count bytes, not characters, so a non-ASCII title gets fewer than 80.
 LC_ALL=C
 export LC_ALL
 
+readonly VERSION=0.1.0
 TAB=$(printf '\t')
-
+readonly TAB
 
 usage() {
-  cat <<'USAGE'
-usage: card <command> [arguments] [--fetch]
+  cat <<USAGE
+card $VERSION: the Workdeck command-line tool
 
-  next                      print the first ready card
+usage: card <command> [arguments]
+
+  next [--fetch]            print the first ready card
   show <id>                 print one card
-  list                      one line per card: state, id, size, title
-  status                    current card, open work, next ready card
-  new <id> <title> [--size S] [--depends ids]
+  list [--fetch]            one line per card: state, id, size, title
+  status [--fetch]          current card, open work, next ready card
+  new <id> <title> [--size XS|S|M] [--depends ID,ID]
                             create a card file
   done <id>                 set done: true in the card file
   lint                      check every card and log file
@@ -32,10 +42,34 @@ usage: card <command> [arguments] [--fetch]
   log-new <id> <outcome>    create a session log entry
   stats                     growth per card size across session logs
   conf <key>                print one configuration value
+  help, version
 
 --fetch runs git fetch --prune and reads open pull requests with gh first.
-Exit codes: 0 ok, 1 a check failed, 2 usage or configuration error.
+card <command> --help prints that command's arguments.
+Reports go to stdout; errors go to stderr and start with "card:".
+Exit codes: 0 ok; 1 a check failed or nothing matched; 2 usage or
+configuration error.
 USAGE
+}
+
+# synopsis <command>: the arguments of one command.
+synopsis() {
+  case $1 in
+    next | list | status) echo "card $1 [--fetch]" ;;
+    lint | stats) echo "card $1" ;;
+    show | done | touched | tests) echo "card $1 <id>" ;;
+    new) echo 'card new <id> <title> [--size XS|S|M] [--depends ID,ID]' ;;
+    tokens) echo 'card tokens [transcript]' ;;
+    log-new) echo 'card log-new <id> <done|split|blocked|review-fixes>' ;;
+    conf) echo 'card conf <key>' ;;
+  esac
+}
+
+# usage_die <command> [reason]: a usage error for one command, exit 2.
+usage_die() {
+  [ -z "${2-}" ] || printf 'card: %s\n' "$2" >&2
+  printf 'usage: %s\n' "$(synopsis "$1")" >&2
+  exit 2
 }
 
 die() {
@@ -53,12 +87,14 @@ enter_repo() {
   local root
   root=$(g rev-parse --show-toplevel 2>/dev/null) || die 2 "not a git repository"
   cd "$root" || die 2 "cannot enter $root"
-  [ -f workdeck.conf ] || die 2 "no workdeck.conf in $root; run /workdeck:init"
+  [ -f workdeck.conf ] ||
+    die 2 "no workdeck.conf in $root; run /workdeck:init in Claude Code, or create one with a 'check = <command>' line"
 }
 
 # --- configuration ---
 
 CONF_KEYS='version|check|base|cards_dir|log_dir|touch_ignore|status_max_chars|reviewer|budget[.][A-Z][A-Z0-9]*'
+readonly CONF_KEYS
 CONF=""
 
 # conf_get <key>: prints the value; fails when the key has none. Pure bash:
@@ -110,7 +146,7 @@ load_conf() {
       c[k] = v
     }
     END {
-      if (c["version"] != "1") bad(": unsupported version \047" c["version"] "\047 (this card understands version 1)")
+      if (c["version"] != "1") bad(": unsupported version \047" c["version"] "\047 (this version of card understands version 1)")
       if (!dir_ok(c["cards_dir"])) bad(": cards_dir must be a relative path inside the repository")
       if (!dir_ok(c["log_dir"])) bad(": log_dir must be a relative path inside the repository")
       if (!branch_ok(c["base"])) bad(": base is not a valid branch name")
@@ -146,7 +182,7 @@ CONF
 need_check() { [ -n "$(conf_get check)" ] || conf_die "check is not set"; }
 
 cmd_conf() {
-  [ "$#" -eq 1 ] || die 2 "usage: card conf <key>"
+  [ "$#" -eq 1 ] || usage_die conf
   printf '%s\n' "$1" | grep -Eq "^($CONF_KEYS)\$" || die 2 "workdeck.conf has no key '$1'"
   [ "$1" != check ] || need_check
   conf_get "$1" || die 2 "workdeck.conf: no value for '$1'"
@@ -155,6 +191,7 @@ cmd_conf() {
 # --- cards ---
 
 ID_RE='^[A-Z][A-Z0-9]*-[0-9]+[a-z]?$'
+readonly ID_RE
 
 valid_id() { [[ $1 =~ $ID_RE ]]; }
 
@@ -187,13 +224,16 @@ wt_cards() {
 # card_path <id>: prints the path of the card. Exit 1 when the id is unknown
 # or used by two files.
 card_path() {
-  local id=$1 index hits
+  local id=$1 index hits same
   index=$(wt_cards)
   hits=$(printf '%s\n' "$index" | ID="$id" awk -F '\t' '$1 == ENVIRON["ID"] { print $2 }')
   case $hits in
     '')
-      die 1 "no card $id in $CARDS_DIR; cards with prefix ${id%%-*}:$(printf '%s\n' "$index" |
-        P="${id%%-*}-" awk -F '\t' 'index($1, ENVIRON["P"]) == 1 { printf " %s", $1 }')"
+      same=$(printf '%s\n' "$index" | P="${id%%-*}-" awk -F '\t' 'index($1, ENVIRON["P"]) == 1 { printf " %s", $1 }')
+      if [ -n "$same" ]; then
+        die 1 "no card $id in $CARDS_DIR; cards with prefix ${id%%-*}:$same"
+      fi
+      die 1 "no card $id in $CARDS_DIR (no cards with prefix ${id%%-*}; run 'card list')"
       ;;
     *"
 "*) die 1 "two cards have the id $id: $(printf '%s' "$hits" | tr '\n' ' '); run card lint" ;;
@@ -448,7 +488,7 @@ base_ref() {
 # per base ref for the whole deck. A card counts only when "done: true" sits
 # between a --- on line 1 and the next ---, so text in a card body cannot
 # flip it.
-# ponytail: a card file renamed between the two base refs is looked up under
+# Limitation: a card file renamed between the two base refs is looked up under
 # both names and counts under the one that says done.
 base_done() {
   local ref
@@ -512,6 +552,12 @@ has_blocked() {
   g grep -q -e '^## Blocked' "$ref" -- "$CARDS_DIR/$id.md" "$CARDS_DIR/$id-*.md" 2>/dev/null
 }
 
+# deck_table gathers everything it needs as tagged lines and joins them in one
+# awk pass. The tags: W a card file in the working tree, G a card file on a
+# base ref, D a path that is done on a base ref, M front matter of one card,
+# B an id that has a branch, K an id whose branch says Blocked, P an id with
+# an open pull request.
+#
 # deck_table: one line per card in natural id order, tab-separated:
 # "<state> <id> <size> <title> <why>". <why> lists unmet dependencies.
 # The deck is the union of the cards on the base branch and in the working
@@ -534,7 +580,7 @@ INDEX
     printf '%s\n' "$tagged"
     base_done | awk '{ print "D\t" $0 }'
     wt_meta "$@" | awk '{ print "M\t" $0 }'
-    # ponytail: one git show per card that is on base but not in the working
+    # One git show per card that is on base but not in the working
     # tree. That set is normally empty; batch with cat-file if it ever is not.
     printf '%s\n' "$tagged" | awk -F '\t' '$1 == "W" { w[$2] = 1 } $1 == "G" && !($2 in w) { print $3 }' |
       while IFS= read -r p; do
@@ -599,7 +645,10 @@ cmd_next() {
       else {
         print "no card is ready"
         for (i = 1; i <= o; i++) print "  " open[i]
-        if (held) print "active and blocked cards have a branch named card/<id>-*; deleting it releases the card. List them: git branch -a --list \047card/*\047 (card list --fetch drops stale remote refs)"
+        if (held) {
+          print "active and blocked cards have a branch named card/<id> or card/<id>-<slug>; deleting it releases the card."
+          print "List them: git branch -a --list \047card/*\047 (card list --fetch drops stale remote refs)"
+        }
       }
       exit 1
     }'
@@ -721,19 +770,19 @@ cmd_new() {
         if [ "$1" = --size ]; then size=$2; else depends=$2; fi
         shift 2
         ;;
-      --*) die 2 "unknown option $1; usage: card new <id> <title> [--size S] [--depends ids]" ;;
+      --*) usage_die new "unknown option $1" ;;
       *)
         case $have in
           0) id=$1 ;;
           1) title=$1 ;;
-          *) die 2 "usage: card new <id> <title> [--size S] [--depends ids] (quote the title)" ;;
+          *) usage_die new "too many arguments; quote the title" ;;
         esac
         have=$((have + 1))
         shift
         ;;
     esac
   done
-  [ "$have" -eq 2 ] || die 2 "usage: card new <id> <title> [--size S] [--depends ids]"
+  [ "$have" -eq 2 ] || usage_die new
   need_id "$id"
   [ -n "$title" ] || die 2 "the title is empty"
   [ "${#title}" -le 80 ] || die 2 "the title is longer than 80 characters (${#title})"
@@ -753,7 +802,12 @@ cmd_new() {
   existing=$(wt_cards | ID="$id" awk -F '\t' '$1 == ENVIRON["ID"] { print $2; exit }')
   [ -z "$existing" ] || die 1 "$existing: card $id already exists"
 
-  slug=$(printf '%s' "$title" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]\{1,\}/-/g; s/^-//' | cut -c1-40 | sed 's/-$//')
+  # At most 40 characters, cut at a word where there is one.
+  slug=$(printf '%s\n' "$title" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]\{1,\}/-/g; s/^-//; s/-$//' |
+    awk '{
+      if (length($0) > 40) { s = substr($0, 1, 41); if (!sub(/-[^-]*$/, "", s)) s = substr($0, 1, 40); $0 = s }
+      print
+    }')
   path="$CARDS_DIR/$id${slug:+-$slug}.md"
   mkdir -p "$CARDS_DIR" || die 2 "cannot create $CARDS_DIR"
   {
@@ -765,7 +819,7 @@ cmd_new() {
 }
 
 cmd_done() {
-  local path tmp
+  local path tmp rc
   need_id "$@"
   path=$(card_path "$1") || exit $?
   case $(fm_get "$path" done) in
@@ -843,7 +897,6 @@ cmd_touched() {
   path=$(card_path "$1") || exit $?
   base_ref
   fp=$(fork_point) || exit $?
-  # The text after the first space of an entry is a comment.
   # The text after the first space of an entry is a comment. A trailing /
   # covers the directory, and a leading / or ./ is ignored.
   entries=$(section_items "$path" Touch | sed 's/ .*//' | sed 's|^\./||; s|^/||; s|/$|/*|; /^$/d')
@@ -953,9 +1006,9 @@ cmd_stats() {
       s = rec["size"]
       if (s != "") {
         if (!(s in count)) extra[++nextra] = s
-        count[s]++
+        count[s]++; total++
         g = rec["growth_tokens"]
-        if (g ~ /^[0-9]+$/) val[s, ++nval[s]] = g + 0
+        if (g ~ /^[0-9]+$/) { val[s, ++nval[s]] = g + 0; measured++ }
         c = rec["compacted"]
         if (c == "true") comp[s]++
         if (c == "true" || c == "false") known[s]++
@@ -993,18 +1046,19 @@ cmd_stats() {
       printf "%-6s %8s %8s %8s %8s %9s\n", "size", "sessions", "budget", "median", "max", "compacted"
       for (i = 1; i <= n; i++) row(order[i], budget[order[i]])
       for (i = 1; i <= nextra; i++) row(extra[i], "-")
+      if (total > measured) printf "%d of %d sessions have no measurement (growth_tokens: unknown)\n", total - measured, total
     }' "$@"
 }
 
 cmd_log_new() {
   local id outcome path size budget date n=1 file branch
-  [ "$#" -eq 2 ] || die 2 "usage: card log-new <id> <outcome>"
+  [ "$#" -eq 2 ] || usage_die log-new
   id=$1
   outcome=$2
   need_id "$id"
   case $outcome in
     done | split | blocked | review-fixes) ;;
-    *) die 2 "outcome must be done, split, blocked or review-fixes" ;;
+    *) usage_die log-new "outcome must be done, split, blocked or review-fixes" ;;
   esac
   path=$(card_path "$id") || exit $?
   size=$(fm_get "$path" size)
@@ -1089,51 +1143,76 @@ branch_budget() {
 
 cmd_tokens() {
   local budget
-  [ "$#" -le 1 ] || die 2 "usage: card tokens [transcript]"
+  [ -n "${1:-${WORKDECK_TRANSCRIPT-}}" ] ||
+    printf 'card: no transcript: WORKDECK_TRANSCRIPT is not set and no path was given\n' >&2
   measure "${1:-${WORKDECK_TRANSCRIPT-}}"
   budget=$(branch_budget)
   [ -z "$budget" ] || printf 'budget %s\n' "$budget"
 }
 
-# --- commands above this line ---
+# --- main ---
 
-FETCH=0
-n=$#
-while [ "$n" -gt 0 ]; do
-  a=$1
+main() {
+  local n=$# arg cmd want
+  FETCH=0
+  while [ "$n" -gt 0 ]; do
+    arg=$1
+    shift
+    n=$((n - 1))
+    if [ "$arg" = --fetch ]; then FETCH=1; else set -- "$@" "$arg"; fi
+  done
+
+  [ "$#" -gt 0 ] || { usage >&2; exit 2; }
+  cmd=$1
   shift
-  n=$((n - 1))
-  if [ "$a" = --fetch ]; then FETCH=1; else set -- "$@" "$a"; fi
-done
+  case $cmd in
+    help | -h | --help)
+      usage
+      exit 0
+      ;;
+    version | -V | --version)
+      printf 'card %s\n' "$VERSION"
+      exit 0
+      ;;
+    next | show | list | status | new | done | lint | touched | tests | tokens | log-new | stats | conf) ;;
+    *) die 2 "unknown command '$cmd'; run 'card help'" ;;
+  esac
+  for arg in "$@"; do
+    case $arg in
+      -h | --help)
+        printf 'usage: %s\n' "$(synopsis "$cmd")"
+        exit 0
+        ;;
+    esac
+  done
 
-[ "$#" -gt 0 ] || { usage >&2; exit 2; }
-cmd=$1
-shift
-case $cmd in
-  help | -h | --help)
-    usage
-    exit 0
-    ;;
-  next | show | list | status | new | done | lint | touched | tests | tokens | log-new | stats | conf)
-    enter_repo
-    load_conf
-    ;;
-  *) die 2 "unknown command '$cmd'; run 'card help'" ;;
-esac
+  # How many arguments each command takes; new parses its own.
+  case $cmd in
+    next | list | status | lint | stats) want=0 ;;
+    show | done | touched | tests | conf) want=1 ;;
+    log-new) want=2 ;;
+    tokens) [ "$#" -le 1 ] || usage_die "$cmd"; want=$# ;;
+    new) want=$# ;;
+  esac
+  [ "$#" -eq "$want" ] || usage_die "$cmd"
 
-case $cmd in
-  conf) cmd_conf "$@" ;;
-  show) cmd_show "$@" ;;
-  lint) cmd_lint "$@" ;;
-  list) cmd_list "$@" ;;
-  next) cmd_next "$@" ;;
-  status) cmd_status "$@" ;;
-  new) cmd_new "$@" ;;
-  done) cmd_done "$@" ;;
-  touched) cmd_touched "$@" ;;
-  tests) cmd_tests "$@" ;;
-  log-new) cmd_log_new "$@" ;;
-  stats) cmd_stats "$@" ;;
-  tokens) cmd_tokens "$@" ;;
-  *) die 2 "command '$cmd' is not implemented yet" ;;
-esac
+  enter_repo
+  load_conf
+  case $cmd in
+    conf) cmd_conf "$@" ;;
+    show) cmd_show "$@" ;;
+    lint) cmd_lint ;;
+    list) cmd_list ;;
+    next) cmd_next ;;
+    status) cmd_status ;;
+    new) cmd_new "$@" ;;
+    done) cmd_done "$@" ;;
+    touched) cmd_touched "$@" ;;
+    tests) cmd_tests "$@" ;;
+    log-new) cmd_log_new "$@" ;;
+    stats) cmd_stats ;;
+    tokens) cmd_tokens "$@" ;;
+  esac
+}
+
+main "$@"

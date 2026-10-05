@@ -140,3 +140,11 @@ test_new_rejects_titles_lint_would_reject() {
   card new AUTH-03 'Fix > and | in [brackets]'
   assert_rc 0
 }
+
+test_new_slug_ends_at_a_word() {
+  new_repo; mk_conf
+  card new R-04 'Skill gaps, permission rules and spec amendments from the review'
+  assert_eq cards/R-04-skill-gaps-permission-rules-and-spec.md "$OUT" path
+  card new R-05 'Supercalifragilisticexpialidociousandthensomemore'
+  assert_eq cards/R-05-supercalifragilisticexpialidociousandthe.md "$OUT" 'one long word'
+}

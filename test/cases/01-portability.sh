@@ -47,3 +47,11 @@ test_conf_keys_pattern_has_no_backslash() {
   case $line in *\\*) fail "CONF_KEYS has a backslash: $line" ;; esac
   ! grep -n -E 'awk .*-v [a-z]+="[^"]*\\\\[^$"]' "$CARD" || fail 'a backslash escape is passed through awk -v'
 }
+
+# Comments are read by strangers: no marker from another tool, no skeleton text.
+test_card_file_carries_no_persona_markers() {
+  local f
+  for f in $(shipped_scripts); do
+    ! grep -n -i -E 'ponytail|not implemented yet|TODO|FIXME|XXX' "$f" || fail "leftover marker in $f"
+  done
+}

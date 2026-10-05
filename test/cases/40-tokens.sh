@@ -93,3 +93,10 @@ test_tokens_prints_the_budget_on_a_branch_without_slug() {
   card tokens "$TX/normal.jsonl"
   assert_contains "$OUT" 'budget 100000 M'
 }
+
+test_tokens_says_why_it_is_unknown() {
+  deck
+  card tokens
+  assert_eq unknown "$OUT" stdout
+  assert_contains "$ERR" 'card: no transcript'
+}
