@@ -129,3 +129,24 @@ LOG
 edit() {
   sed "$2" "$1" > "$1.tmp" && mv "$1.tmp" "$1"
 }
+
+# hook <name> [json]: runs hooks/<name>.sh with the JSON on stdin; sets OUT, ERR, RC.
+hook() {
+  printf '%s' "${2-}" > "$T/stdin"
+  OUT=$("$BASH" "$ROOT/hooks/$1.sh" < "$T/stdin" 2>"$T/stderr")
+  RC=$?
+  ERR=$(cat "$T/stderr")
+}
+
+# hook_input <event> [session] [transcript] [extra fields]: hook JSON in the
+# documented shape, common fields first.
+hook_input() {
+  printf '{"session_id":"%s","transcript_path":"%s","cwd":"%s","permission_mode":"default","hook_event_name":"%s"%s}' \
+    "${2:-abc-123}" "${3:-$T/transcript.jsonl}" "$PWD" "$1" "${4:+,$4}"
+}
+
+assert_silent() {
+  assert_rc 0
+  assert_empty "$OUT" stdout
+  assert_empty "$ERR" stderr
+}
