@@ -26,3 +26,14 @@ jobs:
           claude plugin validate --strict .
           claude plugin validate --strict .claude-plugin/plugin.json
           for d in agents skills; do [ ! -d "$d" ] || claude plugin validate --strict "$d"; done
+      # Ubuntu's default awk is mawk; other distributions ship gawk. They
+      # differ from each other and from the awk on macOS.
+      - name: Test with awk as mawk and as gawk
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install -y gawk mawk > /dev/null
+          for a in mawk gawk; do
+            mkdir -p "$RUNNER_TEMP/$a"
+            ln -sf "$(command -v "$a")" "$RUNNER_TEMP/$a/awk"
+            PATH="$RUNNER_TEMP/$a:$PATH" /bin/bash test/run.sh
+          done
