@@ -167,3 +167,21 @@ What went wrong: four of the reviewer's commands were denied. It called `card` b
 The reviewer now uses the bare `card` command and runs `git merge-base` and `git diff` as two commands.
 
 A baseline of 36,917 tokens with only this plugin loaded is useful to know: the spec's budgets assume a baseline near 60,000 with a typical set of plugins.
+
+## 11. Independent review of the open findings (2026-10-06)
+
+A separate reviewer, told to assume the proposals above were wrong, went through findings 1 to 8 and then looked for defects of its own in scratch repositories. Its decisions replace the "proposed fix" lines above where they differ:
+
+| Finding | Decision | What changed from the proposal |
+|---|---|---|
+| 1 tests gate | Document, and say it in the gate's message | No windowed match: it trades false failures for false passes with no evidence of the friction yet |
+| 2 Touch patterns | Normalise instead of lint | A trailing `/` now covers the directory and a leading `/` or `./` is ignored. A lint error would only report the problem and would fail decks that pass today |
+| 3 abandoned branch | One hint line in `card next` | No local/remote classification |
+| 3 unpushed local merge | `done` is read from both the local and the remote base branch | Worse than recorded: `card next` offered a card that had already been merged locally. "Local when strictly ahead" was rejected because state would flip on every fetch |
+| 6 hook timing | Document | 45 ms is under 2% of a tool round trip; all three options add an interface or state |
+| 7 validate | Document | Agreed |
+| 8 branch name | Rejected | Nothing depends on the slug, and a command the agent must choose to run is still an instruction. The real hole was a card with no slug, whose branch `card/<id>` was not recognised at all |
+
+It also found thirteen defects, nine demonstrated by running them. The ones that mattered most: three places where text from a card or a log file name reached the agent's context unfiltered (`size:`, an invalid `depends:`, the log file name); `done: true` with a trailing space passing lint but never counting as done; `cards_dir = cards/` breaking both gates; and a `-v` value with a backslash that makes gawk print a warning on every `card` call, which the macOS and mawk runs would never have shown.
+
+All are fixed in cards R-01 to R-04, each with the tests the reviewer named. Not done: a live handoff against a remote under the permission rules, because the nested sessions used for earlier manual runs draw on the owner's usage limit.

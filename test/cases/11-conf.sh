@@ -97,3 +97,25 @@ test_conf_works_from_a_subdirectory() {
   mkdir -p deep/er && cd deep/er || exit 1
   conf_is base trunk
 }
+
+test_conf_rejects_directory_forms_that_break_the_gates() {
+  local v
+  for v in 'cards/' './cards' 'cards//sub' '.' 'a/./b'; do
+    new_repo; mk_conf "cards_dir = $v"
+    conf_fails 'cards_dir'
+  done
+  new_repo; mk_conf 'cards_dir = work/cards' 'log_dir = .log'
+  card conf cards_dir; assert_rc 0
+}
+
+test_conf_rejects_equal_cards_and_log_directories() {
+  new_repo; mk_conf 'cards_dir = deck' 'log_dir = deck'
+  conf_fails 'must differ'
+}
+
+test_conf_caps_status_max_chars() {
+  new_repo; mk_conf 'status_max_chars = 10000'
+  card conf status_max_chars; assert_rc 0
+  mk_conf 'status_max_chars = 10001'; conf_fails 'status_max_chars'
+  mk_conf 'status_max_chars = 99999999999999999999'; conf_fails 'status_max_chars'
+}
