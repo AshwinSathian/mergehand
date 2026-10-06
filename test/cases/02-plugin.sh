@@ -182,6 +182,16 @@ test_plugin_manifest_names_its_repository() {
   grep -q "$(sed -n 's/^  "repository": "\(.*\)",$/\1/p' "$f")" "$CARD" || fail 'the URL in bin/card differs from plugin.json'
 }
 
+test_plugin_manifest_names_the_license() {
+  local id
+  id=$(sed -n 's/^  "license": "\(.*\)",$/\1/p' "$ROOT/.claude-plugin/plugin.json")
+  assert_eq MIT "$id" 'license in plugin.json'
+  assert_eq 'MIT License' "$(sed -n 1p "$ROOT/LICENSE")" 'first line of LICENSE'
+  grep -q '^Copyright (c) [0-9]* Ashwin Sathian$' "$ROOT/LICENSE" || fail 'LICENSE has no copyright line'
+  assert_eq "# SPDX-License-Identifier: $id" "$(sed -n 4p "$CARD")" 'line 4 of bin/card'
+  grep -q "^\[$id\](LICENSE)" "$ROOT/README.md" || fail 'README does not link the license'
+}
+
 test_example_deck_lints_and_lists() {
   mkdir "$T/ex"
   cp -R "$ROOT/examples/hello-deck/." "$T/ex/" || fail 'no example deck'
