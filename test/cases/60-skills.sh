@@ -79,7 +79,9 @@ test_quick_writes_list_items_and_lints_the_card_before_showing_it() {
   grep -q 'starts with `- `' "$f" || fail 'quick does not say that an item starts with "- "'
   a=$(grep -n '`card lint`' "$f" | head -1 | cut -d: -f1)
   b=$(grep -n 'Show the card to the user' "$f" | head -1 | cut -d: -f1)
-  [ -n "$a" ] && [ -n "$b" ] && [ "$a" -lt "$b" ] || fail 'quick does not lint the card before showing it'
+  if [ -z "$a" ] || [ -z "$b" ] || [ "$a" -ge "$b" ]; then
+    fail 'quick does not lint the card before showing it'
+  fi
 }
 
 test_handoff_runs_the_gates_in_order() {
