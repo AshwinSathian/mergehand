@@ -253,6 +253,8 @@ Restart Claude Code afterwards. If you downloaded `card` with `curl`, or use the
 
 **Context windows keep growing. Does sizing still matter?** Less, for compaction. Budgets are configuration, so raise them. The scope gate, the review by a separate agent, the pull request per card and the measured record do not depend on window size.
 
+**What does it cost in context?** About 335 tokens in every session, by the estimate `claude plugin details mergehand` gives for 0.1.1. That is the names and descriptions of the four skills and the reviewer agent. A skill's full text loads only when you run it: about 810 tokens for quick and 1,200 to 1,400 for each of the others. The reviewer's is about 880. The hooks add nothing until they print. In a Mergehand project the session-start hook adds the `card status` lines.
+
 **Why bash?** So `card` is one file with nothing to install, which CI can fetch with `curl`. The cost is no native Windows. A single binary with the same commands would remove that limit. It is not built.
 
 **Why do I have to type handoff?** It pushes a branch and opens a pull request, so a person starts it.
