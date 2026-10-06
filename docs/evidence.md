@@ -23,10 +23,10 @@ The session did not compact. What this run showed that no shell test can:
 
 - Handoff ran the check, the three gates and the reviewer, wrote the log with figures taken from the transcript, committed, pushed the branch and opened the pull request with the card, the changes, the tests, the review and the token figures in its body.
 - CI ran on the pull request and passed on macOS and Ubuntu before the merge.
-- The scope gate did its job on real work: the card needed `README.md` and `bin/card`, which it did not list, and both were added to its `Touch` list in the same pull request.
+- The scope gate failed on real work: the card needed `README.md` and `bin/card`, which it did not list, and both were added to its `Touch` list in the same pull request.
 - The reviewer found nothing that had to be fixed and left five small notes, which are in the pull request body.
 
-The baseline is 16,000 tokens higher than in the scratch run below, because this session had the maintainer's other plugins loaded as well; that is the reason budgets limit growth, not total size. The growth also includes a first attempt in the same session that the permission mode refused, so 25,982 overstates what the card alone needed. It is still three quarters of the XS budget for a card that adds a license file, which suggests the XS default is on the tight side once a session carries other plugins.
+The baseline is 16,138 tokens higher than in the scratch run below, because this session had the maintainer's other plugins loaded as well. That difference is why a budget limits growth and not total size. The growth also includes a first attempt in the same session that the permission mode refused, so 25,982 overstates what the card alone needed. It is still three quarters of the XS budget for a card that adds a license file, which suggests the XS default is on the tight side once a session carries other plugins.
 
 ## Context growth with only this plugin loaded
 
@@ -43,7 +43,7 @@ The session did not compact. This run is also what showed that the reviewer agen
 
 ## What the repository's own logs do not show
 
-Mergehand 0.1 was built card by card: each card on its own branch, through `card lint`, `card touched` and `card tests`, with a session log. But all the cards before DOC-02, and E-01 after it, were driven by hand inside one long agent session, without the plugin loaded, so their logs record `unknown` for the token fields. One session's growth does not describe any single card, and writing it into each log would have been false. `card stats` says so itself: it prints how many sessions have no measurement.
+Mergehand 0.1 was built card by card: each card on its own branch, through `card lint`, `card touched` and `card tests`, with a session log. All the cards before DOC-02, and E-01 after it, were driven by hand inside one long agent session without the plugin loaded. Their logs record `unknown` for the token fields. One session's growth does not describe any single card, and writing it into each log would have been false. `card stats` says so itself: it prints how many sessions have no measurement.
 
 Logs from sessions that run a card through the plugin carry real figures. DOC-02 is the first.
 
@@ -65,7 +65,7 @@ A project that does not use Mergehand pays 2 ms per tool call for having the plu
 
 [`examples/hello-deck/README.md`](../examples/hello-deck/README.md) shows both gates failing on a real change and what resolves each.
 
-The tests gate is a check that a name is present, nothing more. Tried on sixteen test declarations in Go, Python, TypeScript and Rust, it was right on seven, gave seven false failures (a name split across a `describe` block, a class, a module or a line break, or reworded by one small word) and passed two it should not have (a one-word line, and a name that appeared only in a comment). The table is in `development/findings.md`, finding 1, and each row is a test in `test/cases/33-tests.sh`.
+The tests gate checks only that a name is present. Tried on sixteen test declarations in Go, Python, TypeScript and Rust, it was right on seven. It gave seven false failures: a name split across a `describe` block, a class, a module or a line break, or reworded by one small word. It passed two it should not have: a one-word line, and a name that appeared only in a comment. The table is in `development/findings.md`, finding 1, and each row is a test in `test/cases/33-tests.sh`.
 
 ## Not yet shown
 

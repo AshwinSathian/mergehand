@@ -86,7 +86,7 @@ From 0.1.1, each [release](https://github.com/AshwinSathian/mergehand/releases) 
 
 In a git repository with at least one commit:
 
-1. `/mergehand:init`. It finds your check command (for example `make check` or `npm test`) and your base branch, asks you to confirm both, and writes `mergehand.conf`, `cards/REVIEW.md`, a pull request template and a short section in `CLAUDE.md`. It shows you permission entries before adding them to `.claude/settings.json`. It also offers a CI workflow that runs `card lint` on pull requests, and to enable the plugin for teammates in the project settings.
+1. `/mergehand:init`. It finds your check command (for example `make check` or `npm test`) and your base branch, asks you to confirm both, and writes `mergehand.conf`, `cards/REVIEW.md`, a pull request template and a short section in `CLAUDE.md`. It shows you permission entries before adding them to `.claude/settings.json`. It also offers a CI workflow that runs `card lint` on pull requests, and to turn the plugin on for teammates in the project settings. Each teammate still installs it once.
 2. Review what it wrote and **commit it on your base branch**. The next step stops if the working tree is dirty.
 3. `/mergehand:quick "fix the typo in the greeting"`. Claude reads the relevant code, writes a small card, and shows it to you. Say yes, and it creates a branch, writes the test, and makes it pass.
 4. `/mergehand:handoff`. Claude runs your check command, the gates and the reviewer, writes the session log, commits, pushes, and opens the pull request.
@@ -96,7 +96,7 @@ The session needs permission to edit files: in a permission mode that refuses wr
 
 With no remote, handoff stops after the commit and tells you what is left. Merge the branch yourself and delete it. With no `gh`, it stops after the push and prints the URL for opening the pull request.
 
-To plan more than one step ahead, write cards: `card new AUTH-03 "Token refresh" --size S` creates the file, you fill in its sections, commit and push it on the base branch, and `/mergehand:next-card` starts the first card that is ready.
+To plan more than one step ahead, write cards. `card new AUTH-03 "Token refresh" --size S` creates the file. Fill in its sections, then commit and push it on the base branch. `/mergehand:next-card` starts the first card that is ready.
 
 ## The loop
 
@@ -147,7 +147,7 @@ done: false
 - Revoking sessions. AUTH-04 owns it.
 ```
 
-- **Read** is what the agent reads before it plans. It says why before reading anything else.
+- **Read** is what the agent reads before it plans. To read anything the card does not list, it first says why.
 - **Touch** is the scope. Entries are shell patterns matched against the whole path: `src/auth/` covers the directory, `*.ts` matches at any depth, and a bare `refresh.ts` matches only at the repository root. `!` does not negate. Text after the first space is a comment.
 - **Tests** names the tests that must exist. Write each line as the test will be named. `refresh rotates the token` is found in `test_refresh_rotates_the_token`, `TestRefreshRotatesTheToken` and `it('refresh rotates the token')`. A name split between a `describe` block and its `it`, or a class and its method, is not joined: use the innermost name.
 - **Acceptance** is a list of statements that are true or false.
@@ -206,7 +206,7 @@ The after-tool-call hook costs about 2 ms per tool call when you are not on a ca
 
 ## Evidence
 
-[`docs/evidence.md`](docs/evidence.md) lists what has been measured and what has not. In short:
+The main results, from [`docs/evidence.md`](docs/evidence.md):
 
 - More than 300 shell tests run under bash 3.2 on macOS, and in CI on Ubuntu with `awk` as mawk and as gawk. `make test` runs them.
 - One of this repository's own cards went through the whole loop against GitHub: [pull request 1](https://github.com/AshwinSathian/mergehand/pull/1). Its session grew by 25,982 tokens against an XS budget of 35,000 and did not compact.
@@ -268,9 +268,9 @@ To ask for something or argue against one of these, [open an issue](https://gith
 
 ## How this was built
 
-By a coding agent under supervision, from a written design. The records are in this repository. The order was: a [design](docs/design.md), an adversarial review of it, a [plan](docs/development/plan-0.1.md), then the code, test first. Once `card` could run cards, the rest of the work became cards in [`cards/`](cards/), each done on its own branch, through the gates, with a log in [`log/`](log/).
+A coding agent built it under supervision, from a written design, and the records are in this repository. The order was: a [design](docs/design.md), an adversarial review of it, a [plan](docs/development/plan-0.1.md), then the code, test first. Once `card` could run cards, the rest of the work became cards in [`cards/`](cards/), each done on its own branch, through the gates, with a log in [`log/`](log/).
 
-Those cards were driven by hand in one long session, without the plugin loaded, so their logs say `unknown` for the token fields. One card, the license, was run by the maintainer through `/mergehand:next-card` and `/mergehand:handoff`, and merged as [pull request 1](https://github.com/AshwinSathian/mergehand/pull/1); its log has real figures. Of the 24 session logs for 0.1, it is the only one with a measurement. What went wrong along the way, including three independent reviews and what they overturned, is in [`docs/development/findings.md`](docs/development/findings.md).
+Those cards were driven by hand in one long session, without the plugin loaded, so their logs say `unknown` for the token fields. One card, the license, was run by the maintainer through `/mergehand:next-card` and `/mergehand:handoff`, and merged as [pull request 1](https://github.com/AshwinSathian/mergehand/pull/1). Of the 24 session logs for 0.1, its log is the only one with measured figures. What went wrong along the way, including three independent reviews and what they overturned, is in [`docs/development/findings.md`](docs/development/findings.md).
 
 ## Contributing
 
