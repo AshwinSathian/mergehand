@@ -17,10 +17,16 @@ done: true
 - README.md
 - CHANGELOG.md
 - test/cases/02-plugin.sh
+- bin/card (added during the card: a branch-only card showed as done while its pull request was open; found when this card was handed off)
+- test/cases/20-base.sh (the test for that)
+- test/cases/22-fetch.sh (the test for that)
+- docs/design.md (section 6 and 19.2 item 35 for that)
 
 ## Tests
 - plugin manifest names the license
 - evidence names the first pull request
+- base branch only card is not done after handoff
+- fetch branch only card with open pull request is review
 
 ## Acceptance
 - docs/evidence.md gives the figures from the DOC-02 session log and links pull request 1.

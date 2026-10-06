@@ -434,6 +434,7 @@ Found while building 0.1 with its own cards, and by a separate adversarial revie
 32. The three plugin eval cases were cut from 0.1. `claude plugin eval` measures skills that the model chooses to invoke, against a baseline without the plugin; all four Workdeck skills are typed by the user, so the tool would have measured a mismatch, at about eighteen billed agent runs (section 17).
 33. `card` gained `--version`, per-command `--help` and strict argument counts; a usage error prints `usage:` (section 9).
 34. The license is MIT (section 20, question 1).
+35. A card that exists only on its own branch showed as `done` as soon as handoff ran, so a quick card never showed as `review`. Seen on the first pull request opened by hand against the hosted repository. Such a card is not done while it has a branch or an open pull request (section 6).
 
 ## 20. Open questions
 

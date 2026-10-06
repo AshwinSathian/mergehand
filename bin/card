@@ -607,7 +607,10 @@ INDEX
       for (id in ids) {
         path[id] = (id in wpath) ? wpath[id] : gpath[id]
         if (id in gpath) { if (gpath[id] in bdone) isdone[id] = 1 }
-        else if (wpath[id] in wdone) isdone[id] = 1
+        # A card that is only in the working tree is done on its own word, unless
+        # it has a branch or a pull request: then done: true only means that
+        # handoff ran, and the card is not merged yet.
+        else if ((wpath[id] in wdone) && !(id in branch) && !(id in review)) isdone[id] = 1
       }
       for (id in ids) {
         p = path[id]; why = ""

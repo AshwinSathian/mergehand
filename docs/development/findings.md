@@ -231,3 +231,15 @@ Two things it showed:
 - **A refused attempt leaves no trace except in the log's prose.** The agent reported that every file write was refused by the permission mode on the first try. Nothing in Workdeck notices that a session did no work; the user ran next-card again. Worth a line in the README's quick start: the session needs permission to edit files.
 
 The baseline of 53,055 also fits the range of 53,000 to 71,000 that the design's section 19 quotes from earlier sessions, and is well above the 36,917 measured with only this plugin loaded.
+
+## 15. A card that lives only on its branch showed as done before it merged (2026-10-06)
+
+**Status:** fixed in E-01. **Evidence:** pull request 2, the first one opened by the build agent against the hosted repository.
+
+Card E-01 was created on its own branch, like every quick card. After `card done` and with its pull request open, `card list --fetch` printed `done   E-01`, and `card next` said "every card is done". The design's section 6 said a card that exists only on the current branch takes `done` from the working tree, with the quick lane in mind; it had not considered that handoff writes `done: true` on that same branch before anything merges. The effect: a quick card never showed as `review`, and a session started on its branch was told the work was finished.
+
+No test had caught it because the stub `gh` was only ever pointed at cards that were also on the base branch. It took a real pull request for a branch-only card.
+
+The fix is one condition: a card that is only in the working tree is done on its own word unless it has a branch or an open pull request. With the fix, the same command against the same pull request prints `review   E-01`.
+
+Still true, and not fixable without reading other branches: from the base branch, a quick card is invisible until its pull request merges, because its file is not there.
