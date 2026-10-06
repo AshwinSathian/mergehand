@@ -70,5 +70,6 @@ The tests gate is a check that a name is present, nothing more. Tried on sixteen
 ## Not yet shown
 
 - `/workdeck:init` end to end in a stranger's repository, including the permission entries and the CI workflow it offers.
+- The `review` state for a card that is on the base branch. It was seen for a card that exists only on its branch: with [pull request 2](https://github.com/AshwinSathian/workdeck/pull/2) open, `card list --fetch` printed `review   E-01`.
 - A handoff under exactly the permission entries that init writes. The DOC-02 session ran under the maintainer's own settings.
 - Any session that compacted.
