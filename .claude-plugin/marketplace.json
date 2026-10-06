@@ -1,6 +1,6 @@
 {
   "name": "mergehand",
-  "description": "Mergehand: run a software project as a series of cards.",
+  "description": "Mergehand: run a project as cards, one card per Claude Code session, with a scope gate, a separate review and one pull request.",
   "owner": {
     "name": "Ashwin Sathian"
   },

@@ -12,10 +12,10 @@ Mergehand is a Claude Code plugin. While it is enabled it runs four hooks, in ev
 |---|---|---|
 | `session-start.sh` | A session starts | Prints `card status` into the session and writes the transcript path and session id to `CLAUDE_ENV_FILE` |
 | `post-tool-use.sh` | After every tool call | On a `card/` branch, measures context growth and prints one warning per session |
-| `stop.sh` | A turn ends | On a `card/` branch with commits and no session log, blocks the stop once |
+| `stop.sh` | A turn ends | On a `card/` branch with commits, a clean tree and no session log, blocks the end of the turn |
 | `pre-compact.sh` | Before compaction | Writes an empty marker file under the git directory |
 
-In a repository with no `mergehand.conf`, each hook exits at once and prints nothing. No hook makes a network call. The only network access in the plugin is `card ... --fetch`, which runs `git fetch --prune` and `gh pr list`.
+In a repository with no `mergehand.conf`, each hook exits at once and prints nothing. No hook makes a network call. In `card`, the only network access is `--fetch`, which runs `git fetch --prune` and `gh pr list`. The skills also use the network when you type them: next-card and quick pull the base branch, next-card reads your open pull requests with `gh`, and handoff pushes the card branch and opens the pull request with `gh`.
 
 The `card` command is one bash file, `bin/card`. Read it before you trust it; it is written to be read.
 

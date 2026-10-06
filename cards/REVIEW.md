@@ -25,4 +25,4 @@ The reviewer checks every rule here against the diff.
 - Error messages go to stderr, start with `card:` and name the file. Reports, including what a gate found, go to stdout. A usage error prints `usage:` and the command's arguments. Exit codes: 0 ok, 1 a check failed or nothing matched, 2 usage or configuration error.
 - Each test builds its own temporary repository through `test/lib.sh` and touches neither the network nor the real `~/.claude`.
 - `bin/card` stays one file.
-- No reference to any other project.
+- No reference to any other project, except in the "How it compares" section of `README.md`.
