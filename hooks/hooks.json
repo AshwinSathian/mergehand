@@ -1,5 +1,5 @@
 {
-  "description": "Workdeck: session status, budget warning, log guard and compaction marker. Silent in projects without workdeck.conf.",
+  "description": "Mergehand: session status, budget warning, log guard and compaction marker. Silent in projects without mergehand.conf.",
   "hooks": {
     "SessionStart": [
       {

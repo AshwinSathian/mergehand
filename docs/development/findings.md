@@ -1,6 +1,6 @@
 # Findings
 
-What turned out awkward or wrong while building Workdeck 0.1 with itself, with what happened and a proposed fix. Nothing here was fixed silently: a finding stayed open until the maintainer decided.
+What turned out awkward or wrong while building Mergehand 0.1 with itself, with what happened and a proposed fix. Nothing here was fixed silently: a finding stayed open until the maintainer decided.
 
 Findings 1 to 3 and 6 answer four questions the maintainer asked before the build started: does the tests gate give false failures on real test files; does the post-tool-use hook add a noticeable delay; do shell `case` patterns surprise someone used to gitignore globs; and does deriving state from branches survive squash merges and deleted branches. Each is pinned by tests, so the evidence can be re-run.
 
@@ -100,14 +100,14 @@ Sorting `id<TAB>path` lines with `sort -V` puts `AUTH-03b` before `AUTH-03`, bec
 
 | Path | Median | 95th percentile |
 |---|---|---|
-| Not a Workdeck project | 2 ms | 2 ms |
-| Workdeck project, not on a card branch | 2 ms | 2 ms |
+| Not a Mergehand project | 2 ms | 2 ms |
+| Mergehand project, not on a card branch | 2 ms | 2 ms |
 | Card branch, already warned | 4 ms | 5 ms |
 | Card branch, under budget, 2 MB transcript | 45 ms | 51 ms |
 | Same, with a 1 MB tool result on stdin | 53 ms | 57 ms |
 | Card branch, under budget, 20 MB transcript | 127 ms | 151 ms |
 
-The first three paths start no process or one: the hook reads `.git/HEAD` itself instead of calling git, which is why a project that does not use Workdeck, or a session on `main`, pays 2 ms.
+The first three paths start no process or one: the hook reads `.git/HEAD` itself instead of calling git, which is why a project that does not use Mergehand, or a session on `main`, pays 2 ms.
 
 The fourth path is the one that matters, and the spec's "about 10 ms, so running on every tool call costs little" is off by a factor of four to five. Parsing the transcript is the small part. The rest is `card tokens` starting up: about 17 ms for each of two git calls on macOS, plus awk and sort processes to find the card's size. A session of 200 tool calls on a card branch pays about 9 seconds in total at 2 MB. Next to model latency that is not noticeable call by call.
 
@@ -116,7 +116,7 @@ The fifth and sixth rows show the two ways it gets worse: a large tool result ha
 The card for this work said to stop and report if the under-budget median passed 50 ms. It is 45 ms at 2 MB and over at 20 MB, so here are the options, none built:
 
 1. **Skip the git calls.** The hook already knows the repository root and the branch. Passing them to `card tokens` removes about 34 ms and brings the 2 MB case near 12 ms. Smallest change; adds two internal environment variables to `bin/card`.
-2. **Read only what is new.** Keep the byte offset, baseline and peak in `<git-dir>/workdeck/<session>.state` and read the transcript from that offset. Cost stops growing with session length. More code, and state that can go stale.
+2. **Read only what is new.** Keep the byte offset, baseline and peak in `<git-dir>/mergehand/<session>.state` and read the transcript from that offset. Cost stops growing with session length. More code, and state that can go stale.
 3. **Measure less often.** Run the measurement on every tenth call, or only when the transcript has grown by some amount. One line of code; a warning can arrive up to nine tool calls late.
 
 Recommendation: option 1 now if 45 ms bothers anyone, option 2 only if long sessions turn out to be common.
@@ -136,7 +136,7 @@ The marketplace entry's source is `"./"` as the spec says; validate accepts it.
 
 ## 8. The agent names the card branch from the title, not the file
 
-**Status:** decided (finding 11): `card branch` rejected. Only the `card/<id>` prefix matters, and a branch with no slug is now recognized (R-02). **Evidence:** manual run of `/workdeck:next-card` in a scratch repository (Claude Code 2.1.261, `--plugin-dir`, 9 turns).
+**Status:** decided (finding 11): `card branch` rejected. Only the `card/<id>` prefix matters, and a branch with no slug is now recognized (R-02). **Evidence:** manual run of `/mergehand:next-card` in a scratch repository (Claude Code 2.1.261, `--plugin-dir`, 9 turns).
 
 The card file was `GREET-01-fix-greeting.md` with the title "Fix the greeting". The skill said the branch is `card/` plus the file name without `.md`. The agent created `card/GREET-01-fix-the-greeting`. State still works, because it matches `card/<id>-*`, but the rule "the branch is named after the file" is an instruction, and the spec's own goal 4 says a rule a script can check should be checked by a script.
 
@@ -154,11 +154,11 @@ The permissions page is explicit that these rules match the command as written a
 
 ## 10. The full loop ran in a real session; the reviewer's commands were denied
 
-**Status:** fixed in SKILL-02. **Evidence:** manual run of `/workdeck:handoff` in the scratch repository (Claude Code 2.1.261, non-interactive, 24 turns).
+**Status:** fixed in SKILL-02. **Evidence:** manual run of `/mergehand:handoff` in the scratch repository (Claude Code 2.1.261, non-interactive, 24 turns).
 
 What the run proved, which no shell test can:
 
-- The reviewer launches under its scoped name. The session spawned one subagent for `workdeck:reviewer`. This was the open item in the plan's interface table.
+- The reviewer launches under its scoped name. The session spawned one subagent for `mergehand:reviewer`. This was the open item in the plan's interface table.
 - Measurement works end to end. The log has `baseline_tokens: 36917`, `peak_tokens: 40334`, `growth_tokens: 3417`, `compacted: false`. So the session-start hook ran, `CLAUDE_ENV_FILE` carried the transcript path and session id into the Bash tool, and `card log-new` read both.
 - The gates, `card done`, the log, the commit and the "no remote, stop here" branch all happened in order, and `card lint` passes on the result. The card shows as `active`, not `done`, because the branch has not merged.
 
@@ -203,6 +203,8 @@ The second review found where a stranger gets stuck: init leaves a dirty tree an
 
 Decisions taken by the maintainer: MIT license; keep the name with a line saying it is not affiliated with the Workdeck product at workdeck.com; publish privately first; keep the history and its co-author trailers; cut the plugin eval cases from 0.1; run one card through the real loop against the hosted repository before claiming the tool was built with itself.
 
+Note, 2026-10-06: the name decision was reversed after the release. The project was called Workdeck through version 0.1.0 and was renamed Mergehand in 0.1.1, and the line about affiliation was removed from the README. Everywhere else in these records the new name has replaced the old one.
+
 Fixed in cards S-01 to S-03 and DOC-01. The plugin eval tool was cut because it is built for skills the model chooses to invoke with a no-plugin baseline, and all four of these skills are typed by the user.
 
 ## 13. First CI runs (2026-10-06)
@@ -228,7 +230,7 @@ The maintainer ran DOC-02 with the plugin loaded against the hosted repository. 
 Two things it showed:
 
 - **The XS budget is tight in a session that carries other plugins.** Adding a license file used 74% of 35,000. Part of that is a first attempt that the permission mode refused, which stayed in the same session's transcript. Even so, a session that starts at 53,000 tokens and reads a card, a few files and a reviewer's findings does not have much room in 35,000. `card stats` exists so a project can set budgets from its own sessions; the defaults may want raising once there are more than one of these to go on.
-- **A refused attempt leaves no trace except in the log's prose.** The agent reported that every file write was refused by the permission mode on the first try. Nothing in Workdeck notices that a session did no work; the user ran next-card again. Worth a line in the README's quick start: the session needs permission to edit files.
+- **A refused attempt leaves no trace except in the log's prose.** The agent reported that every file write was refused by the permission mode on the first try. Nothing in Mergehand notices that a session did no work; the user ran next-card again. Worth a line in the README's quick start: the session needs permission to edit files.
 
 The baseline of 53,055 also fits the range of 53,000 to 71,000 that the design's section 19 quotes from earlier sessions, and is well above the 36,917 measured with only this plugin loaded.
 

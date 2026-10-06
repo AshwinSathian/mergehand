@@ -24,7 +24,7 @@ done: true
 
 ## Acceptance
 - The reviewer's tools are Read, Grep, Glob and Bash, and its body is the procedure and output format of spec section 12.
-- templates/ holds REVIEW.md, the PR template, the CLAUDE.md section, workdeck.conf, the CI workflow and the permission entries.
+- templates/ holds REVIEW.md, the PR template, the CLAUDE.md section, mergehand.conf, the CI workflow and the permission entries.
 - claude plugin validate --strict . still passes.
 
 ## Out of scope

@@ -1,6 +1,6 @@
 # Implementing a card
 
-You are on the card's branch. The card is the contract: what to read, which files to touch, which tests must exist, and what must be true at the end. These steps are shared by `/workdeck:next-card` and `/workdeck:quick`.
+You are on the card's branch. The card is the contract: what to read, which files to touch, which tests must exist, and what must be true at the end. These steps are shared by `/mergehand:next-card` and `/mergehand:quick`.
 
 1. **Read.** Read every item under `Read`, and the existing code for every path under `Touch`. Do not read further without first saying why in one line.
 
@@ -14,6 +14,6 @@ You are on the card's branch. The card is the contract: what to read, which file
 
 6. **Do not commit, push or open a pull request.** Handoff does all three after the check, the gates and the review. A commit made now leaves a clean tree with no session log, and the stop hook will block the end of every turn until one exists.
 
-7. **If a Workdeck budget warning appears,** finish the step you are on, stop, and ask the user to run `/workdeck:handoff split`.
+7. **If a Mergehand budget warning appears,** finish the step you are on, stop, and ask the user to run `/mergehand:handoff split`.
 
-8. **When the card's tests pass,** tell the user in a few lines what was done, which tests pass and anything that differs from the card. Then say that `/workdeck:handoff` is the next command, for them to type. Do not start another card in this session.
+8. **When the card's tests pass,** tell the user in a few lines what was done, which tests pass and anything that differs from the card. Then say that `/mergehand:handoff` is the next command, for them to type. Do not start another card in this session.

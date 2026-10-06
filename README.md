@@ -1,26 +1,26 @@
-# Workdeck
+# Mergehand
 
 **Run a project as a deck of cards: one card per Claude Code session, one pull request per card.**
 
-[![ci](https://github.com/AshwinSathian/workdeck/actions/workflows/ci.yml/badge.svg)](https://github.com/AshwinSathian/workdeck/actions/workflows/ci.yml)
+[![ci](https://github.com/AshwinSathian/mergehand/actions/workflows/ci.yml/badge.svg)](https://github.com/AshwinSathian/mergehand/actions/workflows/ci.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Workdeck is a plugin for [Claude Code](https://code.claude.com/docs/en/). A card is a small markdown file that describes one unit of work: what to read, which files may change, which tests must exist, and what must be true at the end. A session takes one card, implements it, passes your project's check command, gets a review from a separate agent, and opens one pull request. A person merges.
+Mergehand is a plugin for [Claude Code](https://code.claude.com/docs/en/). A card is a small markdown file that describes one unit of work: what to read, which files may change, which tests must exist, and what must be true at the end. A session takes one card, implements it, passes your project's check command, gets a review from a separate agent, and opens one pull request. A person merges.
 
 ## Why
 
 A long agent session fills its context window. Claude Code then compacts the conversation, and details from early in the session are lost. The diff also grows past what anyone will review carefully.
 
-Workdeck sizes work to fit one session. Each card has a size, each size has a budget for how much the session's context may grow, and the growth is measured from the session transcript and written into a log. The rules that a script can check are checked by a script: `card touched` fails if a file changed that the card does not list, and `card tests` fails if a test the card names does not exist. What a script cannot check goes to a reviewer agent that did not write the code.
+Mergehand sizes work to fit one session. Each card has a size, each size has a budget for how much the session's context may grow, and the growth is measured from the session transcript and written into a log. The rules that a script can check are checked by a script: `card touched` fails if a file changed that the card does not list, and `card tests` fails if a test the card names does not exist. What a script cannot check goes to a reviewer agent that did not write the code.
 
 ## The loop
 
 ```mermaid
 flowchart LR
-  A[card: ready] --> B["/workdeck:next-card"]
+  A[card: ready] --> B["/mergehand:next-card"]
   B --> C[branch card/ID-slug]
   C --> D[tests first, then code]
-  D --> E["/workdeck:handoff"]
+  D --> E["/mergehand:handoff"]
   E --> F[check command]
   F --> G[gates: lint, scope, tests]
   G --> H[reviewer agent]
@@ -43,38 +43,38 @@ You type the two skills. Everything between them is the agent working on one car
 | Git host | Any, up to the pull request. Opening the pull request uses `gh`, so GitHub |
 | Other tools | git, awk, sed, grep, sort. `gh` is optional |
 
-Workdeck 0.1 runs cards. It does not write them for you from a specification; that is planned for 0.2. You write cards by hand, or use the quick lane, which writes a small one from a sentence.
+Mergehand 0.1 runs cards. It does not write them for you from a specification; that is planned for 0.2. You write cards by hand, or use the quick lane, which writes a small one from a sentence.
 
 ## Install
 
 In Claude Code:
 
 ```
-/plugin marketplace add AshwinSathian/workdeck
-/plugin install workdeck@workdeck
+/plugin marketplace add AshwinSathian/mergehand
+/plugin install mergehand@mergehand
 ```
 
 The plugin puts `card` on the PATH of the commands Claude runs. To use `card` yourself, or in CI, download the one file:
 
 ```
-curl -fsSL https://raw.githubusercontent.com/AshwinSathian/workdeck/v0.1.0/bin/card -o card && chmod +x card
+curl -fsSL https://raw.githubusercontent.com/AshwinSathian/mergehand/v0.1.1/bin/card -o card && chmod +x card
 ```
 
 ## Quick start
 
 In a git repository with at least one commit:
 
-1. `/workdeck:init`. It finds your check command (for example `make check` or `npm test`) and your base branch, asks you to confirm both, and writes `workdeck.conf`, `cards/REVIEW.md`, a pull request template and a short section in `CLAUDE.md`. It shows you permission entries before adding them to `.claude/settings.json`.
+1. `/mergehand:init`. It finds your check command (for example `make check` or `npm test`) and your base branch, asks you to confirm both, and writes `mergehand.conf`, `cards/REVIEW.md`, a pull request template and a short section in `CLAUDE.md`. It shows you permission entries before adding them to `.claude/settings.json`.
 2. Review what it wrote and **commit it on your base branch**. The next step stops if the working tree is dirty.
-3. `/workdeck:quick "fix the typo in the greeting"`. Claude reads the relevant code, writes a small card, and shows it to you. Say yes, and it creates a branch, writes the test, and makes it pass.
-4. `/workdeck:handoff`. Claude runs your check command, the gates and the reviewer, writes the session log, commits, pushes, and opens the pull request.
+3. `/mergehand:quick "fix the typo in the greeting"`. Claude reads the relevant code, writes a small card, and shows it to you. Say yes, and it creates a branch, writes the test, and makes it pass.
+4. `/mergehand:handoff`. Claude runs your check command, the gates and the reviewer, writes the session log, commits, pushes, and opens the pull request.
 5. Merge the pull request.
 
 The session needs permission to edit files: in a permission mode that refuses writes, the agent can read the card and do nothing else.
 
 With no remote, handoff stops after the commit and tells you what is left. Merge the branch yourself and delete it. With no `gh`, it stops after the push and prints the URL for opening the pull request.
 
-To plan more than one step ahead, write cards: `card new AUTH-03 "Token refresh" --size S` creates the file, you fill in its sections, commit and push it on the base branch, and `/workdeck:next-card` starts the first card that is ready.
+To plan more than one step ahead, write cards: `card new AUTH-03 "Token refresh" --size S` creates the file, you fill in its sections, commit and push it on the base branch, and `/mergehand:next-card` starts the first card that is ready.
 
 ## A card
 
@@ -117,10 +117,10 @@ A full example with two cards, a session log and real output is in [`examples/he
 
 | You type | What happens |
 |---|---|
-| `/workdeck:init` | Sets up a repository. Asks before each choice and commits nothing |
-| `/workdeck:next-card [id]` | Updates the base branch, picks the next ready card or the one you name, creates its branch and implements it. Stops before handoff |
-| `/workdeck:quick "<description>"` | Writes an XS card from a sentence, shows it to you, then implements it |
-| `/workdeck:handoff [split]` | Check, gates, review, session log, commit, push, pull request. `split` hands off the finished part and moves the rest to a new card |
+| `/mergehand:init` | Sets up a repository. Asks before each choice and commits nothing |
+| `/mergehand:next-card [id]` | Updates the base branch, picks the next ready card or the one you name, creates its branch and implements it. Stops before handoff |
+| `/mergehand:quick "<description>"` | Writes an XS card from a sentence, shows it to you, then implements it |
+| `/mergehand:handoff [split]` | Check, gates, review, session log, commit, push, pull request. `split` hands off the finished part and moves the rest to a new card |
 
 Claude cannot start these itself. Handoff pushes a branch and opens a pull request, so a person starts it.
 
@@ -161,7 +161,7 @@ A card's branch is `card/<id>` or `card/<id>-<slug>`. Deleting the branch releas
 
 ## Configuration
 
-`workdeck.conf` is `key = value` lines. It is parsed, never run.
+`mergehand.conf` is `key = value` lines. It is parsed, never run.
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -183,12 +183,12 @@ A budget limits growth: the largest context size in the session minus its size a
 
 ## What the plugin runs
 
-Four hooks run while the plugin is enabled. In a repository with no `workdeck.conf`, each exits at once and prints nothing.
+Four hooks run while the plugin is enabled. In a repository with no `mergehand.conf`, each exits at once and prints nothing.
 
 | Hook | What it does |
 |---|---|
 | Session start | Prints `card status` into the session |
-| After each tool call | On a card branch, measures context growth. Past the card's budget it tells Claude, once, to finish the step and ask you to run `/workdeck:handoff split` |
+| After each tool call | On a card branch, measures context growth. Past the card's budget it tells Claude, once, to finish the step and ask you to run `/mergehand:handoff split` |
 | End of turn | On a card branch that has commits and no session log, stops Claude from finishing once and tells it to ask you for handoff |
 | Before compaction | Leaves a marker so the session log records that the session compacted |
 
@@ -199,7 +199,7 @@ The after-tool-call hook costs about 2 ms per tool call when you are not on a ca
 [`docs/evidence.md`](docs/evidence.md) lists what has been measured and what has not. In short:
 
 - More than 300 shell tests run under bash 3.2 on macOS, and in CI on Ubuntu with `awk` as mawk and as gawk. `make test` runs them.
-- One of this repository's own cards went through the whole loop against GitHub: [pull request 1](https://github.com/AshwinSathian/workdeck/pull/1). Its session grew by 25,982 tokens against an XS budget of 35,000 and did not compact.
+- One of this repository's own cards went through the whole loop against GitHub: [pull request 1](https://github.com/AshwinSathian/mergehand/pull/1). Its session grew by 25,982 tokens against an XS budget of 35,000 and did not compact.
 - The same loop in a scratch repository, with only this plugin loaded, grew by 3,417 tokens, from 36,917 to 40,334.
 - [`examples/hello-deck/`](examples/hello-deck/) shows both gates failing on a real change.
 
@@ -223,7 +223,7 @@ The after-tool-call hook costs about 2 ms per tool call when you are not on a ca
 
 **Why do I have to type handoff?** It pushes and opens a pull request. Those are yours to start.
 
-**How do I stop using it?** Disable or uninstall the plugin; the hooks go with it. Remove the Workdeck section from `CLAUDE.md` and the entries init added to `.claude/settings.json`. `cards/`, `log/` and `workdeck.conf` are plain files.
+**How do I stop using it?** Disable or uninstall the plugin; the hooks go with it. Remove the Mergehand section from `CLAUDE.md` and the entries init added to `.claude/settings.json`. `cards/`, `log/` and `mergehand.conf` are plain files.
 
 ## Roadmap
 
@@ -234,7 +234,7 @@ The after-tool-call hook costs about 2 ms per tool call when you are not on a ca
 
 By a coding agent under supervision, from a written design, in the open. The order was: a [design](docs/design.md), an adversarial review of it, a [plan](docs/development/plan-0.1.md), then the code, test first. Once `card` could run cards, the rest of the work became cards in [`cards/`](cards/), each done on its own branch, through the gates, with a log in [`log/`](log/).
 
-Those cards were driven by hand in one long session, without the plugin loaded, so their logs say `unknown` for the token fields. The last card of the release, the license, was run by the maintainer through `/workdeck:next-card` and `/workdeck:handoff`, and merged as [pull request 1](https://github.com/AshwinSathian/workdeck/pull/1); its log has real figures. What went wrong along the way, including three independent reviews and what they overturned, is in [`docs/development/findings.md`](docs/development/findings.md).
+Those cards were driven by hand in one long session, without the plugin loaded, so their logs say `unknown` for the token fields. The last card of the release, the license, was run by the maintainer through `/mergehand:next-card` and `/mergehand:handoff`, and merged as [pull request 1](https://github.com/AshwinSathian/mergehand/pull/1); its log has real figures. What went wrong along the way, including three independent reviews and what they overturned, is in [`docs/development/findings.md`](docs/development/findings.md).
 
 ## Contributing
 
@@ -243,5 +243,3 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md). `make test` and `make lint` are the tw
 ## License
 
 [MIT](LICENSE).
-
-Workdeck is not affiliated with the Workdeck product at workdeck.com.

@@ -24,8 +24,8 @@ done: true
 - stats leaves unknown out of the median
 
 ## Acceptance
-- card log-new writes baseline, peak and growth from WORKDECK_TRANSCRIPT, or unknown.
-- compacted is true when <git-dir>/workdeck/<session>.compacted exists, false when it does not, unknown without WORKDECK_SESSION.
+- card log-new writes baseline, peak and growth from MERGEHAND_TRANSCRIPT, or unknown.
+- compacted is true when <git-dir>/mergehand/<session>.compacted exists, false when it does not, unknown without MERGEHAND_SESSION.
 - card stats prints, per size, sessions, budget, median growth, maximum growth and the share that compacted.
 
 ## Out of scope

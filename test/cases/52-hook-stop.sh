@@ -7,7 +7,7 @@ stop() { hook stop "$(hook_input Stop abc-123 '' "\"stop_hook_active\":${1:-fals
 assert_blocked() {
   assert_rc 2
   assert_empty "$OUT" stdout
-  assert_contains "$ERR" '/workdeck:handoff'
+  assert_contains "$ERR" '/mergehand:handoff'
   assert_contains "$ERR" 'A-1'
 }
 
@@ -87,7 +87,7 @@ test_stop_exits_zero_on_bad_input_or_config() {
   deck; work
   hook stop ''; assert_silent
   hook stop 'not json'; assert_silent
-  echo 'not a setting' >> workdeck.conf; git add -A; git commit -q -m conf
+  echo 'not a setting' >> mergehand.conf; git add -A; git commit -q -m conf
   stop; assert_silent
 }
 

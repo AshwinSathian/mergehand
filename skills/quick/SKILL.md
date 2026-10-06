@@ -1,6 +1,6 @@
 ---
 name: quick
-description: Make a small change that needs no plan (a bug fix, a rename, a small addition) as an XS Workdeck card on its own branch. Keeps the check, the review and the pull request.
+description: Make a small change that needs no plan (a bug fix, a rename, a small addition) as an XS Mergehand card on its own branch. Keeps the check, the review and the pull request.
 argument-hint: "\"<description>\""
 disable-model-invocation: true
 allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/bin/card" *) Bash(card *)
@@ -38,10 +38,10 @@ Work through these steps in order. Stop where a step says stop.
 
 5. **Show the card to the user** and ask for a yes or an edit. Do not write code before the answer. If the user says no, delete the card file and stop: an untracked card left on the base branch would stop the next card from starting.
 
-6. **Create the branch.** Its name is `card/` followed by the card's file name without `.md`. Take it from the path `card new` printed, not from the title. Only the `card/<id>` prefix matters to Workdeck; the rest is for people. Run `git checkout -b <branch>`.
+6. **Create the branch.** Its name is `card/` followed by the card's file name without `.md`. Take it from the path `card new` printed, not from the title. Only the `card/<id>` prefix matters to Mergehand; the rest is for people. Run `git checkout -b <branch>`.
 
 7. **Implement.** Read `${CLAUDE_PLUGIN_ROOT}/reference/implement.md` and follow it step by step.
 
-8. **Stop at handoff.** Tell the user the change is ready and that `/workdeck:handoff` is the next command for them to type. Do not commit and do not run it.
+8. **Stop at handoff.** Tell the user the change is ready and that `/mergehand:handoff` is the next command for them to type. Do not commit and do not run it.
 
 If the work turns out larger than this, two things say so: a budget warning when the session grows past the XS budget, and the scope gate at handoff when files beyond the card changed. In either case the user decides whether to split or to write a proper card.

@@ -33,11 +33,11 @@ These are checked in review; the full list is in `cards/REVIEW.md`.
 - `bin/card` stays one file and runs on bash 3.2: no associative arrays, `mapfile`, `${var,,}` or `local -n`.
 - awk code must work in mawk, gawk and the awk on macOS: no interval expressions, no POSIX classes, no `gensub`.
 - No `sed -i`, no `grep -P`, no jq, python or node.
-- Nothing from `workdeck.conf` or a card file is ever sourced or evaluated.
-- A hook exits 0 at once without `workdeck.conf`, and exits 0 on any internal error.
+- Nothing from `mergehand.conf` or a card file is ever sourced or evaluated.
+- A hook exits 0 at once without `mergehand.conf`, and exits 0 on any internal error.
 
 ## How this repository is worked on
 
-Workdeck is developed with itself. Work is a card in `cards/`, done on a branch named `card/<id>-<slug>`, and handed off with a session log in `log/`. `card list` shows the deck. If you would rather send a plain pull request, that is fine: say what it changes and how you tested it.
+Mergehand is developed with itself. Work is a card in `cards/`, done on a branch named `card/<id>-<slug>`, and handed off with a session log in `log/`. `card list` shows the deck. If you would rather send a plain pull request, that is fine: say what it changes and how you tested it.
 
 Design notes are in `docs/`. `docs/development/findings.md` records what went wrong while building and what was decided about it.

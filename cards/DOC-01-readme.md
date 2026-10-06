@@ -21,7 +21,7 @@ done: true
 - readme links resolve
 
 ## Acceptance
-- A reader learns what Workdeck is and why in the first screen.
+- A reader learns what Mergehand is and why in the first screen.
 - The quick start works from an empty repository and leads with the quick lane.
 - Requirements and limits are stated near the top, before the reference sections.
 - Every card command and every configuration key is listed.

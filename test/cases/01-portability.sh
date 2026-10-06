@@ -35,7 +35,7 @@ test_shellcheck() {
 # This repository runs on its own cards from stage 4 on.
 test_own_deck_lints() {
   cd "$ROOT" || exit 1
-  [ -f workdeck.conf ] || fail 'workdeck.conf is missing'
+  [ -f mergehand.conf ] || fail 'mergehand.conf is missing'
   card lint
   assert_rc 0
 }

@@ -17,7 +17,7 @@ growth 84300' "$OUT" figures
 
 test_tokens_defaults_to_the_session_transcript() {
   deck
-  WORKDECK_TRANSCRIPT="$TX/normal.jsonl" card tokens
+  MERGEHAND_TRANSCRIPT="$TX/normal.jsonl" card tokens
   assert_rc 0
   assert_contains "$OUT" 'growth 84300'
 }

@@ -26,7 +26,7 @@ done: true
 - stop passes with a dirty tree
 
 ## Acceptance
-- Exit 2 with a message naming /workdeck:handoff only when the branch has commits, the tree is clean and no log for this card was added on the branch.
+- Exit 2 with a message naming /mergehand:handoff only when the branch has commits, the tree is clean and no log for this card was added on the branch.
 - A log for a different card does not satisfy the guard.
 - Every other path, including malformed input, exits 0.
 

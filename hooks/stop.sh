@@ -5,7 +5,7 @@
 # including every failure, is exit 0.
 
 root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
-[ -f "$root/workdeck.conf" ] || exit 0
+[ -f "$root/mergehand.conf" ] || exit 0
 
 input=$(cat)
 # Only act on input we recognize, and never twice in a row: stop_hook_active
@@ -37,7 +37,7 @@ ahead=$(git rev-list --count HEAD --not "$@" 2>/dev/null) || exit 0
 added=$(git -c core.quotepath=off log --no-renames --diff-filter=A --name-only --format= HEAD --not "$@" -- "$log_dir" 2>/dev/null) || exit 0
 printf '%s\n' "$added" | grep -Eq "^$log_dir/[0-9]{4}-[0-9]{2}-[0-9]{2}-$id-[0-9]+\.md\$" && exit 0
 
-printf 'Workdeck: card %s has commits on this branch and no session log.\n' "$id" >&2
-printf 'Tell the user the work is ready and ask them to run /workdeck:handoff.\n' >&2
+printf 'Mergehand: card %s has commits on this branch and no session log.\n' "$id" >&2
+printf 'Tell the user the work is ready and ask them to run /mergehand:handoff.\n' >&2
 printf 'If the session is waiting on a person instead, add a "## Blocked" section with the question to the card, run "card log-new %s blocked", fill it in and commit.\n' "$id" >&2
 exit 2
