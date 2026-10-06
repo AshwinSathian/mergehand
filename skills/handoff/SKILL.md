@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: Finish the current Workdeck card. Runs the check and the mechanical gates, gets an independent review, writes the session log, commits, pushes the branch and opens the pull request. A person merges.
+description: Finish the current Mergehand card. Runs the check and the mechanical gates, gets an independent review, writes the session log, commits, pushes the branch and opens the pull request. A person merges.
 argument-hint: "[split]"
 disable-model-invocation: true
 allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/bin/card" *) Bash(card *)
@@ -29,7 +29,7 @@ Work through the steps in order. Each gate must pass before the next step starts
 
    After any fix, run the check and the gates again from the top.
 
-3. **Review.** Run `card show <id>` and `card conf reviewer`. Skip this step only when the card's size is `XS` and reviewer is `off`. Otherwise launch the `workdeck:reviewer` subagent with this prompt: `Card <id>, base branch <base>.` Wait for its findings. Fix every `must-fix` finding, then run the check and the gates again. For each `should-fix` finding you do not fix, keep the finding and your reason for the pull request body.
+3. **Review.** Run `card show <id>` and `card conf reviewer`. Skip this step only when the card's size is `XS` and reviewer is `off`. Otherwise launch the `mergehand:reviewer` subagent with this prompt: `Card <id>, base branch <base>.` Wait for its findings. Fix every `must-fix` finding, then run the check and the gates again. For each `should-fix` finding you do not fix, keep the finding and your reason for the pull request body.
 
 4. **Split mode only.** Create the remainder card: `card new <id>b "<title of what remains>" --size <size> --depends <id>` (if `<id>` already ends in a letter, use the next letter). Move the unfinished `Touch`, `Tests` and `Acceptance` items into it. Edit the current card so its `Acceptance` and `Tests` describe only what is done. Run `card lint`.
 

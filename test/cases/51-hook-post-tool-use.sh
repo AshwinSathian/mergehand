@@ -20,21 +20,21 @@ test_post_tool_use_is_silent_off_a_card_branch() {
   ptu; assert_silent
   git checkout -q --detach
   ptu; assert_silent
-  assert_no_file .git/workdeck
+  assert_no_file .git/mergehand
 }
 
 test_post_tool_use_is_silent_under_budget() {
   deck M
   ptu; assert_silent
-  assert_no_file .git/workdeck/abc-123.warned
+  assert_no_file .git/mergehand/abc-123.warned
 }
 
 test_post_tool_use_warns_once_over_budget() {
   deck S
   ptu
   assert_rc 0
-  assert_eq '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"Workdeck: this session has grown by 84300 tokens, past the 70000-token budget of a size S card. Finish the current step, then stop and ask the user to run /workdeck:handoff split."}}' "$OUT" json
-  assert_file .git/workdeck/abc-123.warned
+  assert_eq '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"Mergehand: this session has grown by 84300 tokens, past the 70000-token budget of a size S card. Finish the current step, then stop and ask the user to run /mergehand:handoff split."}}' "$OUT" json
+  assert_file .git/mergehand/abc-123.warned
   ptu; assert_silent
   ptu normal.jsonl another-session
   assert_contains "$OUT" 'additionalContext'
@@ -42,9 +42,9 @@ test_post_tool_use_warns_once_over_budget() {
 
 test_post_tool_use_ignores_subagent_calls() {
   deck S
-  ptu normal.jsonl abc-123 '"agent_id":"agent-7","agent_type":"workdeck:reviewer"'
+  ptu normal.jsonl abc-123 '"agent_id":"agent-7","agent_type":"mergehand:reviewer"'
   assert_silent
-  assert_no_file .git/workdeck/abc-123.warned
+  assert_no_file .git/mergehand/abc-123.warned
   ptu
   assert_contains "$OUT" 'additionalContext'
 }
@@ -56,7 +56,7 @@ test_post_tool_use_is_silent_when_tokens_are_unknown() {
   hook post-tool-use 'not json'; assert_silent
   hook post-tool-use ''; assert_silent
   ptu normal.jsonl '../../escape'; assert_silent
-  assert_no_file .git/workdeck
+  assert_no_file .git/mergehand
 }
 
 test_post_tool_use_is_silent_when_the_branch_has_no_card() {
@@ -65,7 +65,7 @@ test_post_tool_use_is_silent_when_the_branch_has_no_card() {
 }
 
 test_post_tool_use_survives_a_broken_config() {
-  deck S; echo 'not a setting' >> workdeck.conf
+  deck S; echo 'not a setting' >> mergehand.conf
   ptu; assert_silent
 }
 
@@ -82,12 +82,12 @@ test_post_tool_use_in_a_linked_worktree() {
   cd "$T/wt" || exit 1
   ptu
   assert_contains "$OUT" 'additionalContext'
-  assert_file "$T/repo/.git/worktrees/wt/workdeck/abc-123.warned"
-  assert_no_file "$T/repo/.git/workdeck"
+  assert_file "$T/repo/.git/worktrees/wt/mergehand/abc-123.warned"
+  assert_no_file "$T/repo/.git/mergehand"
 }
 
 test_post_tool_use_marker_failure_never_repeats_the_warning() {
   deck S
-  : > .git/workdeck
+  : > .git/mergehand
   ptu; assert_silent
 }

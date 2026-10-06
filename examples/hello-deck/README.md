@@ -1,9 +1,9 @@
 # hello-deck: a two-card example
 
-A tiny project set up the way `/workdeck:init` leaves one, with two cards. The first is done and has a session log; the second is ready. Copy the directory somewhere, run `git init` and commit, and every command below gives the output shown.
+A tiny project set up the way `/mergehand:init` leaves one, with two cards. The first is done and has a session log; the second is ready. Copy the directory somewhere, run `git init` and commit, and every command below gives the output shown.
 
 ```
-workdeck.conf                        check = sh test.sh, base = main
+mergehand.conf                        check = sh test.sh, base = main
 cards/GREET-01-fix-the-greeting.md   done
 cards/GREET-02-add-a-farewell.md     ready, depends on GREET-01
 log/2026-10-05-GREET-01-1.md         the session that did GREET-01
@@ -29,7 +29,7 @@ GREET-02 XS Add a farewell
 
 ## A session log
 
-`log/2026-10-05-GREET-01-1.md` was written at handoff. The token fields are filled in by `card log-new` from the session transcript, not by the agent. These figures are from a real run of this card through `/workdeck:next-card` and `/workdeck:handoff`: the session started at 36,917 tokens of context and peaked at 40,334, so it grew by 3,417 against an XS budget of 35,000.
+`log/2026-10-05-GREET-01-1.md` was written at handoff. The token fields are filled in by `card log-new` from the session transcript, not by the agent. These figures are from a real run of this card through `/mergehand:next-card` and `/mergehand:handoff`: the session started at 36,917 tokens of context and peaked at 40,334, so it grew by 3,417 against an XS budget of 35,000.
 
 ```
 $ card stats
@@ -51,7 +51,7 @@ echo '# also tidied' >> test.sh
 
 ```
 $ card status
-Workdeck: on card/GREET-02-add-a-farewell: GREET-02 XS Add a farewell (active)
+Mergehand: on card/GREET-02-add-a-farewell: GREET-02 XS Add a farewell (active)
 In progress:
   active   GREET-02     XS  Add a farewell
 Next ready: none

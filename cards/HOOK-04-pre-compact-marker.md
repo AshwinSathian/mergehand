@@ -21,7 +21,7 @@ done: true
 - pre compact rejects a hostile session id
 
 ## Acceptance
-- With a config, <git-dir>/workdeck/<session>.compacted exists after the hook runs; nothing is printed.
+- With a config, <git-dir>/mergehand/<session>.compacted exists after the hook runs; nothing is printed.
 - The hook never blocks compaction.
 
 ## Out of scope

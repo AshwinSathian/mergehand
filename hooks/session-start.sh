@@ -3,11 +3,11 @@
 # transcript path to later Bash tool commands through CLAUDE_ENV_FILE.
 #
 # Plugin hooks run in every project where the plugin is enabled, so the first
-# action is to leave silently when this is not a Workdeck project. Every
+# action is to leave silently when this is not a Mergehand project. Every
 # other failure also ends in exit 0: a broken hook must not block a session.
 
 root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
-[ -f "$root/workdeck.conf" ] || exit 0
+[ -f "$root/mergehand.conf" ] || exit 0
 
 input=$(cat)
 card=$(dirname "$0")/../bin/card
@@ -23,10 +23,10 @@ if [ -n "${CLAUDE_ENV_FILE-}" ]; then
   {
     # Single-quoted so the file can be sourced whatever the path contains.
     [ -z "$transcript" ] ||
-      printf "export WORKDECK_TRANSCRIPT='%s'\n" "$(printf '%s' "$transcript" | sed "s/'/'\\\\''/g")"
+      printf "export MERGEHAND_TRANSCRIPT='%s'\n" "$(printf '%s' "$transcript" | sed "s/'/'\\\\''/g")"
     case $session in
       '' | *[!A-Za-z0-9_-]*) ;;
-      *) printf "export WORKDECK_SESSION='%s'\n" "$session" ;;
+      *) printf "export MERGEHAND_SESSION='%s'\n" "$session" ;;
     esac
   } >> "$CLAUDE_ENV_FILE" 2>/dev/null
 fi

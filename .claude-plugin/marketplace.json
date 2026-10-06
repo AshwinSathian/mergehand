@@ -1,12 +1,12 @@
 {
-  "name": "workdeck",
-  "description": "Workdeck: run a software project as a series of cards.",
+  "name": "mergehand",
+  "description": "Mergehand: run a software project as a series of cards.",
   "owner": {
     "name": "Ashwin Sathian"
   },
   "plugins": [
     {
-      "name": "workdeck",
+      "name": "mergehand",
       "source": "./",
       "description": "Cards, a card command, hooks, a reviewer agent and the skills that run the loop."
     }

@@ -31,7 +31,7 @@ test_session_start_exports_transcript_and_session() {
   hook session-start "$(hook_input SessionStart abc-123 "$T/t.jsonl")"
   assert_rc 0
   assert_contains "$(cat "$T/env")" 'export KEEP=1'
-  assert_eq "$T/t.jsonl|abc-123|1" "$(. "$T/env"; echo "$WORKDECK_TRANSCRIPT|$WORKDECK_SESSION|$KEEP")" 'sourced values'
+  assert_eq "$T/t.jsonl|abc-123|1" "$(. "$T/env"; echo "$MERGEHAND_TRANSCRIPT|$MERGEHAND_SESSION|$KEEP")" 'sourced values'
 }
 
 test_session_start_writes_hostile_values_literally() {
@@ -40,7 +40,7 @@ test_session_start_writes_hostile_values_literally() {
   local p="$T/it's \$(touch pwned) \`touch pwned2\`; touch pwned3.jsonl"
   hook session-start "$(hook_input SessionStart 'x; touch pwned4' "$p")"
   assert_rc 0
-  assert_eq "$p|unset" "$(. "$T/env"; echo "$WORKDECK_TRANSCRIPT|${WORKDECK_SESSION-unset}")" 'sourced values'
+  assert_eq "$p|unset" "$(. "$T/env"; echo "$MERGEHAND_TRANSCRIPT|${MERGEHAND_SESSION-unset}")" 'sourced values'
   assert_no_file pwned; assert_no_file pwned2; assert_no_file pwned3; assert_no_file pwned4
 }
 
@@ -55,7 +55,7 @@ test_session_start_without_env_file_still_prints_status() {
 }
 
 test_session_start_survives_a_broken_config() {
-  deck; echo 'this is not a setting' >> workdeck.conf
+  deck; echo 'this is not a setting' >> mergehand.conf
   hook session-start "$(hook_input SessionStart)"; assert_silent
   mk_conf 'base = nosuchbranch'
   hook session-start "$(hook_input SessionStart)"; assert_silent

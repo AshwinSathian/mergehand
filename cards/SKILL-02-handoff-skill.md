@@ -22,7 +22,7 @@ done: true
 
 ## Acceptance
 - The eight steps of spec section 10.3, with card lint, card touched and card tests in that order.
-- The manual run confirms the reviewer launches as workdeck:reviewer, or records a finding.
+- The manual run confirms the reviewer launches as mergehand:reviewer, or records a finding.
 - Without gh the skill stops after the push and prints the URL.
 
 ## Out of scope

@@ -6,14 +6,14 @@
 # enabled, so the common exits start no process at all: the project check and
 # the branch check read files directly. Any failure ends in exit 0.
 
-# 1. Not a Workdeck project: leave. The repository root is the nearest
-#    directory with a .git entry; workdeck.conf must sit beside it.
+# 1. Not a Mergehand project: leave. The repository root is the nearest
+#    directory with a .git entry; mergehand.conf must sit beside it.
 d=$PWD
 while [ ! -e "$d/.git" ]; do
   d=${d%/*}
   [ -n "$d" ] || exit 0
 done
-[ -f "$d/workdeck.conf" ] || exit 0
+[ -f "$d/mergehand.conf" ] || exit 0
 
 # 2. Not on a card branch: leave. In a linked worktree .git is a file that
 #    names the real git directory.
@@ -46,7 +46,7 @@ $(grep -o -E '"(session_id|transcript_path|agent_id)":"[^"]*"' 2>/dev/null)
 FIELDS
 [ -z "$agent" ] || exit 0
 case $session in '' | *[!A-Za-z0-9_-]*) exit 0 ;; esac
-marker=$gitdir/workdeck/$session.warned
+marker=$gitdir/mergehand/$session.warned
 [ ! -e "$marker" ] || exit 0
 
 # 4. Measure growth against the card's budget.
@@ -65,7 +65,7 @@ case $budget in '' | *[!0-9]*) exit 0 ;; esac
 
 # The marker goes down before the warning is printed: a failure here can lose
 # the warning, but can never repeat it on every tool call.
-mkdir -p "$gitdir/workdeck" 2>/dev/null && : 2>/dev/null > "$marker" || exit 0
-printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"Workdeck: this session has grown by %s tokens, past the %s-token budget of a size %s card. Finish the current step, then stop and ask the user to run /workdeck:handoff split."}}\n' \
+mkdir -p "$gitdir/mergehand" 2>/dev/null && : 2>/dev/null > "$marker" || exit 0
+printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"Mergehand: this session has grown by %s tokens, past the %s-token budget of a size %s card. Finish the current step, then stop and ask the user to run /mergehand:handoff split."}}\n' \
   "$growth" "$budget" "$size"
 exit 0

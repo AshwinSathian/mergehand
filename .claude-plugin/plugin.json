@@ -1,14 +1,14 @@
 {
-  "name": "workdeck",
-  "displayName": "Workdeck",
-  "version": "0.1.0",
+  "name": "mergehand",
+  "displayName": "Mergehand",
+  "version": "0.1.1",
   "description": "Run a software project as a series of cards: one card per agent session, each with a check, a separate review and one pull request.",
   "author": {
     "name": "Ashwin Sathian",
     "url": "https://github.com/AshwinSathian"
   },
-  "homepage": "https://github.com/AshwinSathian/workdeck",
-  "repository": "https://github.com/AshwinSathian/workdeck",
+  "homepage": "https://github.com/AshwinSathian/mergehand",
+  "repository": "https://github.com/AshwinSathian/mergehand",
   "license": "MIT",
   "keywords": ["workflow", "task-management", "code-review", "pull-requests", "context-budget", "hooks"]
 }

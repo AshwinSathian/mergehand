@@ -27,7 +27,7 @@ test_lint_empty_deck_passes() {
 }
 
 test_lint_needs_check() {
-  deck; echo 'base = main' > workdeck.conf
+  deck; echo 'base = main' > mergehand.conf
   card lint
   assert_rc 2
   assert_contains "$ERR" 'check is not set'

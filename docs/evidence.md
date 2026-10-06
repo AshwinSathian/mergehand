@@ -10,7 +10,7 @@ One case, `test_runner_reports_failure`, checks that the test runner itself repo
 
 ## A card through the whole loop, against the hosted repository
 
-Card DOC-02 (add the license, size XS) was run by the maintainer with the plugin loaded: `/workdeck:next-card DOC-02`, then `/workdeck:handoff`. The result is [pull request 1](https://github.com/AshwinSathian/workdeck/pull/1) and the log `log/2026-10-06-DOC-02-1.md`.
+Card DOC-02 (add the license, size XS) was run by the maintainer with the plugin loaded: `/mergehand:next-card DOC-02`, then `/mergehand:handoff`. The result is [pull request 1](https://github.com/AshwinSathian/mergehand/pull/1) and the log `log/2026-10-06-DOC-02-1.md`.
 
 | | Tokens |
 |---|---|
@@ -30,7 +30,7 @@ Two things to read these figures with. The baseline is 16,000 tokens higher than
 
 ## Context growth with only this plugin loaded
 
-Before that, the card in `examples/hello-deck/` was run through `/workdeck:next-card` and `/workdeck:handoff` in a scratch repository with only this plugin loaded:
+Before that, the card in `examples/hello-deck/` was run through `/mergehand:next-card` and `/mergehand:handoff` in a scratch repository with only this plugin loaded:
 
 | | Tokens |
 |---|---|
@@ -43,7 +43,7 @@ The session did not compact. This run is also what showed that the reviewer agen
 
 ## What the repository's own logs do not show
 
-Workdeck 0.1 was built card by card: each card on its own branch, through `card lint`, `card touched` and `card tests`, with a session log. But all the cards before DOC-02 were driven by hand inside one long agent session, without the plugin loaded, so their logs record `unknown` for the token fields. One session's growth does not describe any single card, and writing it into each log would have been false. `card stats` says so itself: it prints how many sessions have no measurement.
+Mergehand 0.1 was built card by card: each card on its own branch, through `card lint`, `card touched` and `card tests`, with a session log. But all the cards before DOC-02 were driven by hand inside one long agent session, without the plugin loaded, so their logs record `unknown` for the token fields. One session's growth does not describe any single card, and writing it into each log would have been false. `card stats` says so itself: it prints how many sessions have no measurement.
 
 Logs from sessions that run a card through the plugin carry real figures. DOC-02 is the first.
 
@@ -53,13 +53,13 @@ Logs from sessions that run a card through the plugin carry real figures. DOC-02
 
 | Path | Median | 95th percentile |
 |---|---|---|
-| Not a Workdeck project | 2 ms | 2 ms |
-| Workdeck project, not on a card branch | 2 ms | 2 ms |
+| Not a Mergehand project | 2 ms | 2 ms |
+| Mergehand project, not on a card branch | 2 ms | 2 ms |
 | Card branch, warning already given | 4 ms | 5 ms |
 | Card branch, under budget, 2 MB transcript | 45 ms | 51 ms |
 | Card branch, under budget, 20 MB transcript | 127 ms | 151 ms |
 
-A project that does not use Workdeck pays 2 ms per tool call for having the plugin enabled.
+A project that does not use Mergehand pays 2 ms per tool call for having the plugin enabled.
 
 ## What the gates catch, and what they miss
 
@@ -69,7 +69,7 @@ The tests gate is a check that a name is present, nothing more. Tried on sixteen
 
 ## Not yet shown
 
-- `/workdeck:init` end to end in a stranger's repository, including the permission entries and the CI workflow it offers.
-- The `review` state for a card that is on the base branch. It was seen for a card that exists only on its branch: with [pull request 2](https://github.com/AshwinSathian/workdeck/pull/2) open, `card list --fetch` printed `review   E-01`.
+- `/mergehand:init` end to end in a stranger's repository, including the permission entries and the CI workflow it offers.
+- The `review` state for a card that is on the base branch. It was seen for a card that exists only on its branch: with [pull request 2](https://github.com/AshwinSathian/mergehand/pull/2) open, `card list --fetch` printed `review   E-01`.
 - A handoff under exactly the permission entries that init writes. The DOC-02 session ran under the maintainer's own settings.
 - Any session that compacted.

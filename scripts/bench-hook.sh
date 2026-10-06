@@ -47,7 +47,7 @@ transcript "$T/20mb.jsonl" 20
 
 mkdir "$T/plain" "$T/repo" && cd "$T/repo" || exit 1
 git init -q . && git symbolic-ref HEAD refs/heads/main
-printf 'check = true\n' > workdeck.conf
+printf 'check = true\n' > mergehand.conf
 mkdir cards
 i=1
 while [ "$i" -le 30 ]; do
@@ -57,11 +57,11 @@ done
 git add -A && git commit -q -m deck
 
 printf '%-44s %9s %9s\n' "path ($RUNS runs each, $(uname -s), bash ${BASH_VERSION%%(*})" median p95
-cd "$T/plain" && input "$T/2mb.jsonl" > "$T/in" && bench 'not a Workdeck project'
-cd "$T/repo" && bench 'Workdeck project, not on a card branch'
+cd "$T/plain" && input "$T/2mb.jsonl" > "$T/in" && bench 'not a Mergehand project'
+cd "$T/repo" && bench 'Mergehand project, not on a card branch'
 git checkout -q -b card/A-1-thing
 bench 'card branch, under budget, 2 MB transcript'
 input "$T/2mb.jsonl" 1000000 > "$T/in" && bench 'same, with a 1 MB tool result on stdin'
 input "$T/20mb.jsonl" > "$T/in" && bench 'card branch, under budget, 20 MB transcript'
-mkdir -p .git/workdeck && : > .git/workdeck/bench.warned
+mkdir -p .git/mergehand && : > .git/mergehand/bench.warned
 bench 'card branch, already warned'
