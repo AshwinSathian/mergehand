@@ -3,6 +3,7 @@
 **Run a project as a deck of cards: one card per Claude Code session, one pull request per card.**
 
 [![ci](https://github.com/AshwinSathian/workdeck/actions/workflows/ci.yml/badge.svg)](https://github.com/AshwinSathian/workdeck/actions/workflows/ci.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Workdeck is a plugin for [Claude Code](https://code.claude.com/docs/en/). A card is a small markdown file that describes one unit of work: what to read, which files may change, which tests must exist, and what must be true at the end. A session takes one card, implements it, passes your project's check command, gets a review from a separate agent, and opens one pull request. A person merges.
 
@@ -238,6 +239,6 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md). `make test` and `make lint` are the tw
 
 ## License
 
-MIT.
+[MIT](LICENSE).
 
 Workdeck is not affiliated with the Workdeck product at workdeck.com.

@@ -3,7 +3,7 @@ id: DOC-02
 title: LICENSE
 size: XS
 depends: PLUG-01
-done: false
+done: true
 ---
 
 ## Read
@@ -12,6 +12,8 @@ done: false
 - LICENSE (new)
 - .claude-plugin/plugin.json
 - test/cases/02-plugin.sh
+- README.md (link the license line to LICENSE, add a license badge)
+- bin/card (SPDX identifier in the header)
 
 ## Tests
 - plugin manifest names the license

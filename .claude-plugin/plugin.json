@@ -9,5 +9,6 @@
   },
   "homepage": "https://github.com/AshwinSathian/workdeck",
   "repository": "https://github.com/AshwinSathian/workdeck",
+  "license": "MIT",
   "keywords": ["workflow", "task-management", "code-review", "pull-requests", "context-budget", "hooks"]
 }
