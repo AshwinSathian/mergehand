@@ -221,6 +221,7 @@ A budget limits growth: the peak context size of the session minus its size at t
 | `card tokens [transcript]` | Prints baseline, peak and growth for a session transcript. Defaults to `$MERGEHAND_TRANSCRIPT`. On a card branch it also prints the card's budget and size. |
 | `card log-new <id> <outcome>` | Creates the log file with the measured fields filled in and empty sections for the agent |
 | `card stats` | Per size: number of sessions, budget, median and maximum `growth_tokens`, share that compacted |
+| `card help`, `card version` | Print the usage text, and `card <version>`. `--help` and `--version` do the same; `card <command> --help` prints that command's arguments |
 
 `card lint` checks: front matter keys and values, id format and file name, duplicate ids, dependencies that name no card, dependency cycles, required sections, sizes that have no budget, and log entry length.
 

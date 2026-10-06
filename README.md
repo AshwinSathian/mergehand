@@ -10,6 +10,8 @@ Mergehand is a plugin for [Claude Code](https://code.claude.com/docs/en/). A car
 
 It suits a project where you review every pull request and want agent work in pieces small enough to review. Mergehand 0.1 runs cards. It does not write them for you from a specification; that is planned for 0.2. You write cards by hand, or use the quick lane, which writes a small one from a sentence. What has been measured, and what has not, is in [`docs/evidence.md`](docs/evidence.md).
 
+**Contents:** [What it looks like](#what-it-looks-like) · [Why](#why) · [How it compares](#how-it-compares) · [Install](#install) · [Quick start](#quick-start) · [The loop](#the-loop) · [A card](#a-card) · [Skills](#skills) · [The `card` command and configuration](#the-card-command-and-configuration) · [What the plugin runs](#what-the-plugin-runs) · [Requirements and limits](#requirements-and-limits) · [Evidence](#evidence) · [Known limits](#known-limits) · [When it stops](#when-it-stops) · [Upgrade](#upgrade) · [FAQ](#faq) · [Roadmap](#roadmap) · [How this was built](#how-this-was-built) · [Contributing](#contributing) · [License](#license)
+
 ## What it looks like
 
 The commands and their output below are from [`examples/hello-deck/`](examples/hello-deck/), where you can reproduce them. The lines in parentheses describe what Claude does; they are not output.
@@ -193,7 +195,7 @@ The after-tool-call hook costs about 2 ms per tool call when you are not on a ca
 
 | | |
 |---|---|
-| Claude Code (CLI, desktop, IDE) | Yes. Built on 2.1.261; CI validates the manifests against the latest release |
+| Claude Code (CLI, desktop, IDE) | Yes. Built and run on 2.1.261 through 2.1.290; CI validates the manifests against the latest release |
 | Claude Code on the web (cloud sessions) | No. Cloud sessions do not load a plugin that a repository's settings turn on |
 | claude.ai and Cowork | No. They do not install a plugin that has a top-level `bin/` directory |
 | Codex, Cursor, Gemini CLI and other agents | No. The hooks, skills and reviewer are Claude Code's. `card` itself runs anywhere bash does |
@@ -213,13 +215,13 @@ The after-tool-call hook costs about 2 ms per tool call when you are not on a ca
 
 ## Known limits
 
-- **The tests gate checks that a name is present.** It does not check what the test asserts; the reviewer does. In a trial on sixteen test declarations in four languages it gave seven false failures, all on nested or reworded names, and two false passes. Each false failure costs one edit to the card line.
-- **The permission entries are not a sandbox.** They match commands as written. Protect your base branch on the git host.
-- **Some commands are not pre-approved**: `git checkout`, `git pull`, `git add` and `git commit`. Claude asks before each, so an unattended next-card or handoff stops at the first one.
-- **Token measurement reads the session transcript**, which is not a documented format. If it changes, `card tokens` prints `unknown` and nothing else breaks. Subagent turns are not counted, so the reviewer's tokens are in no figure here.
-- **A resumed session keeps its transcript**, so its baseline is the first turn of the original session and growth is counted from there.
-- **A budget is a warning.** It does not stop the model.
-- **`review` needs `--fetch`.** Without it a card with an open pull request shows as `active`.
+- The tests gate checks that a name is present. It does not check what the test asserts; the reviewer does. In a trial on sixteen test declarations in four languages it gave seven false failures, all on nested or reworded names, and two false passes. Each false failure costs one edit to the card line.
+- The permission entries are not a sandbox. They match commands as written. Protect your base branch on the git host.
+- Some commands are not pre-approved: `git checkout`, `git pull`, `git add` and `git commit`. Claude asks before each, so an unattended next-card or handoff stops at the first one.
+- Token measurement reads the session transcript, which is not a documented format. If it changes, `card tokens` prints `unknown` and nothing else breaks. Subagent turns are not counted, so the reviewer's tokens are in no figure here.
+- A resumed session keeps its transcript, so its baseline is the first turn of the original session and growth is counted from there.
+- A budget is a warning. It does not stop the model.
+- `review` needs `--fetch`. Without it a card with an open pull request shows as `active`.
 - A path with a space cannot be written in `Touch` as it is, because text after the first space is a comment. Use `?` for the space: `src/my?file.ts`.
 - A file whose name git quotes (one containing a double quote) cannot be listed in `Touch`.
 - Title length is counted in bytes, so a title with non-ASCII characters gets fewer than 80.
