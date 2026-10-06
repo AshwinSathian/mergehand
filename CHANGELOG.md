@@ -4,7 +4,7 @@ Notable changes to Workdeck. The format follows [Keep a Changelog](https://keepa
 
 Claude Code keeps an installed plugin at the version in `plugin.json`, so every fix that users should receive comes with a version bump and a tag.
 
-## [0.1.0] - unreleased
+## [0.1.0] - 2026-10-06
 
 First release: the core, the runner and the quick lane.
 
