@@ -20,13 +20,6 @@ test_base_working_tree_done_on_a_card_branch_is_not_done() {
   assert_eq waiting "$(state_of A-2)" dependent
 }
 
-test_base_card_only_on_this_branch_uses_working_tree() {
-  new_repo; mk_conf; commit_all
-  git checkout -q -b card/Q-1-thing
-  mk_card Q-1 XS; set_done Q-1
-  card list
-  assert_eq done "$(state_of Q-1)" 'untracked card'
-}
 
 test_base_card_only_on_base_still_listed() {
   new_repo; mk_conf; mk_card A-1 M; commit_all
@@ -135,5 +128,28 @@ test_base_done_tolerates_spaces_around_true() {
   card lint; assert_rc 0
   card list
   assert_eq done "$(state_of A-1)" state
+  assert_eq ready "$(state_of A-2)" dependent
+}
+
+# A card that exists only in the working tree (a quick card, or one not yet
+# committed) has nowhere else to read done from. But once it has a branch or a
+# pull request, done: true only means handoff ran: it is not merged.
+test_base_branch_only_card_is_not_done_after_handoff() {
+  new_repo; mk_conf; commit_all
+  git checkout -q -b card/Q-1-thing
+  mk_card Q-1 XS; mk_card Q-1b XS Q-1
+  card list
+  assert_eq active "$(state_of Q-1)" 'before handoff'
+  set_done Q-1; commit_all handoff
+  card list
+  assert_eq active "$(state_of Q-1)" 'after handoff, not merged'
+  assert_eq waiting "$(state_of Q-1b)" 'remainder waits for the merge'
+}
+
+test_base_working_tree_only_card_without_branch_uses_its_own_done() {
+  new_repo; mk_conf; commit_all
+  mk_card A-1; set_done A-1; mk_card A-2 S A-1
+  card list
+  assert_eq done "$(state_of A-1)" 'uncommitted card on the base branch'
   assert_eq ready "$(state_of A-2)" dependent
 }

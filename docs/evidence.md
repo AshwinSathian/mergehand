@@ -8,9 +8,29 @@ What has been measured, where the numbers come from, and what has not been shown
 
 One case, `test_runner_reports_failure`, checks that the test runner itself reports a failing case and a case file that does not parse, so a broken assertion helper cannot make everything pass.
 
-## Context growth, measured in a real session
+## A card through the whole loop, against the hosted repository
 
-The card in `examples/hello-deck/` was run through `/workdeck:next-card` and `/workdeck:handoff` in a scratch repository with only this plugin loaded:
+Card DOC-02 (add the license, size XS) was run by the maintainer with the plugin loaded: `/workdeck:next-card DOC-02`, then `/workdeck:handoff`. The result is [pull request 1](https://github.com/AshwinSathian/workdeck/pull/1) and the log `log/2026-10-06-DOC-02-1.md`.
+
+| | Tokens |
+|---|---|
+| Context at the first turn (baseline) | 53,055 |
+| Largest context in the session (peak) | 79,037 |
+| Growth | 25,982 |
+| Budget for an XS card | 35,000 |
+
+The session did not compact. What this run showed that no shell test can:
+
+- Handoff ran the check, the three gates and the reviewer, wrote the log with figures taken from the transcript, committed, pushed the branch and opened the pull request with the template filled in.
+- CI ran on the pull request and passed on macOS and Ubuntu before the merge.
+- The scope gate did its job on real work: the card needed `README.md` and `bin/card`, which it did not list, and both were added to its `Touch` list in the same pull request.
+- The reviewer found nothing that had to be fixed and left five small notes, which are in the pull request body.
+
+Two things to read these figures with. The baseline is 16,000 tokens higher than in the scratch run below, because this session had the maintainer's other plugins loaded as well; that is the reason budgets limit growth, not total size. And the growth includes a first attempt in the same session that the permission mode refused, so 25,982 overstates what the card alone needed. It is still three quarters of the XS budget for a card that adds a license file, which suggests the XS default is on the tight side once a session carries other plugins.
+
+## Context growth with only this plugin loaded
+
+Before that, the card in `examples/hello-deck/` was run through `/workdeck:next-card` and `/workdeck:handoff` in a scratch repository with only this plugin loaded:
 
 | | Tokens |
 |---|---|
@@ -23,9 +43,9 @@ The session did not compact. This run is also what showed that the reviewer agen
 
 ## What the repository's own logs do not show
 
-Workdeck 0.1 was built card by card: each card on its own branch, through `card lint`, `card touched` and `card tests`, with a session log. But the cards were driven by hand inside one long agent session, without the plugin loaded, so the seventeen logs from the build record `unknown` for the token fields and `card stats` has nothing to summarize for them. One session's growth does not describe any single card, and writing it into each log would have been false.
+Workdeck 0.1 was built card by card: each card on its own branch, through `card lint`, `card touched` and `card tests`, with a session log. But all the cards before DOC-02 were driven by hand inside one long agent session, without the plugin loaded, so their logs record `unknown` for the token fields. One session's growth does not describe any single card, and writing it into each log would have been false. `card stats` says so itself: it prints how many sessions have no measurement.
 
-Logs written after the first release, by sessions that run a card through the plugin, carry real figures.
+Logs from sessions that run a card through the plugin carry real figures. DOC-02 is the first.
 
 ## Cost of the hooks
 
@@ -49,6 +69,7 @@ The tests gate is a check that a name is present, nothing more. Tried on sixteen
 
 ## Not yet shown
 
-- The pull request path against a real host: `git push`, `gh pr create`, and the `review` state. Tests use a stub `gh`.
-- A handoff under the permission entries that init writes.
+- `/workdeck:init` end to end in a stranger's repository, including the permission entries and the CI workflow it offers.
+- The `review` state for a card that is on the base branch. It was seen for a card that exists only on its branch: with [pull request 2](https://github.com/AshwinSathian/workdeck/pull/2) open, `card list --fetch` printed `review   E-01`.
+- A handoff under exactly the permission entries that init writes. The DOC-02 session ran under the maintainer's own settings.
 - Any session that compacted.

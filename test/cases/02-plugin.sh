@@ -184,11 +184,13 @@ test_plugin_manifest_names_its_repository() {
 
 test_plugin_manifest_names_the_license() {
   local id
-  id=$(sed -n 's/^  "license": "\(.*\)",$/\1/p' "$ROOT/.claude-plugin/plugin.json")
+  id=$(sed -n 's/^  "license": "\([^"]*\)",\{0,1\}$/\1/p' "$ROOT/.claude-plugin/plugin.json")
   assert_eq MIT "$id" 'license in plugin.json'
   assert_eq 'MIT License' "$(sed -n 1p "$ROOT/LICENSE")" 'first line of LICENSE'
-  grep -q '^Copyright (c) [0-9]* Ashwin Sathian$' "$ROOT/LICENSE" || fail 'LICENSE has no copyright line'
-  assert_eq "# SPDX-License-Identifier: $id" "$(sed -n 4p "$CARD")" 'line 4 of bin/card'
+  grep -q '^Copyright (c) [0-9][0-9][0-9][0-9] Ashwin Sathian$' "$ROOT/LICENSE" || fail 'LICENSE has no copyright line with a year'
+  grep -q 'THE SOFTWARE IS PROVIDED "AS IS"' "$ROOT/LICENSE" || fail 'LICENSE is not the whole MIT text'
+  sed -n 1,10p "$CARD" | grep -qx "# SPDX-License-Identifier: $id" || fail 'bin/card has no SPDX line in its header'
+  grep -q "license-$id-" "$ROOT/README.md" || fail 'README has no license badge'
   grep -q "^\[$id\](LICENSE)" "$ROOT/README.md" || fail 'README does not link the license'
 }
 
@@ -250,4 +252,15 @@ test_readme_links_resolve() {
   for l in $(grep -o '](\([^)#]*\)' "$ROOT/README.md" | sed 's/^](//' | grep -v '^http' | sort -u); do
     [ -e "$ROOT/$l" ] || fail "README links to $l, which does not exist"
   done
+}
+
+test_evidence_names_the_first_pull_request() {
+  local log="$ROOT/log/2026-10-06-DOC-02-1.md" k v
+  grep -q 'github.com/AshwinSathian/workdeck/pull/1' "$ROOT/docs/evidence.md" || fail 'evidence does not link pull request 1'
+  # The figures on the page are the ones in the session log.
+  for k in baseline_tokens peak_tokens growth_tokens; do
+    v=$(sed -n "s/^$k: //p" "$log" | awk '{ printf "%d,%03d", $1 / 1000, $1 % 1000 }')
+    grep -q "$v" "$ROOT/docs/evidence.md" || fail "evidence does not give $k as $v"
+  done
+  ! grep -q -i 'no pull requests\|none did' "$ROOT/README.md" || fail 'README still says no card went through the loop'
 }

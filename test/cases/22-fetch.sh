@@ -105,3 +105,11 @@ test_next_reports_review() {
   assert_rc 1
   assert_contains "$OUT" 'A-1 review'
 }
+
+test_fetch_branch_only_card_with_open_pull_request_is_review() {
+  new_repo; mk_conf; commit_all; add_remote
+  git checkout -q -b card/Q-1-thing; mk_card Q-1 XS; edit cards/Q-1-thing.md 's/^done: false$/done: true/'; commit_all handoff
+  echo 'card/Q-1-thing' > "$GH_STUB_DIR/pr-list"
+  card list --fetch
+  assert_eq review "$(state_of Q-1)" 'handed off, pull request open'
+}

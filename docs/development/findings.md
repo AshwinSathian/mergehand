@@ -218,3 +218,28 @@ What that settles, which had only been argued before:
 - The suite passes under bash 3.2 on a machine other than the one it was written on.
 
 Still not shown: the pull request path against the host, and a handoff under the permission entries. The first card run through the plugin against this repository (DOC-02) covers both.
+
+## 14. The first card through the real loop (2026-10-06)
+
+**Status:** closed, with two notes for 0.2. **Evidence:** pull request 1, `log/2026-10-06-DOC-02-1.md`.
+
+The maintainer ran DOC-02 with the plugin loaded against the hosted repository. Handoff pushed the branch, opened the pull request with the template filled in, CI passed on it, and it was merged. The log has real figures: baseline 53,055, peak 79,037, growth 25,982, not compacted. This closes what findings 10 to 13 left open about `git push`, `gh pr create` and a log written by a real session.
+
+Two things it showed:
+
+- **The XS budget is tight in a session that carries other plugins.** Adding a license file used 74% of 35,000. Part of that is a first attempt that the permission mode refused, which stayed in the same session's transcript. Even so, a session that starts at 53,000 tokens and reads a card, a few files and a reviewer's findings does not have much room in 35,000. `card stats` exists so a project can set budgets from its own sessions; the defaults may want raising once there are more than one of these to go on.
+- **A refused attempt leaves no trace except in the log's prose.** The agent reported that every file write was refused by the permission mode on the first try. Nothing in Workdeck notices that a session did no work; the user ran next-card again. Worth a line in the README's quick start: the session needs permission to edit files.
+
+The baseline of 53,055 also fits the range of 53,000 to 71,000 that the design's section 19 quotes from earlier sessions, and is well above the 36,917 measured with only this plugin loaded.
+
+## 15. A card that lives only on its branch showed as done before it merged (2026-10-06)
+
+**Status:** fixed in E-01. **Evidence:** pull request 2, the first one opened by the build agent against the hosted repository.
+
+Card E-01 was created on its own branch, like every quick card. After `card done` and with its pull request open, `card list --fetch` printed `done   E-01`, and `card next` said "every card is done". The design's section 6 said a card that exists only on the current branch takes `done` from the working tree, with the quick lane in mind; it had not considered that handoff writes `done: true` on that same branch before anything merges. The effect: a quick card never showed as `review`, and a session started on its branch was told the work was finished.
+
+No test had caught it because the stub `gh` was only ever pointed at cards that were also on the base branch. It took a real pull request for a branch-only card.
+
+The fix is one condition: a card that is only in the working tree is done on its own word unless it has a branch or an open pull request. With the fix, the same command against the same pull request prints `review   E-01`.
+
+Still true, and not fixable without reading other branches: from the base branch, a quick card is invisible until its pull request merges, because its file is not there.
