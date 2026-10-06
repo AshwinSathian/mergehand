@@ -72,6 +72,16 @@ test_quick_creates_an_xs_card_with_a_time_based_id() {
   ! grep -n -i -E 'next (free )?number|increment' "$f" || fail 'quick uses a counter for the id'
 }
 
+# Found in the first run from the marketplace (finding 16): quick wrote bare
+# lines under Touch, which are not items, and nothing said so until handoff.
+test_quick_writes_list_items_and_lints_the_card_before_showing_it() {
+  local f="$ROOT/skills/quick/SKILL.md" a b
+  grep -q 'starts with `- `' "$f" || fail 'quick does not say that an item starts with "- "'
+  a=$(grep -n '`card lint`' "$f" | head -1 | cut -d: -f1)
+  b=$(grep -n 'Show the card to the user' "$f" | head -1 | cut -d: -f1)
+  [ -n "$a" ] && [ -n "$b" ] && [ "$a" -lt "$b" ] || fail 'quick does not lint the card before showing it'
+}
+
 test_handoff_runs_the_gates_in_order() {
   local f="$ROOT/skills/handoff/SKILL.md" a b c d e
   a=$(grep -n 'card conf check' "$f" | head -1 | cut -d: -f1)

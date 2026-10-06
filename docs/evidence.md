@@ -41,6 +41,25 @@ Before that, the card in `examples/hello-deck/` was run through `/mergehand:next
 
 The session did not compact. This run is also what showed that the reviewer agent launches under its plugin name, and that the session-start hook passes the transcript path to later commands ([`development/findings.md`](development/findings.md), finding 10).
 
+## A quick card in a new repository, installed from the marketplace
+
+On 2026-10-06 the maintainer installed 0.1.1 with `/plugin marketplace add AshwinSathian/mergehand` in a new private repository holding one shell function and a `test.sh`. `/mergehand:init`, `/mergehand:quick` and `/mergehand:handoff` followed, in that order. The repository is private, so the figures below are from its session log and cannot be checked from outside.
+
+| | Tokens |
+|---|---|
+| Context at the first turn (baseline) | 53,350 |
+| Largest context in the session (peak) | 68,465 |
+| Growth | 15,115 |
+| Budget for an XS card | 35,000 |
+
+The session did not compact. Its baseline is within 300 tokens of the DOC-02 session's, which had the maintainer's other plugins loaded. What the run showed:
+
+- Init wrote `mergehand.conf`, `cards/REVIEW.md`, the pull request template, the permission entries, the project settings that turn the plugin on, and the CI workflow. The workflow downloaded `card` at `v0.1.1` and its `lint` job passed on the pull request.
+- Handoff ran the check, the gates and the reviewer, and opened the pull request. With it open, `card list --fetch` printed `review` for the card.
+- The reviewer left one nit and nothing to fix.
+
+Two things went wrong, and both are in the card's log under Deviations. Quick wrote the `Touch` entries as bare lines, which are not items, so the scope gate did not match them until they were rewritten with `- ` ([`development/findings.md`](development/findings.md), finding 16). The `Tests` line also had to be reworded to match the name the test ended up with.
+
 ## What the repository's own logs do not show
 
 Mergehand 0.1 was built card by card: each card on its own branch, through `card lint`, `card touched` and `card tests`, with a session log. All the cards before DOC-02, and E-01 after it, were driven by hand inside one long agent session without the plugin loaded. Their logs record `unknown` for the token fields. One session's growth does not describe any single card, and writing it into each log would have been false. `card stats` says so itself: it prints how many sessions have no measurement.
@@ -69,7 +88,7 @@ The tests gate checks only that a name is present. Tried on sixteen test declara
 
 ## Not yet shown
 
-- `/mergehand:init` end to end in a stranger's repository, including the permission entries and the CI workflow it offers.
+- `/mergehand:init` in someone else's repository. The run above was the maintainer's.
 - The `review` state for a card that is on the base branch. It was seen for a card that exists only on its branch: with [pull request 2](https://github.com/AshwinSathian/mergehand/pull/2) open, `card list --fetch` printed `review   E-01`.
-- A handoff under exactly the permission entries that init writes. The DOC-02 session ran under the maintainer's own settings.
+- A handoff under exactly the permission entries that init writes. The DOC-02 session ran under the maintainer's own settings. The quick-card session had init's entries, but the maintainer's own settings applied too and the prompts it raised were not recorded.
 - Any session that compacted.

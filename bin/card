@@ -351,7 +351,7 @@ lint_cards() {
       for (i = 1; i <= n; i++) {
         s = sec[i]
         if (!(s in seen)) err("has no ## " s " section")
-        else if (items[s] == 0 && !(s == "Read" && fm["size"] == "XS")) err("## " s " has no items")
+        else if (items[s] == 0 && !(s == "Read" && fm["size"] == "XS")) err("## " s " has no items (an item is a line that starts with \"- \")")
       }
     }
     END {
