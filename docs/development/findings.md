@@ -4,6 +4,8 @@ What turned out awkward or wrong while building Mergehand 0.1 with itself, with 
 
 Findings 1 to 3 and 6 answer four questions the maintainer asked before the build started: does the tests gate give false failures on real test files; does the post-tool-use hook add a noticeable delay; do shell `case` patterns surprise someone used to gitignore globs; and does deriving state from branches survive squash merges and deleted branches. Each is pinned by tests, so the evidence can be re-run.
 
+"The spec" in this file is [`../design.md`](../design.md).
+
 ## 1. The tests gate gives false failures on idiomatic nested tests
 
 **Status:** decided (finding 11): documented, and the gate message now says nested names are not joined. No windowed match. **Evidence:** `test/cases/33-tests.sh`, fixtures in `test/fixtures/lang/`. Run `/bin/bash test/run.sh test_lang`.
@@ -29,7 +31,7 @@ The gate lowercases a `Tests` line and each line of the changed files, strips ev
 | TypeScript | `const networks = []`, no such test | works | found | **false pass** |
 | TypeScript | `// TODO: revokes every session on logout` | revokes every session on logout | found | **false pass** |
 
-Seven false failures and two false passes. The pattern is clear: a test whose name lives on one line and matches the card word for word is found; a name that is split across a nesting level (Go table cases, Python classes, `describe` plus `it`, Rust modules), wrapped by a formatter, or reworded by one small word is not. Nesting is the normal style in three of the four languages, so this will come up on most cards in those projects.
+Seven false failures and two false passes. A test whose name lives on one line and matches the card word for word is found; a name that is split across a nesting level (Go table cases, Python classes, `describe` plus `it`, Rust modules), wrapped by a formatter, or reworded by one small word is not. Nesting is the normal style in three of the four languages, so this will come up on most cards in those projects.
 
 Each false failure costs one edit to the card line, and the edit shows in the PR diff, which is what the spec intends. The cost is friction, not wrong results. The false passes are the reviewer's job by design (spec section 11).
 
@@ -55,9 +57,9 @@ Each false failure costs one edit to the card line, and the edit shows in the PR
 | `src/*` | `src/x/y.ts` | match | match |
 | `src/[ab].ts` | `src/b.ts` | match | match |
 
-The dangerous direction is safe: every surprise but one makes the gate stricter than expected, so the author gets a scope failure and fixes the entry. The exception is `src/*.ts` matching `src/x/y.ts`, which is looser, and is stated in the spec.
+Every surprise but one makes the gate stricter than expected, so the author gets a scope failure and fixes the entry. The exception is `src/*.ts` matching `src/x/y.ts`, which is looser, and is stated in the spec.
 
-`src/` matching nothing is the one that will bite most often, because listing a directory is the obvious way to say "anything in here", and the failure message lists every file under it as out of scope.
+`src/` matching nothing is the one that will come up most often, because listing a directory is the obvious way to say "anything in here", and the failure message lists every file under it as out of scope.
 
 **Proposed fix:** make `card lint` reject a `Touch` entry that ends in `/`, a leading `/` and a leading `!`, each with a message that gives the working form (`src/*`). That is three cheap checks and turns a confusing gate failure into a clear lint error. Not built; needs a decision because it changes what lint accepts. The README gets this table either way.
 

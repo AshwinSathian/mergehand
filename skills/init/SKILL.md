@@ -40,6 +40,6 @@ Work through these steps in order.
    }
    ```
 
-   People who open the repository then get the marketplace and the plugin from the project settings.
+   Each teammate then runs `claude plugin install <plugin>@<marketplace> --scope project` once; the project settings turn the plugin on for them.
 
 8. **Say what is next.** List the files written and changed. Nothing is committed, and the next skill stops on a dirty tree, so tell the user to review and commit these files on the base branch before the next command, and to push if the repository has a remote. Then give the next step: type `/mergehand:quick "<description>"` for a small change, or write a card with `card new <id> "<title>"`, fill in its sections, and commit and push it on the base branch before starting it. Mergehand 0.1 runs cards; it does not write them from a specification.

@@ -39,7 +39,7 @@ Work through the steps in order. Each gate must pass before the next step starts
 
 7. **Commit, push, open the pull request.**
    - `git add -A` and `git commit` with a message that names the card id, in the style the project's history uses.
-   - If the repository has no remote, stop here and tell the user what remains: push the branch and open a pull request against `<base>`.
+   - If the repository has no remote, stop here and tell the user what remains: merge the branch into `<base>` and delete it, or add a remote, push and open a pull request.
    - `git push -u origin <branch>`.
    - Fill in the project's pull request template (`.github/pull_request_template.md`, if there is one): the card, what changed, the tests, the review findings left open with reasons, and the measured tokens from the log. Write it to a file, run `gh pr create --base <base> --title "<id>: <title>" --body-file <file>`, then delete the file so the tree stays clean.
    - If `gh` is missing or not signed in, stop after the push and print the URL where the user can open the pull request by hand.

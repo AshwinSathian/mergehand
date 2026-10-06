@@ -13,6 +13,16 @@ Claude Code keeps an installed plugin at the version in `plugin.json`, so every 
 - The configuration file is `mergehand.conf`, the CI workflow template is `mergehand.yml`, the environment variables are `MERGEHAND_TRANSCRIPT` and `MERGEHAND_SESSION`, and the compaction markers are in `<git-dir>/mergehand/`.
 - The `card` command keeps its name and its arguments.
 
+- The README shows a session, compares the plugin with other projects, and has sections on upgrading and on what to do when a skill stops. The command list, the card states and the configuration keys moved to `docs/reference.md`.
+- Releases carry `card` and `card.sha256`.
+
+### Fixed
+
+- The handoff skill told the user to push when the repository has no remote. It now says to merge the branch, or to add a remote.
+- The init skill and the design said teammates get the plugin from the project settings. Each teammate installs it once.
+- `SECURITY.md` said `card --fetch` was the only network access in the plugin. The skills pull, push and call `gh`.
+- The README said the license card was the last card of 0.1 and that the project was built in the open. Neither was true.
+
 ### Moving from 0.1.0
 
 Nothing reads the old names, so a repository set up with 0.1.0 does nothing until it is moved:

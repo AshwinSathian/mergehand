@@ -8,7 +8,7 @@ make lint          # shellcheck
 /bin/bash test/run.sh lint tokens     # only the cases whose name contains a word
 ```
 
-You need bash, git, awk, sed, grep and sort. `make lint` needs [shellcheck](https://www.shellcheck.net/). On macOS the suite runs under `/bin/bash`, which is 3.2, so a bash 4 feature fails there.
+You need bash, git, awk, sed, grep, sort (with `-V`) and the usual POSIX tools. `make lint` needs [shellcheck](https://www.shellcheck.net/). On macOS the suite runs under `/bin/bash`, which is 3.2, so a bash 4 feature fails there.
 
 There is no test framework. `test/run.sh` runs every function named `test_*` in `test/cases/*.sh`, each in its own bash process. `test/lib.sh` gives each case a temporary git repository, a stub `gh`, and a few assertions. A case never touches the network or your real `~/.claude`.
 
@@ -28,7 +28,7 @@ Write the test first and watch it fail.
 
 ## Rules the code keeps
 
-These are checked in review; the full list is in `cards/REVIEW.md`.
+These are checked in review; the full list is in [`cards/REVIEW.md`](cards/REVIEW.md).
 
 - `bin/card` stays one file and runs on bash 3.2: no associative arrays, `mapfile`, `${var,,}` or `local -n`.
 - awk code must work in mawk, gawk and the awk on macOS: no interval expressions, no POSIX classes, no `gensub`.
@@ -40,4 +40,4 @@ These are checked in review; the full list is in `cards/REVIEW.md`.
 
 Mergehand is developed with itself. Work is a card in `cards/`, done on a branch named `card/<id>-<slug>`, and handed off with a session log in `log/`. `card list` shows the deck. If you would rather send a plain pull request, that is fine: say what it changes and how you tested it.
 
-Design notes are in `docs/`. `docs/development/findings.md` records what went wrong while building and what was decided about it.
+Design notes are in `docs/`. [`docs/development/findings.md`](docs/development/findings.md) records what went wrong while building and what was decided about it.

@@ -212,7 +212,7 @@ A budget limits growth: the peak context size of the session minus its size at t
 | `card show <id>` | Prints one card |
 | `card list` | One line per card: state, id, size, title |
 | `card status` | Current branch and its card, cards in `active`, `review` and `blocked`, the next ready card, and the last log entry for the current card. Truncated to `status_max_chars` with a note when cut. |
-| `card new <id> <title> [--size S] [--depends ids]` | Creates a card file from the template |
+| `card new <id> <title> [--size XS|S|M] [--depends ID,ID]` | Creates a card file from the template |
 | `card done <id>` | Sets `done: true` in the card file |
 | `card lint` | Checks every card and log file. Exit 1 on any error. |
 | `card touched <id>` | Compares the files changed against `base` with the card's `Touch` list. Files under `cards_dir` and `log_dir` and files matching `touch_ignore` are skipped. Entries are matched as shell `case` patterns, so `*` also matches `/`. Prints files changed but not listed, and files listed but not changed. Exit 1 when unlisted files changed. "Changed" means different from the point where the branch left the base branch, including uncommitted and untracked files, because handoff runs the gates before it commits. |
@@ -224,7 +224,7 @@ A budget limits growth: the peak context size of the session minus its size at t
 
 `card lint` checks: front matter keys and values, id format and file name, duplicate ids, dependencies that name no card, dependency cycles, required sections, sizes that have no budget, and log entry length.
 
-Exit codes: 0 success, 1 a check failed, 2 usage or configuration error. Every error message starts with `card:` and names the file.
+Exit codes: 0 success, 1 a check failed or nothing matched, 2 usage or configuration error. Every error message starts with `card:` and names the file.
 
 ## 10. Skills
 
@@ -238,7 +238,7 @@ All four skills set `disable-model-invocation: true`. They run only when the use
 4. Append the session protocol section to `CLAUDE.md`, creating the file if needed. The section is about 20 lines and points at the skills.
 5. Show the user the permission entries as a diff, then merge them into `.claude/settings.json` on approval: allow `card`, the check command, read-only git commands, pushing `card/*` branches and `gh pr create`; deny force-push, `git reset --hard`, branch deletion and `gh pr merge`.
 6. Offer the CI workflow that downloads `bin/card` at the installed release tag and runs `card lint` on pull requests.
-7. Offer to add the marketplace under `extraKnownMarketplaces` and the plugin under `enabledPlugins` in `.claude/settings.json`, so teammates who open the repository are prompted to install it.
+7. Offer to add the marketplace under `extraKnownMarketplaces` and the plugin under `enabledPlugins` in `.claude/settings.json`, so the plugin is turned on for teammates, who each install it once with `claude plugin install <plugin>@<marketplace> --scope project`.
 8. Print the next step: write a card with `card new`, or use `/mergehand:quick`.
 
 Init does not commit. The user reviews and commits the result.

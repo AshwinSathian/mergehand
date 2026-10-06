@@ -1,17 +1,100 @@
 # Mergehand
 
-**Run a project as a deck of cards: one card per Claude Code session, one pull request per card.**
+**Run a project as cards: one card per Claude Code session, with a scope gate, a separate review and one pull request.**
 
 [![ci](https://github.com/AshwinSathian/mergehand/actions/workflows/ci.yml/badge.svg)](https://github.com/AshwinSathian/mergehand/actions/workflows/ci.yml)
+[![release](https://img.shields.io/github/v/release/AshwinSathian/mergehand)](https://github.com/AshwinSathian/mergehand/releases)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Mergehand is a plugin for [Claude Code](https://code.claude.com/docs/en/). A card is a small markdown file that describes one unit of work: what to read, which files may change, which tests must exist, and what must be true at the end. A session takes one card, implements it, passes your project's check command, gets a review from a separate agent, and opens one pull request. A person merges.
+
+It suits a project where you review every pull request and want agent work in pieces small enough to review. Mergehand 0.1 runs cards. It does not write them for you from a specification; that is planned for 0.2. You write cards by hand, or use the quick lane, which writes a small one from a sentence. What has been measured, and what has not, is in [`docs/evidence.md`](docs/evidence.md).
+
+## What it looks like
+
+The commands and their output below are from [`examples/hello-deck/`](examples/hello-deck/), where you can reproduce them. The lines in parentheses describe what Claude does; they are not output.
+
+```
+$ card list
+done     GREET-01     XS  Fix the greeting
+ready    GREET-02     XS  Add a farewell
+
+> /mergehand:next-card
+  (Claude creates the branch card/GREET-02-add-a-farewell, reads the card,
+   writes the test, then the code, and stops)
+```
+
+Suppose the session added the function without its test and edited a file the card does not list. The two gates say so:
+
+```
+$ card touched GREET-02
+in Touch but not changed:
+  tests/greet.sh
+changed but not in Touch (revert it, or add it to Touch with a reason):
+  test.sh
+
+$ card tests GREET-02
+no test with this name on one line of the files changed (nested names are not joined: use the innermost name, or edit the card line):
+  farewell says goodbye with the name
+```
+
+Both exit 1, and handoff does not go on until they pass.
+
+```
+> /mergehand:handoff
+  (Claude runs your check command and the gates, asks the reviewer agent,
+   writes the session log, commits, pushes and opens the pull request)
+```
+
+[Pull request 1](https://github.com/AshwinSathian/mergehand/pull/1) in this repository was produced this way.
 
 ## Why
 
 A long agent session fills its context window. Claude Code then compacts the conversation, and details from early in the session are lost. The diff also grows past what anyone will review carefully.
 
 Mergehand sizes work to fit one session. Each card has a size, each size has a budget for how much the session's context may grow, and the growth is measured from the session transcript and written into a log. The rules that a script can check are checked by a script: `card touched` fails if a file changed that the card does not list, and `card tests` fails if a test the card names does not exist. What a script cannot check goes to a reviewer agent that did not write the code.
+
+## How it compares
+
+These descriptions are from each project's README in October 2026.
+
+- [Backlog.md](https://github.com/MrLesk/Backlog.md) recommends the same practice: one task, one agent session, one pull request. It gives you a task board and a command-line tool for it. Mergehand enforces the practice. A gate fails when a file outside the card changes or a named test is missing, a hook stops a session that committed without a log, and each session's context growth is measured and recorded.
+- [Spec Kit](https://github.com/github/spec-kit), [OpenSpec](https://github.com/Fission-AI/OpenSpec) and [BMAD](https://github.com/bmad-code-org/BMAD-METHOD) start earlier. They turn an idea into a specification and a plan. Mergehand starts where they end, with work already cut into pieces, and 0.1 does not write the cards for you.
+- [Superpowers](https://github.com/obra/superpowers) is a set of skills that the agent applies by itself during development. Mergehand is two commands that you type, and its checks are scripts.
+- [Taskmaster](https://github.com/eyaltoledano/claude-task-master) and [beads](https://github.com/gastownhall/beads) track tasks and their dependencies for agents, across several tools. Mergehand works only in Claude Code, and its pull request step only on GitHub.
+
+## Install
+
+In Claude Code:
+
+```
+/plugin marketplace add AshwinSathian/mergehand
+/plugin install mergehand@mergehand
+```
+
+The plugin puts `card` on the PATH of the commands Claude runs. To use `card` yourself, or in CI, download the one file:
+
+```
+curl -fsSL https://raw.githubusercontent.com/AshwinSathian/mergehand/v0.1.1/bin/card -o card && chmod +x card
+```
+
+From 0.1.1, each [release](https://github.com/AshwinSathian/mergehand/releases) also carries `card` and `card.sha256`, so you can check the file with `shasum -a 256 -c card.sha256`.
+
+## Quick start
+
+In a git repository with at least one commit:
+
+1. `/mergehand:init`. It finds your check command (for example `make check` or `npm test`) and your base branch, asks you to confirm both, and writes `mergehand.conf`, `cards/REVIEW.md`, a pull request template and a short section in `CLAUDE.md`. It shows you permission entries before adding them to `.claude/settings.json`. It also offers a CI workflow that runs `card lint` on pull requests, and to enable the plugin for teammates in the project settings.
+2. Review what it wrote and **commit it on your base branch**. The next step stops if the working tree is dirty.
+3. `/mergehand:quick "fix the typo in the greeting"`. Claude reads the relevant code, writes a small card, and shows it to you. Say yes, and it creates a branch, writes the test, and makes it pass.
+4. `/mergehand:handoff`. Claude runs your check command, the gates and the reviewer, writes the session log, commits, pushes, and opens the pull request.
+5. Merge the pull request.
+
+The session needs permission to edit files: in a permission mode that refuses writes, the agent can read the card and do nothing else.
+
+With no remote, handoff stops after the commit and tells you what is left. Merge the branch yourself and delete it. With no `gh`, it stops after the push and prints the URL for opening the pull request.
+
+To plan more than one step ahead, write cards: `card new AUTH-03 "Token refresh" --size S` creates the file, you fill in its sections, commit and push it on the base branch, and `/mergehand:next-card` starts the first card that is ready.
 
 ## The loop
 
@@ -30,51 +113,7 @@ flowchart LR
   K --> A
 ```
 
-You type the two skills. Everything between them is the agent working on one card.
-
-## Requirements and limits
-
-| | |
-|---|---|
-| Claude Code (CLI, desktop, IDE) | Yes. Built and tested on 2.1.261 |
-| claude.ai and Cowork | No. They do not install a plugin that has a top-level `bin/` directory |
-| macOS, Linux | Yes. `card` runs on bash 3.2 and later, with BSD or GNU tools |
-| Windows | Not natively. Untested under WSL |
-| Git host | Any, up to the pull request. Opening the pull request uses `gh`, so GitHub |
-| Other tools | git, awk, sed, grep, sort. `gh` is optional |
-
-Mergehand 0.1 runs cards. It does not write them for you from a specification; that is planned for 0.2. You write cards by hand, or use the quick lane, which writes a small one from a sentence.
-
-## Install
-
-In Claude Code:
-
-```
-/plugin marketplace add AshwinSathian/mergehand
-/plugin install mergehand@mergehand
-```
-
-The plugin puts `card` on the PATH of the commands Claude runs. To use `card` yourself, or in CI, download the one file:
-
-```
-curl -fsSL https://raw.githubusercontent.com/AshwinSathian/mergehand/v0.1.1/bin/card -o card && chmod +x card
-```
-
-## Quick start
-
-In a git repository with at least one commit:
-
-1. `/mergehand:init`. It finds your check command (for example `make check` or `npm test`) and your base branch, asks you to confirm both, and writes `mergehand.conf`, `cards/REVIEW.md`, a pull request template and a short section in `CLAUDE.md`. It shows you permission entries before adding them to `.claude/settings.json`.
-2. Review what it wrote and **commit it on your base branch**. The next step stops if the working tree is dirty.
-3. `/mergehand:quick "fix the typo in the greeting"`. Claude reads the relevant code, writes a small card, and shows it to you. Say yes, and it creates a branch, writes the test, and makes it pass.
-4. `/mergehand:handoff`. Claude runs your check command, the gates and the reviewer, writes the session log, commits, pushes, and opens the pull request.
-5. Merge the pull request.
-
-The session needs permission to edit files: in a permission mode that refuses writes, the agent can read the card and do nothing else.
-
-With no remote, handoff stops after the commit and tells you what is left. Merge the branch yourself and delete it. With no `gh`, it stops after the push and prints the URL for opening the pull request.
-
-To plan more than one step ahead, write cards: `card new AUTH-03 "Token refresh" --size S` creates the file, you fill in its sections, commit and push it on the base branch, and `/mergehand:next-card` starts the first card that is ready.
+You type the two skills and merge the pull request. The agent does the rest.
 
 ## A card
 
@@ -110,6 +149,11 @@ done: false
 - **Touch** is the scope. Entries are shell patterns matched against the whole path: `src/auth/` covers the directory, `*.ts` matches at any depth, and a bare `refresh.ts` matches only at the repository root. `!` does not negate. Text after the first space is a comment.
 - **Tests** names the tests that must exist. Write each line as the test will be named. `refresh rotates the token` is found in `test_refresh_rotates_the_token`, `TestRefreshRotatesTheToken` and `it('refresh rotates the token')`. A name split between a `describe` block and its `it`, or a class and its method, is not joined: use the innermost name.
 - **Acceptance** is a list of statements that are true or false.
+- **Out of scope** names work the card must not do. The reviewer looks for it in the diff.
+- **Notes**, which `card new` also writes, is free text.
+- **Blocked** is a section you or the agent add, with a question, when the card waits on a person. The card shows as `blocked` while the section is there.
+
+The size is a budget for context growth. `card new` gives a card size S unless you say otherwise, and the quick lane writes XS cards. After a few cards, `card stats` shows what your sessions used at each size.
 
 A full example with two cards, a session log and real output is in [`examples/hello-deck/`](examples/hello-deck/).
 
@@ -118,68 +162,19 @@ A full example with two cards, a session log and real output is in [`examples/he
 | You type | What happens |
 |---|---|
 | `/mergehand:init` | Sets up a repository. Asks before each choice and commits nothing |
-| `/mergehand:next-card [id]` | Updates the base branch, picks the next ready card or the one you name, creates its branch and implements it. Stops before handoff |
+| `/mergehand:next-card [id]` | Updates the base branch, picks the next ready card or the one you name, creates its branch and implements it. Stops before handoff. If one of your card pull requests has changes requested, it works on those first |
 | `/mergehand:quick "<description>"` | Writes an XS card from a sentence, shows it to you, then implements it |
 | `/mergehand:handoff [split]` | Check, gates, review, session log, commit, push, pull request. `split` hands off the finished part and moves the rest to a new card |
 
-Claude cannot start these itself. Handoff pushes a branch and opens a pull request, so a person starts it.
+Claude cannot start these itself.
 
-## The `card` command
+## The `card` command and configuration
 
-```
-card next [--fetch]            print the first ready card
-card show <id>                 print one card
-card list [--fetch]            one line per card: state, id, size, title
-card status [--fetch]          current card, open work, next ready card
-card new <id> <title> [--size XS|S|M] [--depends ID,ID]
-card done <id>                 set done: true in the card file
-card lint                      check every card and log file
-card touched <id>              scope gate: changed files against the Touch list
-card tests <id>                tests gate: each Tests line names a test that exists
-card tokens [transcript]       baseline, peak and growth for a session
-card log-new <id> <outcome>    create a session log entry
-card stats                     growth per card size across session logs
-card conf <key>                print one configuration value
-```
+`card` is one bash file. `card list` shows the deck, `card next` prints the first ready card, `card touched <id>` and `card tests <id>` are the two gates, and `card stats` reports context growth per card size. `card --help` lists every command.
 
-`--fetch` runs `git fetch --prune` and reads open pull requests with `gh`; nothing else in `card` uses the network. Reports go to stdout and errors to stderr. Exit codes: 0 ok, 1 a check failed or nothing matched, 2 usage or configuration error.
+`mergehand.conf` is `key = value` lines. It is parsed, never run. The only required key is `check`, the command that must pass before handoff.
 
-### Card states
-
-`card` works out each card's state when asked. Only `done` is stored in the file.
-
-| State | Means |
-|---|---|
-| `done` | `done: true` on the base branch, local or remote |
-| `review` | an open pull request from the card's branch (needs `--fetch`) |
-| `blocked` | the card's branch exists and the card has a `## Blocked` section |
-| `active` | the card's branch exists |
-| `ready` | no branch, and every dependency is done |
-| `waiting` | no branch, and a dependency is not done |
-
-A card's branch is `card/<id>` or `card/<id>-<slug>`. Deleting the branch releases the card.
-
-## Configuration
-
-`mergehand.conf` is `key = value` lines. It is parsed, never run.
-
-| Key | Default | Meaning |
-|---|---|---|
-| `version` | `1` | Format version of the config, card and log files |
-| `check` | required | Command that must pass before handoff |
-| `base` | `main` | Branch that cards start from and pull requests target |
-| `cards_dir` | `cards` | Where card files are |
-| `log_dir` | `log` | Where session logs are |
-| `budget.XS` | `35000` | Context growth, in tokens, allowed for an XS card |
-| `budget.S` | `70000` | The same for S |
-| `budget.M` | `100000` | The same for M |
-| `touch_ignore` | empty | Comma-separated patterns the scope gate ignores, such as lockfiles |
-| `status_max_chars` | `6000` | Cap on the status text shown at session start |
-| `reviewer` | `on` | `off` skips the reviewer for XS cards only |
-
-Add a size by adding a budget: `budget.L = 150000`.
-
-A budget limits growth: the largest context size in the session minus its size at the first turn. The first turn already holds the system prompt, tool definitions and plugins, and that differs between machines, so an absolute limit would mean something different for everyone. `card stats` shows the growth your own sessions had, per size, so you can set budgets from your own numbers.
+Every command, the six card states and every configuration key are in [`docs/reference.md`](docs/reference.md).
 
 ## What the plugin runs
 
@@ -189,10 +184,23 @@ Four hooks run while the plugin is enabled. In a repository with no `mergehand.c
 |---|---|
 | Session start | Prints `card status` into the session |
 | After each tool call | On a card branch, measures context growth. Past the card's budget it tells Claude, once, to finish the step and ask you to run `/mergehand:handoff split` |
-| End of turn | On a card branch that has commits and no session log, stops Claude from finishing once and tells it to ask you for handoff |
+| End of turn | On a card branch that has commits, a clean tree and no session log, stops Claude from ending the turn and tells it to ask you for handoff |
 | Before compaction | Leaves a marker so the session log records that the session compacted |
 
-The after-tool-call hook costs about 2 ms per tool call when you are not on a card branch and about 45 ms when you are. See [`SECURITY.md`](SECURITY.md) for what the hooks and `card` trust.
+The after-tool-call hook costs about 2 ms per tool call when you are not on a card branch. On a card branch it reads the whole transcript each time: about 45 ms with a 2 MB transcript and 127 ms with a 20 MB one, measured on an Apple silicon Mac. See [`SECURITY.md`](SECURITY.md) for what the hooks and `card` trust.
+
+## Requirements and limits
+
+| | |
+|---|---|
+| Claude Code (CLI, desktop, IDE) | Yes. Built on 2.1.261; CI validates the manifests against the latest release |
+| Claude Code on the web (cloud sessions) | No. Cloud sessions do not load a plugin that a repository's settings turn on |
+| claude.ai and Cowork | No. They do not install a plugin that has a top-level `bin/` directory |
+| Codex, Cursor, Gemini CLI and other agents | No. The hooks, skills and reviewer are Claude Code's. `card` itself runs anywhere bash does |
+| macOS, Linux | Yes. `card` runs on bash 3.2 and later, with BSD or GNU tools |
+| Windows | Not natively. Untested under WSL |
+| Git host | Any, up to the pull request. Opening the pull request uses `gh`, so GitHub |
+| Other tools | git, awk, sed, grep, sort (with `-V`) and the usual POSIX tools. `gh` is optional |
 
 ## Evidence
 
@@ -207,38 +215,64 @@ The after-tool-call hook costs about 2 ms per tool call when you are not on a ca
 
 - **The tests gate checks that a name is present.** It does not check what the test asserts; the reviewer does. In a trial on sixteen test declarations in four languages it gave seven false failures, all on nested or reworded names, and two false passes. Each false failure costs one edit to the card line.
 - **The permission entries are not a sandbox.** They match commands as written. Protect your base branch on the git host.
-- **`git commit` is not pre-approved**, so Claude asks before the handoff commit. An unattended handoff stops there.
-- **Token measurement reads the session transcript**, which is not a documented format. If it changes, `card tokens` prints `unknown` and nothing else breaks. Subagent turns are not counted.
+- **Some commands are not pre-approved**: `git checkout`, `git pull`, `git add` and `git commit`. Claude asks before each, so an unattended next-card or handoff stops at the first one.
+- **Token measurement reads the session transcript**, which is not a documented format. If it changes, `card tokens` prints `unknown` and nothing else breaks. Subagent turns are not counted, so the reviewer's tokens are in no figure here.
+- **A resumed session keeps its transcript**, so its baseline is the first turn of the original session and growth is counted from there.
 - **A budget is a warning.** It does not stop the model.
 - **`review` needs `--fetch`.** Without it a card with an open pull request shows as `active`.
+- A path with a space cannot be written in `Touch` as it is, because text after the first space is a comment. Use `?` for the space: `src/my?file.ts`.
 - A file whose name git quotes (one containing a double quote) cannot be listed in `Touch`.
 - Title length is counted in bytes, so a title with non-ASCII characters gets fewer than 80.
-- Claude Code keeps an installed plugin at the version in its manifest. A fix reaches you only with a new version.
+- If another program named `card` is already on your PATH, Claude runs that one: Claude Code puts a plugin's `bin/` directory after your own PATH entries.
+- Claude Code keeps an installed plugin at the version in its manifest. A fix reaches you only with a new version; see [Upgrade](#upgrade).
+
+## When it stops
+
+- **next-card or quick stops on a dirty tree.** Commit or stash first. Right after init, this means committing what init wrote.
+- **The pull is not a fast-forward.** Your local base branch has commits the remote does not. Push them, or land them through a pull request.
+- **`card lint` fails on a new card.** `card new` writes empty sections. Fill in `Touch`, `Tests` and `Acceptance`.
+- **"No card is ready" and a card shows `active`.** A branch named `card/<id>` or `card/<id>-<slug>` holds it. Delete the branch to release the card.
+- **A card with an open pull request shows `active`.** Use `--fetch`, with `gh` signed in.
+- **Claude will not end its turn.** A card branch has commits and no session log. Run `/mergehand:handoff`.
+- **Token fields say `unknown`.** The session started without the plugin enabled, or the transcript format changed.
+
+## Upgrade
+
+Claude Code does not update a plugin from this marketplace by itself. From a shell:
+
+```
+claude plugin marketplace update mergehand
+claude plugin update mergehand@mergehand
+```
+
+Restart Claude Code afterwards. If you downloaded `card` with `curl`, or use the CI workflow, change the tag in the URL. [`CHANGELOG.md`](CHANGELOG.md) says what each version changed.
 
 ## FAQ
 
 **Context windows keep growing. Does sizing still matter?** Less, for compaction. Budgets are configuration, so raise them. The scope gate, the review by a separate agent, the pull request per card and the measured record do not depend on window size.
 
-**Why bash?** So `card` is one file with nothing to install, which CI can fetch with `curl`. The cost is no native Windows. A single binary with the same commands is the way out if that matters.
+**Why bash?** So `card` is one file with nothing to install, which CI can fetch with `curl`. The cost is no native Windows. A single binary with the same commands would remove that limit. It is not built.
 
-**Why do I have to type handoff?** It pushes and opens a pull request. Those are yours to start.
+**Why do I have to type handoff?** It pushes a branch and opens a pull request, so a person starts it.
 
-**How do I stop using it?** Disable or uninstall the plugin; the hooks go with it. Remove the Mergehand section from `CLAUDE.md` and the entries init added to `.claude/settings.json`. `cards/`, `log/` and `mergehand.conf` are plain files.
+**How do I stop using it?** Run `claude plugin uninstall mergehand@mergehand`, then `claude plugin marketplace remove mergehand`; the hooks go with the plugin. Remove the Mergehand section from `CLAUDE.md` and the entries init added to `.claude/settings.json`. `cards/`, `log/` and `mergehand.conf` are plain files.
 
 ## Roadmap
 
 - **0.2**: a planner that writes cards from a specification, and onboarding for an existing codebase. Not built.
 - **0.3**: claiming cards, worktrees and parallel sessions. The file formats already allow it. Not built.
 
+To ask for something or argue against one of these, [open an issue](https://github.com/AshwinSathian/mergehand/issues).
+
 ## How this was built
 
-By a coding agent under supervision, from a written design, in the open. The order was: a [design](docs/design.md), an adversarial review of it, a [plan](docs/development/plan-0.1.md), then the code, test first. Once `card` could run cards, the rest of the work became cards in [`cards/`](cards/), each done on its own branch, through the gates, with a log in [`log/`](log/).
+By a coding agent under supervision, from a written design. The records are in this repository. The order was: a [design](docs/design.md), an adversarial review of it, a [plan](docs/development/plan-0.1.md), then the code, test first. Once `card` could run cards, the rest of the work became cards in [`cards/`](cards/), each done on its own branch, through the gates, with a log in [`log/`](log/).
 
-Those cards were driven by hand in one long session, without the plugin loaded, so their logs say `unknown` for the token fields. The last card of the release, the license, was run by the maintainer through `/mergehand:next-card` and `/mergehand:handoff`, and merged as [pull request 1](https://github.com/AshwinSathian/mergehand/pull/1); its log has real figures. What went wrong along the way, including three independent reviews and what they overturned, is in [`docs/development/findings.md`](docs/development/findings.md).
+Those cards were driven by hand in one long session, without the plugin loaded, so their logs say `unknown` for the token fields. One card, the license, was run by the maintainer through `/mergehand:next-card` and `/mergehand:handoff`, and merged as [pull request 1](https://github.com/AshwinSathian/mergehand/pull/1); its log has real figures. Of the 24 session logs for 0.1, it is the only one with a measurement. What went wrong along the way, including three independent reviews and what they overturned, is in [`docs/development/findings.md`](docs/development/findings.md).
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md). `make test` and `make lint` are the two commands to know.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) and the [code of conduct](CODE_OF_CONDUCT.md). `make test` and `make lint` are the two commands to know.
 
 ## License
 

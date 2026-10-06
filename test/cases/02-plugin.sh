@@ -227,13 +227,13 @@ test_nothing_claims_evals_that_do_not_exist() {
   ! ls cards/DOC-03-* 2>/dev/null || fail 'the eval card is still in the deck'
 }
 
-test_readme_names_every_card_command() {
+test_reference_names_every_card_command() {
   local c
   for c in $("$BASH" "$CARD" help | awk '/^  [a-z]/ && $1 != "help," { print $1 }'); do
-    grep -q "card $c" "$ROOT/README.md" || fail "README does not mention card $c"
+    grep -q "^  $c " "$ROOT/docs/reference.md" || fail "docs/reference.md does not list card $c"
   done
   for c in version check base cards_dir log_dir budget.XS touch_ignore status_max_chars reviewer; do
-    grep -q "\`$c\`" "$ROOT/README.md" || fail "README does not document the $c setting"
+    grep -q "\`$c\`" "$ROOT/docs/reference.md" || fail "docs/reference.md does not document the $c setting"
   done
 }
 
