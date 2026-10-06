@@ -77,7 +77,7 @@ In Claude Code:
 The plugin puts `card` on the PATH of the commands Claude runs. To use `card` yourself, or in CI, download the one file:
 
 ```
-curl -fsSL https://raw.githubusercontent.com/AshwinSathian/mergehand/v0.1.1/bin/card -o card && chmod +x card
+curl -fsSL https://raw.githubusercontent.com/AshwinSathian/mergehand/v0.1.2/bin/card -o card && chmod +x card
 ```
 
 From 0.1.1, each [release](https://github.com/AshwinSathian/mergehand/releases) also carries `card` and `card.sha256`, so you can check the file with `shasum -a 256 -c card.sha256`.
@@ -211,6 +211,7 @@ The main results, from [`docs/evidence.md`](docs/evidence.md):
 - More than 300 shell tests run under bash 3.2 on macOS, and in CI on Ubuntu with `awk` as mawk and as gawk. `make test` runs them.
 - One of this repository's own cards went through the whole loop against GitHub: [pull request 1](https://github.com/AshwinSathian/mergehand/pull/1). Its session grew by 25,982 tokens against an XS budget of 35,000 and did not compact.
 - The same loop in a scratch repository, with only this plugin loaded, grew by 3,417 tokens, from 36,917 to 40,334.
+- Installed from the marketplace into a new repository, init, quick and handoff produced a pull request. That session grew by 15,115 tokens.
 - [`examples/hello-deck/`](examples/hello-deck/) shows both gates failing on a real change.
 
 ## Known limits

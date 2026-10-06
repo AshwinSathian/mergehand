@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # card: the Mergehand command-line tool.
-# Version 0.1.1. https://github.com/AshwinSathian/mergehand
+# Version 0.1.2. https://github.com/AshwinSathian/mergehand
 # SPDX-License-Identifier: MIT
 #
 # One file, so people and CI can fetch it without the plugin. It must run on
@@ -19,7 +19,7 @@ set -u
 LC_ALL=C
 export LC_ALL
 
-readonly VERSION=0.1.1
+readonly VERSION=0.1.2
 TAB=$(printf '\t')
 readonly TAB
 
@@ -351,7 +351,7 @@ lint_cards() {
       for (i = 1; i <= n; i++) {
         s = sec[i]
         if (!(s in seen)) err("has no ## " s " section")
-        else if (items[s] == 0 && !(s == "Read" && fm["size"] == "XS")) err("## " s " has no items")
+        else if (items[s] == 0 && !(s == "Read" && fm["size"] == "XS")) err("## " s " has no items (an item is a line that starts with \"- \")")
       }
     }
     END {

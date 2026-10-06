@@ -4,6 +4,13 @@ Notable changes to Mergehand. The format follows [Keep a Changelog](https://keep
 
 Claude Code keeps an installed plugin at the version in `plugin.json`, so every fix that users should receive comes with a version bump and a tag.
 
+## [0.1.2] - 2026-10-06
+
+### Fixed
+
+- The quick skill did not say that a card item starts with `- `. In the first run from the marketplace it wrote bare lines under `Touch`, and the scope gate did not match them. The skill now says so and runs `card lint` before it shows the card.
+- `card lint` reported such a section as having no items, with no hint. The message now says what an item is.
+
 ## [0.1.1] - 2026-10-06
 
 ### Changed
@@ -51,5 +58,6 @@ First release: the core, the runner and the quick lane.
 - Claiming cards, worktrees and parallel sessions (planned for 0.3).
 - Hosts other than GitHub for the pull request step, and native Windows shells.
 
+[0.1.2]: https://github.com/AshwinSathian/mergehand/releases/tag/v0.1.2
 [0.1.1]: https://github.com/AshwinSathian/mergehand/releases/tag/v0.1.1
 [0.1.0]: https://github.com/AshwinSathian/mergehand/releases/tag/v0.1.0

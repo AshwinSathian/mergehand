@@ -30,11 +30,13 @@ Work through these steps in order. Stop where a step says stop.
    card new Q-<digits> "<title, at most 80 characters>" --size XS
    ```
 
-   The command prints the card's path. Fill in the file:
-   - `Touch`: each file that will change, one per line. Entries are shell patterns; write full paths.
-   - `Tests`: one line per test, worded as the test will be named.
+   The command prints the card's path. Fill in the file. In every section an item is a line that starts with `- `; the gates do not see any other line.
+   - `Touch`: one item for each file that will change. Entries are shell patterns; write full paths.
+   - `Tests`: one item per test, worded as the test will be named.
    - `Acceptance`: statements that are true or false, all of which must hold.
    - Leave `Read` empty.
+
+   Then run `card lint` and fix what it reports.
 
 5. **Show the card to the user** and ask for a yes or an edit. Do not write code before the answer. If the user says no, delete the card file and stop: an untracked card left on the base branch would stop the next card from starting.
 

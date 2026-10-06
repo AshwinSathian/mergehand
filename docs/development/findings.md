@@ -247,3 +247,17 @@ No test had caught it because the stub `gh` was only ever pointed at cards that 
 The fix is one condition: a card that is only in the working tree is done on its own word unless it has a branch or an open pull request. With the fix, the same command against the same pull request prints `review   E-01`.
 
 Still true, and not fixable without reading other branches: from the base branch, a quick card is invisible until its pull request merges, because its file is not there.
+
+## 16. The first run from the marketplace: quick wrote card lines the gates do not read (2026-10-06)
+
+**Status:** fixed. **Evidence:** the maintainer's run of 0.1.1 in a new private repository, installed with `/plugin marketplace add`; the card's session log.
+
+The whole path worked: init, a commit, quick, handoff, a pull request with the workflow's `lint` job passing, and `review` from `card list --fetch`. Growth was 15,115 tokens against the XS budget of 35,000. `claude plugin details mergehand` put the always-on cost at about 335 tokens.
+
+One thing failed. The quick skill told the agent to list files under `Touch` "one per line". `card new` writes empty sections, so nothing showed the agent that an item is a line starting with `- `. It wrote bare paths. The scope gate reads only items, so it did not match them, and the agent rewrote the section. The log's Deviations section records it.
+
+`card lint` already fails on such a card, with "## Touch has no items". Two things kept that from helping: quick never ran lint before showing the card (next-card does), and the message does not say what an item is when the section visibly has lines in it.
+
+The fix: quick says an item starts with `- ` and runs `card lint` before it shows the card, and the lint message says what an item is. Not changed: `card new` still writes empty sections.
+
+The same log shows the `Tests` line being reworded after the card was approved, to match the test's final name. That is the known cost of the tests gate (finding 1), not a new fault.

@@ -144,6 +144,7 @@ test_lint_missing_section() {
 test_lint_empty_section() {
   deck; edit "$C" '/^- thing works$/d'
   lint_fails '## Tests has no items'
+  lint_fails 'an item is a line that starts with "- "'
 }
 
 test_lint_xs_card_may_leave_read_empty() {
