@@ -55,7 +55,7 @@ On 2026-10-06 the maintainer installed 0.1.1 with `/plugin marketplace add Ashwi
 The session did not compact. Its baseline is within 300 tokens of the DOC-02 session's, which had the maintainer's other plugins loaded. What the run showed:
 
 - Init wrote `mergehand.conf`, `cards/REVIEW.md`, the pull request template, the permission entries, the project settings that turn the plugin on, and the CI workflow. The workflow downloaded `card` at `v0.1.1` and its `lint` job passed on the pull request.
-- Handoff ran the check, the gates and the reviewer, and opened the pull request. With it open, `card list --fetch` printed `review` for the card.
+- Handoff ran the check, the gates and the reviewer, and opened the pull request. With it open, `card list --fetch` printed `review` for the card. After the maintainer merged it and pulled, `card list` printed `done`.
 - The reviewer left one nit and nothing to fix.
 
 Two things went wrong, and both are in the card's log under Deviations. Quick wrote the `Touch` entries as bare lines, which are not items, so the scope gate did not match them until they were rewritten with `- ` ([`development/findings.md`](development/findings.md), finding 16). The `Tests` line also had to be reworded to match the name the test ended up with.
