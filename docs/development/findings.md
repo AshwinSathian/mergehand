@@ -218,3 +218,16 @@ What that settles, which had only been argued before:
 - The suite passes under bash 3.2 on a machine other than the one it was written on.
 
 Still not shown: the pull request path against the host, and a handoff under the permission entries. The first card run through the plugin against this repository (DOC-02) covers both.
+
+## 14. The first card through the real loop (2026-10-06)
+
+**Status:** closed, with two notes for 0.2. **Evidence:** pull request 1, `log/2026-10-06-DOC-02-1.md`.
+
+The maintainer ran DOC-02 with the plugin loaded against the hosted repository. Handoff pushed the branch, opened the pull request with the template filled in, CI passed on it, and it was merged. The log has real figures: baseline 53,055, peak 79,037, growth 25,982, not compacted. This closes what findings 10 to 13 left open about `git push`, `gh pr create` and a log written by a real session.
+
+Two things it showed:
+
+- **The XS budget is tight in a session that carries other plugins.** Adding a license file used 74% of 35,000. Part of that is a first attempt that the permission mode refused, which stayed in the same session's transcript. Even so, a session that starts at 53,000 tokens and reads a card, a few files and a reviewer's findings does not have much room in 35,000. `card stats` exists so a project can set budgets from its own sessions; the defaults may want raising once there are more than one of these to go on.
+- **A refused attempt leaves no trace except in the log's prose.** The agent reported that every file write was refused by the permission mode on the first try. Nothing in Workdeck notices that a session did no work; the user ran next-card again. Worth a line in the README's quick start: the session needs permission to edit files.
+
+The baseline of 53,055 also fits the range of 53,000 to 71,000 that the design's section 19 quotes from earlier sessions, and is well above the 36,917 measured with only this plugin loaded.

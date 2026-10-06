@@ -70,6 +70,8 @@ In a git repository with at least one commit:
 4. `/workdeck:handoff`. Claude runs your check command, the gates and the reviewer, writes the session log, commits, pushes, and opens the pull request.
 5. Merge the pull request.
 
+The session needs permission to edit files: in a permission mode that refuses writes, the agent can read the card and do nothing else.
+
 With no remote, handoff stops after the commit and tells you what is left. Merge the branch yourself and delete it. With no `gh`, it stops after the push and prints the URL for opening the pull request.
 
 To plan more than one step ahead, write cards: `card new AUTH-03 "Token refresh" --size S` creates the file, you fill in its sections, commit and push it on the base branch, and `/workdeck:next-card` starts the first card that is ready.
@@ -197,7 +199,8 @@ The after-tool-call hook costs about 2 ms per tool call when you are not on a ca
 [`docs/evidence.md`](docs/evidence.md) lists what has been measured and what has not. In short:
 
 - More than 300 shell tests run under bash 3.2 on macOS, and in CI on Ubuntu with `awk` as mawk and as gawk. `make test` runs them.
-- One card run through the full loop in a scratch repository grew its session's context by 3,417 tokens, from 36,917 to 40,334, against an XS budget of 35,000.
+- One of this repository's own cards went through the whole loop against GitHub: [pull request 1](https://github.com/AshwinSathian/workdeck/pull/1). Its session grew by 25,982 tokens against an XS budget of 35,000 and did not compact.
+- The same loop in a scratch repository, with only this plugin loaded, grew by 3,417 tokens, from 36,917 to 40,334.
 - [`examples/hello-deck/`](examples/hello-deck/) shows both gates failing on a real change.
 
 ## Known limits
@@ -231,7 +234,7 @@ The after-tool-call hook costs about 2 ms per tool call when you are not on a ca
 
 By a coding agent under supervision, from a written design, in the open. The order was: a [design](docs/design.md), an adversarial review of it, a [plan](docs/development/plan-0.1.md), then the code, test first. Once `card` could run cards, the rest of the work became cards in [`cards/`](cards/), each done on its own branch, through the gates, with a log in [`log/`](log/).
 
-Those cards were driven by hand in one long session, without the plugin loaded, so their logs say `unknown` for the token fields. The skills, hooks and reviewer were run end to end in a scratch repository. What went wrong along the way, including three independent reviews and what they overturned, is in [`docs/development/findings.md`](docs/development/findings.md).
+Those cards were driven by hand in one long session, without the plugin loaded, so their logs say `unknown` for the token fields. The last card of the release, the license, was run by the maintainer through `/workdeck:next-card` and `/workdeck:handoff`, and merged as [pull request 1](https://github.com/AshwinSathian/workdeck/pull/1); its log has real figures. What went wrong along the way, including three independent reviews and what they overturned, is in [`docs/development/findings.md`](docs/development/findings.md).
 
 ## Contributing
 
