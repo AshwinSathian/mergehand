@@ -12,7 +12,6 @@ Claude Code keeps an installed plugin at the version in `plugin.json`, so every 
 - The plugin and its marketplace are `mergehand`, so the skills are `/mergehand:init`, `/mergehand:next-card`, `/mergehand:handoff` and `/mergehand:quick`.
 - The configuration file is `mergehand.conf`, the CI workflow template is `mergehand.yml`, the environment variables are `MERGEHAND_TRANSCRIPT` and `MERGEHAND_SESSION`, and the compaction markers are in `<git-dir>/mergehand/`.
 - The `card` command keeps its name and its arguments.
-
 - The README shows a session, compares the plugin with other projects, and has sections on upgrading and on what to do when a skill stops. The command list, the card states and the configuration keys moved to `docs/reference.md`.
 - Releases carry `card` and `card.sha256`.
 

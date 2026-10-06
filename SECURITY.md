@@ -17,7 +17,7 @@ Mergehand is a Claude Code plugin. While it is enabled it runs four hooks, in ev
 
 In a repository with no `mergehand.conf`, each hook exits at once and prints nothing. No hook makes a network call. In `card`, the only network access is `--fetch`, which runs `git fetch --prune` and `gh pr list`. The skills also use the network when you type them: next-card and quick pull the base branch, next-card reads your open pull requests with `gh`, and handoff pushes the card branch and opens the pull request with `gh`.
 
-The `card` command is one bash file, `bin/card`. Read it before you trust it; it is written to be read.
+The `card` command is one bash file, `bin/card`. Read it before you trust it.
 
 ## What Mergehand trusts, and what it does not
 
