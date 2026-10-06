@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # card: the Workdeck command-line tool.
 # Version 0.1.0. https://github.com/AshwinSathian/workdeck
+# SPDX-License-Identifier: MIT
 #
 # One file, so people and CI can fetch it without the plugin. It must run on
 # bash 3.2 (macOS /bin/bash) with BSD or GNU awk, sed, grep and sort (with
