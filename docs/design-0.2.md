@@ -3,7 +3,7 @@
 This is the design for release 0.2. It adds to [`design.md`](design.md), which stays the design of everything 0.1 shipped; where this file is silent, that one holds. The scope it follows is [`development/scope-0.2.md`](development/scope-0.2.md).
 
 Date: 2026-10-06, rewritten 2026-10-09
-Status: approved 2026-10-09. Reviewed that day by an agent that did not write it ([`development/review-0.2.md`](development/review-0.2.md)) and rewritten from that review. The maintainer decided four questions (section 20) and had the rest attacked once more and locked (section 22). The outline format of section 5 is the one part that may still change, and only from the spike (section 21).
+Status: approved 2026-10-09. Reviewed that day by an agent that did not write it ([`development/review-0.2.md`](development/review-0.2.md)) and rewritten from that review. The maintainer decided four questions (section 20) and had the rest attacked once more and locked (section 22). The outline format of section 5 is the one part that may still change, and only from the spike (section 21). Writing the deck found five faults, which changed sections 4.2, 5, 7, 13, 14, 19, 21 and 22 the same day; they are the fourth pass of the review record.
 Scope: release 0.2 (the planner, and init for a repository that is already set up). Team features (0.3) get their own design.
 
 ## 1. What 0.2 adds
@@ -77,7 +77,7 @@ The plan skill is invoked as `/workdeck:plan`. The agent is addressed as `workde
 ### 4.2 A project that uses the planner
 
 ```
-docs/specs/auth.md                   # the specification; any path in the repository
+specs/auth.md                        # the specification; any path in the repository
 cards/plan/auth.md                   # the outline for that specification
 cards/AUTH-01-token-store.md         # a card, as in 0.1, once next-card has written it
 ```
@@ -88,7 +88,7 @@ cards/AUTH-01-token-store.md         # a card, as in 0.1, once next-card has wri
 
 ```
 ---
-spec: docs/specs/auth.md
+spec: specs/auth.md
 spec_blob: 3b18e512dba79e4c8300dd08aeb37f8e728b8dad
 prefix: AUTH
 level: 2
@@ -141,7 +141,7 @@ A row whose card is being written or implemented has a `card/<id>` branch, and i
 A planned card is an ordinary 0.1 card that next-card created from a row. It has no extra key. `card plan start <id>` creates it:
 
 - the front matter from the row's id, title, size and dependencies;
-- under `Read`, one item: the specification's path and a comment, `(row <id>: <heading>; <heading>)`;
+- under `Read`, one item: the specification's path and a comment, `(row <id>: <heading>; <heading>)`, or `(row <id>)` for a row with no `spec` item;
 - under `Acceptance`, the row's `does` lines;
 - under `Out of scope`, the row's `not` lines.
 
@@ -292,7 +292,7 @@ One step is added to `agents/reviewer.md`. When a `Read` item of the card has a 
 
 One hook changes.
 
-- **Log guard.** `stop.sh` blocks the end of a turn on a card branch that has commits, a clean tree and no session log. The approval commit of section 10.2 would trip it on the first turn that ends before any code is written. The count of commits now leaves out those that change nothing outside the cards directory: `git rev-list --count HEAD --not <base refs> -- . ':(exclude)<cards_dir>'`.
+- **Log guard.** `stop.sh` blocks the end of a turn on a card branch that has commits, a clean tree and no session log. The approval commit of section 10.2 would trip it on the first turn that ends before any code is written. The count of commits now leaves out those that change nothing outside the cards directory: `git rev-list --count HEAD --not <base refs> -- ':(top)' ':(top,exclude)<cards_dir>'`. Both pathspecs are anchored at the root of the repository, because the hook runs in whatever directory the session is in: without `top`, the same command run in a subdirectory counts 0 for a branch with a code commit outside it (checked with git 2.54). One thing is given up. A commit that only adds a `## Blocked` section to the card no longer trips the guard, so nothing reminds that session to write its log.
 
 The budget warning is unchanged. It fires on a `card/*` branch, and growth is measured over the whole transcript from the session's first turn, so the reading and writing that next-card does before the branch exists is counted.
 
@@ -322,7 +322,7 @@ The baseline is recorded beside them: 9 of the 24 hand-written cards of 0.1 had 
 
 The 0.3 design is written by an agent that knows it will be planned, so its sections may suit the planner better than a specification written for people does. The evidence page keeps the two repositories' figures apart for that reason.
 
-The maintainer reads the record and decides whether to tag. No count decides it: with ten cards, a planner that misses a file on half of them passes a "more than half" test 62 times in 100. One result stops the release: a row that had to be cut again before its card could be written. The release then waits for a change to the plan skill or the outline format, or for the maintainer's written reason in the evidence page.
+The maintainer reads the record and decides whether to tag. The version in `plugin.json` is changed only then (section 21, item 11). No count decides it: with ten cards, a planner that misses a file on half of them passes a "more than half" test 62 times in 100. One result stops the release: a row that had to be cut again before its card could be written. The release then waits for a change to the plan skill or the outline format, or for the maintainer's written reason in the evidence page.
 
 ## 15. Errors
 
@@ -395,6 +395,7 @@ Read on 2026-10-06 through Context7 (`/websites/code_claude`). Pages are under `
 | 15 | Claude follows a skill's instruction to delegate a search to Explore and to wait for a subagent before going on | none | unverified; the page says Claude chooses when to delegate and that subagents run in the background by default |
 | 16 | A skill with `disable-model-invocation: true` adds nothing to every session's context | `slash-commands` says "Description not in context" | unverified: `claude plugin details` reported about 335 always-on tokens for 0.1.1 and the README attributes them to the four skills and the agent. One of the two is wrong. |
 | 17 | A new plugin agent's description is in every session's context | `plugins/measure` shows agents with an always-on cost | read; the size for `plan-reviewer` is not measured |
+| 18 | A user who installed the plugin from the marketplace keeps the cached copy until `version` in `plugin.json` changes, and then receives whatever the marketplace's branch holds | `plugins/host-marketplace` ("Release a new version"), `plugins/loading` ("Versions and updates") | read on 2026-10-09 |
 
 Row 13 of the first draft, about the post-tool-use hook's input, is gone with the change it supported.
 
@@ -434,14 +435,15 @@ The deck is written by hand in PLAN-01. Its order, riskiest first:
 6. The plan skill and the plan reviewer, from the spike's drafts.
 7. next-card, `reference/implement.md`, the reviewer's step and handoff's line.
 8. Init, and the three templates.
-9. The 0.1.2 compatibility test, the README, the reference, the changelog and the version.
-10. The trial and the evidence page.
+9. The 0.1.2 compatibility test, the README, the reference and the changelog.
+10. The hand runs of section 17, the trial and the evidence page.
+11. The version, as the last commit before the tag. Changing `version` on the main branch is what delivers the plugin to everyone who installed it (section 19, row 18), so it waits for the maintainer's decision.
 
 ## 22. Decisions locked, and what is deferred
 
 Locked on 2026-10-09. Each was attacked once more before it was fixed; the attacks are in the review record's third part.
 
-1. **Where 0.2.0 is tagged from.** The main branch. A trial card that adds a command or a skill of 0.3 which a user can reach is not merged before the tag unless the feature it belongs to is complete. If the main branch still holds a reachable half of a feature when the maintainer decides to tag, the tag goes on a branch cut at the last 0.2 commit, with the planner's fixes picked onto it. Which of the two applies is a fact read at that moment, not a choice made now.
+1. **Where 0.2.0 is tagged from.** The main branch. A trial card that adds a command or a skill of 0.3 which a user can reach is not merged before the tag unless the feature it belongs to is complete. If the main branch still holds a reachable half of a feature when the maintainer decides to tag, the tag goes on a branch cut at the last 0.2 commit, with the planner's fixes picked onto it. Which of the two applies is a fact read at that moment, not a choice made now. The branch protects less than it seems: the marketplace serves the plugin from the main branch, and a user receives it when `version` changes there, wherever the tag is (section 19, row 18). A tag on a branch gives a clean `card` file to a CI workflow and nothing else. So `version` is not changed on the main branch while that branch holds a reachable half of a feature; the half is finished, or taken out, first.
 2. **The 0.3 design.** Written by Claude Code as its own hand-written card, outside the 0.2 deck. It can be written while 0.2 is built. The trial card lists it under `Read` and cannot start until it is on the base branch.
 3. **`card plan` in handoff.** No (section 11.3).
 4. **The quick lane's card.** It does not get an approval commit in 0.2. Recorded in `development/later.md`.

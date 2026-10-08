@@ -1,6 +1,6 @@
 # Reviews of the 0.2 scope and design
 
-Two adversarial reviews, each by an agent that did not write what it reviewed, and a third pass in which the second reviewer attacked its own amendments before they were locked. "The scope" is [`scope-0.2.md`](scope-0.2.md) and "the design" is [`../design-0.2.md`](../design-0.2.md).
+Two adversarial reviews, each by an agent that did not write what it reviewed, a third pass in which the second reviewer attacked its own amendments before they were locked, and a fourth made by the agent that wrote the deck. "The scope" is [`scope-0.2.md`](scope-0.2.md) and "the design" is [`../design-0.2.md`](../design-0.2.md).
 
 ## First review, 2026-10-06: the scope note
 
@@ -104,7 +104,7 @@ The reviewer read the three documents against `bin/card` 0.1.2, the hooks, the s
 
 ### Not reviewed
 
-- The deck. PLAN-01 has not produced it.
+- The deck, at the time of this review. The fourth pass covers it.
 - The plan skill's prompt. The spike writes the first one.
 
 ## Third pass, 2026-10-09: the amendments and the open questions
@@ -125,3 +125,47 @@ The maintainer answered the four open points: lock the remaining choices after a
 | The quick lane has the hidden scope growth of finding 19 | The fix is one line in the skill now that the stop hook allows a card-only commit. | Not in 0.2, which is the planner. Added to `later.md`. |
 | The plan skill's commands under init's permission entries | The template allows no `git checkout`, `git add` or `git commit`, for card branches either, and no run under exactly those entries has been recorded. | The hand run of the plan skill is made under them and the prompts are recorded. |
 | The outline format is specified before any plan has been seen | The same streetlight as finding 4. | The format is the one part of the approved design the spike may change. Every card that parses an outline depends on the spike. |
+
+## Fourth pass, 2026-10-09: the deck, and what writing it found in the design
+
+The deck is cards P-01 to P-24, and T-01 for the 0.3 design. This pass is by the agent that wrote the deck, with no second agent, so it is the weakest evidence in this record. What it measured is marked with how. The reviewer that handoff launches for PLAN-01 is the first independent reader of the deck.
+
+### Faults in the design
+
+| Point | Evidence | Outcome |
+|---|---|---|
+| The version was in item 9 of the build order, before the trial | Claude Code keeps an installed plugin at the version in `plugin.json` and replaces it when that string changes (`plugins/host-marketplace`, "Release a new version"; the changelog of this repository says the same). Merging the version on the main branch would have delivered 0.2 to every user before the trial that decides whether it is released. | The version is the last card, P-24, after the trial record, and carries the maintainer's decision as its question. Design sections 14, 19 (row 18) and 21. |
+| The fallback of decision 1, a tag on a branch | The marketplace serves the plugin from the main branch. A tag on a branch changes what a CI workflow downloads and nothing a plugin user receives. | Decision 1 says so, and says the version is not changed on the main branch while it holds a reachable half of a feature. Scope note, "Decided". |
+| The stop hook's command in section 13 | Run in a subdirectory, `-- . ':(exclude)cards'` printed 0 for a branch with one card commit and one code commit at the root; the hook would have passed where it should block. With `':(top)' ':(top,exclude)cards'` it printed 1 (git 2.54, a scratch repository). The hook does not change directory. | Section 13 has the anchored form. P-11 tests it from a subdirectory. |
+| The same condition lets a card-only commit through | A session that commits only a `## Blocked` section, with no log, is no longer stopped. | Accepted and written into section 13. The approval commit needs the condition, and the blocked log is a reminder, not a gate. |
+| The example path in sections 4.2 and 5 | `test_docs_have_one_design_file_and_a_development_folder` fails on any tracked file that names the old documentation directories, and the example was one of them. `make test` failed on the commit that added the design. | The example is `specs/auth.md`. The test is unchanged. |
+| A row with no `spec` item had no comment form in section 7 | Section 5 allows the row; `card plan start` had nothing to write. | `(row <id>)`. It still starts with `(row `, so the reviewer's step fires and finds no heading to check. |
+
+### Where the design and the repository's rules disagreed
+
+| Point | Outcome |
+|---|---|
+| Section 17 has the 0.1.2 file "fetched from the release tag in CI". `cards/REVIEW.md` says a test touches no network. | A step of the CI workflow fetches the tag. The test reads the file with `git show v0.1.2:bin/card` and skips where the tag is absent (P-08). |
+| Section 17 says "a fixture deck". The same rule says each test builds its own repository. | The deck is built in the case with the helpers (P-18). |
+| `cards/REVIEW.md` forbade naming any other project outside one section of the README. The approved design and this record name two specification formats. | The rule gains an exception for a specification format named as the planner's input, in the 0.2 design and the development records. The README still names none (P-19). |
+| `<id>: card as approved` inside a code span | `test_skills_name_only_card_commands_that_exist` reads it as the command `card as`. P-14 and P-15 carry the trap. |
+
+### Choices made in the deck, each attacked
+
+| Choice | Attack | Kept or changed |
+|---|---|---|
+| One prefix, `P`, for the whole deck | Easy to confuse with `PLAN`. | Kept. `card list` orders prefixes alphabetically, so one prefix is the only way the list follows the build order. |
+| The 0.3 design card was `PLAN-02` | It sorted before `P-01`, so `card next` offered it first, and would have gone on offering it before every card of the deck. A design for 0.3 written before the spike is written against an outline format that may change. It may depend on no 0.2 card, so order is the only lever. | Changed to `T-01`, which sorts after the deck. It can still be started by id at any time. |
+| P-22 depends on T-01 | The maintainer asked only that the trial card list the design under `Read`. | Kept. It is the mechanical form of "cannot start until it is on the base branch". T-01 depends on nothing. |
+| `Tests` lines as words, as the 0.1 cards have them | Design section 10.2 asks a planned card for the name the test will have, in the style of the tests beside it. The deck should follow the rule it builds. | Changed to the function names, `test_<words>`. The gate compares letters and digits, so either form passes. |
+| P-05 reuses `changed_files` | That function drops every path under the cards directory, so a card written on a plan branch would not have been seen (read in `bin/card`). | The card says to take the unfiltered list. |
+| `card plan check` and an ignored file | Neither "tracked" nor "untracked". | A `(new)` path fails when anything is at that path. Any other `Touch` entry must match a file git would report, because the scope gate cannot see a change to an ignored file. |
+| The trial as one card | It is not one session: plan runs and ten card sessions are the maintainer's own. | Two cards: P-22 records the setup and P-23 the result. Neither is one of the ten. |
+| The hand runs of section 17 had no place in the build order | | P-21, in item 10. |
+| T-01 at size M | PLAN-01 needed several sessions for the same four outputs. | Kept as one card, as asked. Its notes name the split. |
+| The spike at size S | Two drafts, two plan runs, a second session and four claims. | Kept: the plan runs and the second session are sessions of their own, and the card's session writes the drafts and the record. If it does not fit, that is the first measured S. |
+
+### Still open
+
+- Which repository the second trial runs in. P-22 carries the question.
+- Whether to release. P-24 carries the question.

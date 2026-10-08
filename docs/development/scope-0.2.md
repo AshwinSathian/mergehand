@@ -63,7 +63,7 @@ Ten cards cannot carry a numeric threshold. With ten, a planner that misses a fi
 
 ## Decided on 2026-10-09
 
-- **Where 0.2.0 is tagged from.** The main branch. A trial card that adds a reachable command or skill of 0.3 is not merged before the tag unless its feature is complete. If the main branch holds a reachable half of a feature at that moment, the tag goes on a branch cut at the last 0.2 commit with the planner's fixes picked onto it.
+- **Where 0.2.0 is tagged from.** The main branch. A trial card that adds a reachable command or skill of 0.3 is not merged before the tag unless its feature is complete. If the main branch holds a reachable half of a feature at that moment, the tag goes on a branch cut at the last 0.2 commit with the planner's fixes picked onto it. The plugin itself reaches users from the main branch when its version changes there, so the version is the last commit before the tag and is not changed while the main branch holds such a half.
 - **The 0.3 design** is written by Claude Code, as its own card outside the 0.2 deck. It can be written while 0.2 is built, and the trial waits for it.
 
 ## Deferred
