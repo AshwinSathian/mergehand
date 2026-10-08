@@ -10,13 +10,13 @@ The reviewer checks every rule here against the diff.
 
 ## Trust
 
-- `mergehand.conf` and card content are never sourced or passed to `eval`.
+- `workdeck.conf` and card content are never sourced or passed to `eval`.
 - Every id is checked with `need_id` or `valid_id` before it reaches a branch name, a file name or a pattern.
 - Text that reaches an agent's context (`card status`, hook output) carries front matter fields and one log section only, with control characters removed. No branch name other than the current one.
 
 ## Hooks
 
-- A hook's first action is to exit 0 silently when the repository has no `mergehand.conf`.
+- A hook's first action is to exit 0 silently when the repository has no `workdeck.conf`.
 - A hook exits 0 on any internal error. The stop hook's log guard is the only exit 2.
 - A hook makes no network call.
 

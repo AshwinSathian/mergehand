@@ -2,7 +2,7 @@
 # shellcheck disable=SC2154,SC2016
 
 conf_is() { card conf "$1"; assert_rc 0; assert_eq "$2" "$OUT" "conf $1"; }
-conf_fails() { card conf check; assert_rc 2; assert_contains "$ERR" "card: mergehand.conf"; assert_contains "$ERR" "$1"; }
+conf_fails() { card conf check; assert_rc 2; assert_contains "$ERR" "card: workdeck.conf"; assert_contains "$ERR" "$1"; }
 
 test_conf_defaults() {
   new_repo; mk_conf
@@ -21,14 +21,14 @@ test_conf_defaults() {
 
 test_conf_comments_blanks_and_whitespace() {
   new_repo
-  printf '# a comment\n\n   # indented comment\n  check   =   make check VAR=1  \nbase=trunk\r\n' > mergehand.conf
+  printf '# a comment\n\n   # indented comment\n  check   =   make check VAR=1  \nbase=trunk\r\n' > workdeck.conf
   conf_is check 'make check VAR=1'
   conf_is base trunk
 }
 
 test_conf_value_is_never_evaluated() {
   new_repo
-  printf 'check = $(touch pwned) `touch pwned2` ; touch pwned3\n' > mergehand.conf
+  printf 'check = $(touch pwned) `touch pwned2` ; touch pwned3\n' > workdeck.conf
   conf_is check '$(touch pwned) `touch pwned2` ; touch pwned3'
   assert_no_file pwned; assert_no_file pwned2; assert_no_file pwned3
 }
@@ -45,7 +45,7 @@ test_conf_unknown_version() {
 
 test_conf_malformed_line_names_line_number() {
   new_repo; mk_conf 'this is not a setting'
-  conf_fails 'mergehand.conf:2'
+  conf_fails 'workdeck.conf:2'
 }
 
 test_conf_unknown_key_in_file() {
@@ -61,7 +61,7 @@ test_conf_unknown_key_requested() {
 }
 
 test_conf_check_not_set() {
-  new_repo; echo 'base = main' > mergehand.conf
+  new_repo; echo 'base = main' > workdeck.conf
   card conf check
   assert_rc 2
   assert_contains "$ERR" 'check is not set'

@@ -33,8 +33,8 @@ test_basics_no_config_suggests_init() {
   new_repo
   card list
   assert_rc 2
-  assert_contains "$ERR" 'card: no mergehand.conf'
-  assert_contains "$ERR" '/mergehand:init'
+  assert_contains "$ERR" 'card: no workdeck.conf'
+  assert_contains "$ERR" '/workdeck:init'
 }
 
 test_basics_version_matches_the_plugin_manifest() {

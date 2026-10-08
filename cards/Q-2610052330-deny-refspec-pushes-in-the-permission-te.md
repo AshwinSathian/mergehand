@@ -11,7 +11,7 @@ done: true
 ## Touch
 - templates/settings-permissions.json
 - test/cases/02-plugin.sh
-- mergehand.conf (touch_ignore for the findings and later notes, which every card may add to)
+- workdeck.conf (touch_ignore for the findings and later notes, which every card may add to)
 
 ## Tests
 - permission template denies refspec pushes

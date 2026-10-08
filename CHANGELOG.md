@@ -1,8 +1,25 @@
 # Changelog
 
-Notable changes to Mergehand. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While the version is below 1.0, a minor release may change file formats; `mergehand.conf` carries a `version` key so `card` can refuse a format it does not know.
+Notable changes to WorkDeck. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While the version is below 1.0, a minor release may change file formats; `workdeck.conf` carries a `version` key so `card` can refuse a format it does not know.
 
 Claude Code keeps an installed plugin at the version in `plugin.json`, so every fix that users should receive comes with a version bump and a tag.
+
+## [Unreleased]
+
+### Changed
+
+- The project is called WorkDeck again. The name Mergehand, used in 0.1.1 and 0.1.2, is dropped. The plugin and its marketplace are `workdeck`, so the skills are `/workdeck:init`, `/workdeck:next-card`, `/workdeck:handoff` and `/workdeck:quick`.
+- The configuration file is `workdeck.conf`, the CI workflow template is `workdeck.yml`, the environment variables are `WORKDECK_TRANSCRIPT` and `WORKDECK_SESSION`, and the compaction markers are in `<git-dir>/workdeck/`.
+
+### Moving from 0.1.1 or 0.1.2
+
+Nothing reads the Mergehand names, so a repository set up with those versions does nothing until it is moved:
+
+1. Uninstall the old plugin and remove its marketplace, then install `workdeck@workdeck`.
+2. Rename `mergehand.conf` to `workdeck.conf`.
+3. In `CLAUDE.md`, change the section heading to `## WorkDeck session protocol` and the skill names in it to `/workdeck:`.
+4. In `.claude/settings.json`, change any `mergehand` entry that init added.
+5. Rename the workflow file `mergehand.yml` to `workdeck.yml` if you copied the template.
 
 ## [0.1.2] - 2026-10-06
 
@@ -15,7 +32,7 @@ Claude Code keeps an installed plugin at the version in `plugin.json`, so every 
 
 ### Changed
 
-- The project is renamed from Workdeck to Mergehand, because the old name belongs to an existing product. Version 0.1.0 was released under the old name.
+- The project is renamed from WorkDeck to Mergehand, because the old name belongs to an existing product. Version 0.1.0 was released under the old name.
 - The plugin and its marketplace are `mergehand`, so the skills are `/mergehand:init`, `/mergehand:next-card`, `/mergehand:handoff` and `/mergehand:quick`.
 - The configuration file is `mergehand.conf`, the CI workflow template is `mergehand.yml`, the environment variables are `MERGEHAND_TRANSCRIPT` and `MERGEHAND_SESSION`, and the compaction markers are in `<git-dir>/mergehand/`.
 - The `card` command keeps its name and its arguments.
@@ -58,6 +75,6 @@ First release: the core, the runner and the quick lane.
 - Claiming cards, worktrees and parallel sessions (planned for 0.3).
 - Hosts other than GitHub for the pull request step, and native Windows shells.
 
-[0.1.2]: https://github.com/AshwinSathian/mergehand/releases/tag/v0.1.2
-[0.1.1]: https://github.com/AshwinSathian/mergehand/releases/tag/v0.1.1
-[0.1.0]: https://github.com/AshwinSathian/mergehand/releases/tag/v0.1.0
+[0.1.2]: https://github.com/AshwinSathian/workdeck/releases/tag/v0.1.2
+[0.1.1]: https://github.com/AshwinSathian/workdeck/releases/tag/v0.1.1
+[0.1.0]: https://github.com/AshwinSathian/workdeck/releases/tag/v0.1.0

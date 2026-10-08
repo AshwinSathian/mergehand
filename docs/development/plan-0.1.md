@@ -1,8 +1,8 @@
-# Mergehand 0.1 Implementation Plan
+# WorkDeck 0.1 Implementation Plan
 
 > This is the build plan as the coding agent wrote it for the maintainer, kept as a record. "I" is the agent; "you" is the maintainer. It was followed in order, one test-first step at a time. From step 4.6 onward the remaining work also existed as cards in `cards/`. The checkboxes were never ticked: the git history and `log/` are the record of what was done. Later decisions that override it are in `findings.md`.
 
-**Goal:** Build the Mergehand 0.1 Claude Code plugin: a single-file `card` command, four hooks, a reviewer agent, four skills and the templates init copies into a project.
+**Goal:** Build the WorkDeck 0.1 Claude Code plugin: a single-file `card` command, four hooks, a reviewer agent, four skills and the templates init copies into a project.
 
 **Architecture:** All checkable logic lives in `bin/card`, one bash 3.2 file. Hooks are thin scripts that read the hook JSON from stdin and call `bin/card`. Skills are prompts that call `card` and never re-implement a rule. State is derived from git refs and the base branch on every call; nothing is cached.
 
@@ -22,7 +22,7 @@ The plan below is written against the proposed resolution in each row. If you ch
 |---|---|---|---|---|
 | A1 | §9 `card next` vs §5 and §19.11 | §9 says "first `ready` card in file-name order". §5 and §19.11 say order is natural sort by id, and §19.11 exists because file-name order was wrong. | Natural sort by id (`sort -V`) everywhere, including `next`, `list` and `status`. `sort -V` works on macOS `sort 2.3-Apple` and GNU sort (checked locally: `AUTH-2, AUTH-03, AUTH-03b, AUTH-10`). | 2.5, 3.2 |
 | A2 | §11 tests gate vs §9 | §11 defines the tests gate as a mechanical gate, and goal 4 says checkable rules are checked by a script. §9 has no command for it, so as written the agent would do the search by hand. | Add `card tests <id>`: exit 1 and list each `Tests` line with no match. Same exit codes as `card touched`. | 4.4, 8.3 |
-| A3 | §9 vs §10.3, §13 | Skills and hooks need config values (`check`, `base`, `log_dir`, `reviewer`), and §9 gives no way to read one. The alternative is a second config parser in each hook and an agent reading `mergehand.conf` by eye. | Add `card conf <key>`: prints the parsed value with its default applied, exit 2 for an unknown key. | 2.2, 6.x, 8.x |
+| A3 | §9 vs §10.3, §13 | Skills and hooks need config values (`check`, `base`, `log_dir`, `reviewer`), and §9 gives no way to read one. The alternative is a second config parser in each hook and an agent reading `workdeck.conf` by eye. | Add `card conf <key>`: prints the parsed value with its default applied, exit 2 for an unknown key. | 2.2, 6.x, 8.x |
 | A4 | §7 vs §10.3 | The log example has `pr: 42`. Handoff writes the log in step 6 and commits in step 7, before the PR exists, so the number cannot be known when the file is committed. | `pr:` is optional. `card log-new` does not write it and handoff does not backfill it. Lint accepts the key when present. | 2.4, 4.5, 8.3 |
 | A5 | §6 | `review` needs `gh pr list`, which only runs with `--fetch`. Section 6 says what happens without `gh` but not what happens without `--fetch` when `gh` is present. | Without `--fetch`, a card with an open PR shows as `active`, with no stderr note (the session-start hook would print it every session). The "review unavailable" note appears only when `--fetch` was asked for and `gh` is missing or unauthenticated. No PR cache. | 3.3, 3.4 |
 | A6 | §10.3, §11 | Handoff runs the gates at step 2 and commits at step 7, so the changes being checked are not committed yet. "Files changed against `base`" must therefore include uncommitted and untracked files. | `card touched` and `card tests` compare the merge base with the working tree and add untracked, non-ignored files. | 4.3, 4.4 |
@@ -45,7 +45,7 @@ Checked on 2026-10-05. The local CLI is 2.1.261. Each row is re-checked in the s
 | `CLAUDE_ENV_FILE` in SessionStart | Available in SessionStart (also Setup, CwdChanged, FileChanged). Append `export K=V` lines; guard with `[ -n "$CLAUDE_ENV_FILE" ]`. | /docs/en/hooks |
 | Stop hook input | Common fields (`session_id`, `transcript_path`, `cwd`, `permission_mode`, `hook_event_name`) plus `stop_hook_active` and `last_assistant_message`. Exit 2 with a message on stderr blocks the stop. | /docs/en/hooks |
 | `bin/` on the Bash tool PATH | Yes, while the plugin is enabled, for the Bash tool only. Files need the executable bit. `CLAUDE_PLUGIN_ROOT` is not in the Bash tool environment; it is exported to hook processes and substituted in skill bodies and in `` !`...` `` injections. | /docs/en/plugins/components (Executables), /docs/en/plugins/manifest-reference (Environment variables) |
-| Skill launching a plugin agent | The agent's scoped name is `mergehand:reviewer`. A skill's `agent:` field applies only with `context: fork`, which would fork the whole skill, so handoff instructs Claude in its body to delegate to the `mergehand:reviewer` subagent. The naming is confirmed; that the Agent tool accepts the scoped name is **not** stated on the page and is proven by a live run in step 8.3. | /docs/en/sub-agents, /docs/en/skills |
+| Skill launching a plugin agent | The agent's scoped name is `workdeck:reviewer`. A skill's `agent:` field applies only with `context: fork`, which would fork the whole skill, so handoff instructs Claude in its body to delegate to the `workdeck:reviewer` subagent. The naming is confirmed; that the Agent tool accepts the scoped name is **not** stated on the page and is proven by a live run in step 8.3. | /docs/en/sub-agents, /docs/en/skills |
 
 Other facts from the same pages that shape the design:
 
@@ -55,7 +55,7 @@ Other facts from the same pages that shape the design:
 - Plugin agents ignore `hooks`, `mcpServers` and `permissionMode`. The reviewer is restricted with `tools: Read, Grep, Glob, Bash`.
 - PreCompact accepts matchers `manual` and `auto` and can block. Ours never does.
 - `plugin.json` requires only `name`, but `--strict` fails on a missing `version`, `description` or `author`. Setting `version` pins users to it until it changes.
-- claude.ai and Cowork refuse to install a plugin that has a top-level `bin/`. Mergehand is Claude Code only (§2), so this goes in the README as a known limit.
+- claude.ai and Cowork refuse to install a plugin that has a top-level `bin/`. WorkDeck is Claude Code only (§2), so this goes in the README as a known limit.
 - `claude plugin eval` is early access, calls the model with your credentials and costs money. Fixture repositories need a `scaffold_script` and the `--scaffold` flag. Step 9.3 asks before running anything.
 
 Transcript shape, sampled from one line of a 2.1.289 session (structure only):
@@ -75,10 +75,10 @@ Every step inherits these.
 
 - `bin/card` is one bash file and runs on bash 3.2: no associative arrays, `mapfile`, `readarray`, `${var,,}`, `${var^^}`, `local -n`.
 - Tools: awk, sed, grep, sort, git, POSIX basics (A7), and `gh` only for `--fetch`. No jq, python or node. No `sed -i` without a suffix, no `grep -P`. BSD and GNU variants must both work.
-- `mergehand.conf` and card content are never sourced or passed to `eval`.
+- `workdeck.conf` and card content are never sourced or passed to `eval`.
 - Every id is checked against `^[A-Z][A-Z0-9]*-[0-9]+[a-z]?$` before it reaches a branch name, a file name or a pattern.
 - Error messages start with `card:` and name the file. Exit codes: 0 ok, 1 a check failed, 2 usage or configuration error.
-- Every hook exits 0 silently when the repository has no `mergehand.conf`, and exits 0 on any internal error. The stop hook's log guard is the only exit 2.
+- Every hook exits 0 silently when the repository has no `workdeck.conf`, and exits 0 on any internal error. The stop hook's log guard is the only exit 2.
 - Each test builds its own temporary repository and removes it. No test uses the network or the real `~/.claude`.
 - No reference to any other project anywhere in the repository.
 - Local work only. No push, no GitHub repository, no publishing without asking.
@@ -98,7 +98,7 @@ agents/reviewer.md
 skills/{init,next-card,handoff,quick}/SKILL.md
 reference/implement.md
 templates/                     REVIEW.md, pull_request_template.md, claude-md-section.md,
-                               mergehand.conf, mergehand.yml, settings-permissions.json
+                               workdeck.conf, workdeck.yml, settings-permissions.json
 .claude-plugin/plugin.json
 .claude-plugin/marketplace.json
 evals/                         three cases
@@ -109,7 +109,7 @@ test/cases/NN-*.sh             one file per area
 test/fixtures/                 transcripts, hook JSON, language test files
 test/bench-hook.sh             PostToolUse timing
 .github/workflows/ci.yml
-mergehand.conf, cards/, log/    this repository's own deck, from step 4.6
+workdeck.conf, cards/, log/    this repository's own deck, from step 4.6
 docs/development/findings.md, docs/development/later.md
 ```
 
@@ -123,7 +123,7 @@ Inputs the spec does not mention that a user will hit. Each has a test in the st
 2. `card` run from a subdirectory of the repository: it finds the root and behaves the same (2.2).
 3. Detached HEAD, a repository with no commits, or a `base` branch that does not exist: `card` exits 2 with a message naming the problem; hooks stay silent and exit 0 (3.1, 6.x).
 4. A changed file whose path contains a space: `card touched` reports it correctly. Because text after the first space in a `Touch` entry is a comment, such a file can be listed only with a `?` glob; the test pins that and the README says so (4.3).
-5. `MERGEHAND_TRANSCRIPT` unset, or pointing at a file that is missing or unreadable: `card tokens` prints `unknown` and exits 0 (5.1).
+5. `WORKDECK_TRANSCRIPT` unset, or pointing at a file that is missing or unreadable: `card tokens` prints `unknown` and exits 0 (5.1).
 
 ---
 
@@ -152,7 +152,7 @@ Inputs the spec does not mention that a user will hit. Each has a test in the st
 ### Step 2.1: skeleton, usage, repository and config errors
 
 - [ ] **Files:** create `bin/card` (mode 755), `test/cases/10-basics.sh`.
-- [ ] **Tests first:** no arguments prints usage, exit 2; unknown command, exit 2 with `card: unknown command`; outside a git repository, exit 2 with `card: not a git repository`; no `mergehand.conf`, exit 2 and the message contains `/mergehand:init`.
+- [ ] **Tests first:** no arguments prints usage, exit 2; unknown command, exit 2 with `card: unknown command`; outside a git repository, exit 2 with `card: not a git repository`; no `workdeck.conf`, exit 2 and the message contains `/workdeck:init`.
 - [ ] **Proof:** `/bin/bash test/run.sh basics`.
 - [ ] **Out of scope:** any subcommand body.
 - [ ] **Commit:** `feat(card): add command skeleton and error conventions`
@@ -160,10 +160,10 @@ Inputs the spec does not mention that a user will hit. Each has a test in the st
 ### Step 2.2: config parsing and `card conf`
 
 - [ ] **Files:** modify `bin/card`; create `test/cases/11-conf.sh`.
-- [ ] **Tests first:** defaults for every key in §8 when only `check` is set; `#` comments and blank lines ignored; whitespace around `=` trimmed; a value containing `=` kept whole (`check = make check VAR=1`); `version = 2` exits 2 naming `mergehand.conf`; a line that is not `key = value` exits 2 with file and line number; `card conf nosuch` exits 2; `budget.L = 150000` makes `L` a valid size; a config line `check = $(touch pwned)` is printed literally and creates no file (never evaluated); running from a subdirectory gives the same answers (review focus 2).
+- [ ] **Tests first:** defaults for every key in §8 when only `check` is set; `#` comments and blank lines ignored; whitespace around `=` trimmed; a value containing `=` kept whole (`check = make check VAR=1`); `version = 2` exits 2 naming `workdeck.conf`; a line that is not `key = value` exits 2 with file and line number; `card conf nosuch` exits 2; `budget.L = 150000` makes `L` a valid size; a config line `check = $(touch pwned)` is printed literally and creates no file (never evaluated); running from a subdirectory gives the same answers (review focus 2).
 - [ ] **Proof:** `/bin/bash test/run.sh conf`.
 - [ ] **Out of scope:** validating that `check` is runnable.
-- [ ] **Commit:** `feat(card): parse mergehand.conf with awk and add card conf`
+- [ ] **Commit:** `feat(card): parse workdeck.conf with awk and add card conf`
 
 ### Step 2.3: card parsing and `card show`
 
@@ -288,7 +288,7 @@ Inputs the spec does not mention that a user will hit. Each has a test in the st
 
 ### Step 4.6: bootstrap this repository
 
-- [ ] **Files:** create `mergehand.conf` (`check = /bin/bash test/run.sh`), `cards/REVIEW.md`, `cards/*.md` as listed below, `log/.gitkeep`, `docs/development/findings.md`, `docs/development/later.md`; modify `.github/workflows/ci.yml` to run `bin/card lint`; add `test_own_deck_lints` to `test/cases/01-portability.sh`.
+- [ ] **Files:** create `workdeck.conf` (`check = /bin/bash test/run.sh`), `cards/REVIEW.md`, `cards/*.md` as listed below, `log/.gitkeep`, `docs/development/findings.md`, `docs/development/later.md`; modify `.github/workflows/ci.yml` to run `bin/card lint`; add `test_own_deck_lints` to `test/cases/01-portability.sh`.
 - [ ] **Cards** (ids, sizes and dependencies; bodies follow §5 and are derived from stages 5 to 9 below):
 
   | Id | Size | Depends | Title |
@@ -313,14 +313,14 @@ Inputs the spec does not mention that a user will hit. Each has a test in the st
 - [ ] **Out of scope:** implementing any card.
 - [ ] **Commit:** `chore: bootstrap this repository's own deck`
 
-From here each step is a card. Stages 5 to 8 are implemented in ordinary sessions, one `card/<id>-<slug>` branch per card (question F2 covers who merges). After stage 8 you run DOC-01 to DOC-03 through `/mergehand:next-card` and `/mergehand:handoff`.
+From here each step is a card. Stages 5 to 8 are implemented in ordinary sessions, one `card/<id>-<slug>` branch per card (question F2 covers who merges). After stage 8 you run DOC-01 to DOC-03 through `/workdeck:next-card` and `/workdeck:handoff`.
 
 ## Stage 5: token measurement
 
 ### Step 5.1 (TOK-01): `card tokens`
 
 - [ ] **Files:** create `test/fixtures/transcripts/{normal,compacted,sidechain,synthetic-zero,no-usage,garbage,empty}.jsonl`, `test/cases/40-tokens.sh`; then modify `bin/card`. The fixtures and the test are committed before the parser, in their own commit.
-- [ ] **Tests first:** `normal.jsonl` (shape from section B, including the nested `iterations` copy of the keys) prints exactly `baseline 57000`, `peak 141300`, `growth 84300`; `compacted.jsonl` (sizes rise, drop, rise less) keeps the earlier peak; lines with `"isSidechain":true` are ignored; lines whose three fields sum to 0 are ignored so the baseline is never 0; `no-usage.jsonl`, `garbage.jsonl` (binary and truncated JSON), `empty.jsonl`, a missing path and an unset `MERGEHAND_TRANSCRIPT` each print `unknown` and exit 0 (review focus 5); a line where a key appears only inside `iterations` is not counted; on a `card/*` branch a fourth line `budget 100000 M` is printed.
+- [ ] **Tests first:** `normal.jsonl` (shape from section B, including the nested `iterations` copy of the keys) prints exactly `baseline 57000`, `peak 141300`, `growth 84300`; `compacted.jsonl` (sizes rise, drop, rise less) keeps the earlier peak; lines with `"isSidechain":true` are ignored; lines whose three fields sum to 0 are ignored so the baseline is never 0; `no-usage.jsonl`, `garbage.jsonl` (binary and truncated JSON), `empty.jsonl`, a missing path and an unset `WORKDECK_TRANSCRIPT` each print `unknown` and exit 0 (review focus 5); a line where a key appears only inside `iterations` is not counted; on a `card/*` branch a fourth line `budget 100000 M` is printed.
 - [ ] **Proof:** `/bin/bash test/run.sh tokens`.
 - [ ] **Out of scope:** subagent transcripts; cost; output tokens.
 - [ ] **Commits:** `test(card): add fixture transcripts and token cases`, then `feat(card): add card tokens`
@@ -328,19 +328,19 @@ From here each step is a card. Stages 5 to 8 are implemented in ordinary session
 ### Step 5.2 (TOK-02): measured log fields and `card stats`
 
 - [ ] **Files:** modify `bin/card`, `test/cases/34-log.sh`; create `test/cases/41-stats.sh`.
-- [ ] **Tests first:** with `MERGEHAND_TRANSCRIPT` set to `normal.jsonl`, `card log-new` writes the three figures; with `MERGEHAND_SESSION=abc` and a marker `<git-dir>/mergehand/abc.compacted`, `compacted: true`; no marker, `false`; no session variable, `unknown`; a session id that fails `^[A-Za-z0-9_-]+$` is treated as unset. `card stats` over fixture logs prints, per size, the session count, budget, median growth, maximum growth and the share compacted; `unknown` entries are counted as sessions but left out of the median; even and odd counts give the right median; no logs prints a one-line message, exit 0.
+- [ ] **Tests first:** with `WORKDECK_TRANSCRIPT` set to `normal.jsonl`, `card log-new` writes the three figures; with `WORKDECK_SESSION=abc` and a marker `<git-dir>/workdeck/abc.compacted`, `compacted: true`; no marker, `false`; no session variable, `unknown`; a session id that fails `^[A-Za-z0-9_-]+$` is treated as unset. `card stats` over fixture logs prints, per size, the session count, budget, median growth, maximum growth and the share compacted; `unknown` entries are counted as sessions but left out of the median; even and odd counts give the right median; no logs prints a one-line message, exit 0.
 - [ ] **Proof:** `/bin/bash test/run.sh log stats`.
 - [ ] **Out of scope:** suggesting new budgets.
 - [ ] **Commit:** `feat(card): record measured tokens in logs and add card stats`
 
 ## Stage 6: hooks
 
-All four share one shape, tested in each: read stdin; find the repository root from the input's `cwd`; exit 0 with no output if there is no `mergehand.conf`; never use `set -e`; end with `exit 0`. Fields are pulled from the JSON with sed, and `session_id` is checked against `^[A-Za-z0-9_-]+$` before it is used in a file name. Fixture inputs live in `test/fixtures/hooks/`. Re-read /docs/en/hooks before each step.
+All four share one shape, tested in each: read stdin; find the repository root from the input's `cwd`; exit 0 with no output if there is no `workdeck.conf`; never use `set -e`; end with `exit 0`. Fields are pulled from the JSON with sed, and `session_id` is checked against `^[A-Za-z0-9_-]+$` before it is used in a file name. Fixture inputs live in `test/fixtures/hooks/`. Re-read /docs/en/hooks before each step.
 
 ### Step 6.1 (HOOK-01): session-start
 
 - [ ] **Files:** create `hooks/session-start.sh`, `test/cases/50-hook-session-start.sh`, `test/fixtures/hooks/session-start.json`.
-- [ ] **Tests first:** no `mergehand.conf`: no stdout, no stderr, exit 0; with config: stdout equals `card status` and is at most `status_max_chars`; `CLAUDE_ENV_FILE` gains `export MERGEHAND_TRANSCRIPT=…` and `export MERGEHAND_SESSION=…` with values single-quoted (a transcript path containing a space or `$(…)` is written literally); `CLAUDE_ENV_FILE` unset: still prints status, exit 0; broken config: exit 0, no stdout; not a git repository: silent, exit 0; empty stdin: exit 0; the hook makes no `fetch` call.
+- [ ] **Tests first:** no `workdeck.conf`: no stdout, no stderr, exit 0; with config: stdout equals `card status` and is at most `status_max_chars`; `CLAUDE_ENV_FILE` gains `export WORKDECK_TRANSCRIPT=…` and `export WORKDECK_SESSION=…` with values single-quoted (a transcript path containing a space or `$(…)` is written literally); `CLAUDE_ENV_FILE` unset: still prints status, exit 0; broken config: exit 0, no stdout; not a git repository: silent, exit 0; empty stdin: exit 0; the hook makes no `fetch` call.
 - [ ] **Proof:** `/bin/bash test/run.sh hook-session-start`.
 - [ ] **Out of scope:** `--fetch`; `sessionTitle`.
 - [ ] **Commit:** `feat(hooks): add session-start status and env export`
@@ -348,7 +348,7 @@ All four share one shape, tested in each: read stdin; find the repository root f
 ### Step 6.2 (HOOK-02): post-tool-use budget warning
 
 - [ ] **Files:** create `hooks/post-tool-use.sh`, `test/cases/51-hook-post-tool-use.sh`, `test/bench-hook.sh`, fixture JSON.
-- [ ] **Tests first:** no config: silent, exit 0; on `main`: silent; on a card branch under budget: silent; over budget: stdout is exactly `{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"…"}}`, the text contains the growth figure, the budget and `/mergehand:handoff split`, and `<git-dir>/mergehand/<session>.warned` now exists; a second call the same session: silent; `unknown` tokens: silent; branch whose id has no card: silent; malformed stdin: silent, exit 0.
+- [ ] **Tests first:** no config: silent, exit 0; on `main`: silent; on a card branch under budget: silent; over budget: stdout is exactly `{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"…"}}`, the text contains the growth figure, the budget and `/workdeck:handoff split`, and `<git-dir>/workdeck/<session>.warned` now exists; a second call the same session: silent; `unknown` tokens: silent; branch whose id has no card: silent; malformed stdin: silent, exit 0.
 - [ ] **Challenge (delay per tool call):** `test/bench-hook.sh` builds a 2 MB transcript and reports the median and 95th percentile wall time over 50 runs for three paths: no config, card branch under budget, and warned-already. The numbers from macOS go in the step report and `docs/development/findings.md`. If the under-budget median is above 50 ms I stop and report options instead of optimizing silently.
 - [ ] **Proof:** `/bin/bash test/run.sh hook-post-tool-use` and `/bin/bash test/bench-hook.sh`.
 - [ ] **Out of scope:** blocking; a `matcher` narrower than all tools; caching offsets into the transcript.
@@ -357,7 +357,7 @@ All four share one shape, tested in each: read stdin; find the repository root f
 ### Step 6.3 (HOOK-03): stop log guard
 
 - [ ] **Files:** create `hooks/stop.sh`, `test/cases/52-hook-stop.sh`, fixture JSON.
-- [ ] **Tests first:** no config: silent, exit 0; `stop_hook_active: true`: exit 0 whatever the state; on `main`: exit 0; card branch with no commits beyond base: exit 0; commits and a dirty tree: exit 0; commits, clean tree, no log for this card added on the branch: exit 2 and stderr names `/mergehand:handoff` and the blocked outcome; commits, clean tree, a log added on the branch: exit 0; a log for a different card on the branch does not satisfy the guard; malformed stdin: exit 0.
+- [ ] **Tests first:** no config: silent, exit 0; `stop_hook_active: true`: exit 0 whatever the state; on `main`: exit 0; card branch with no commits beyond base: exit 0; commits and a dirty tree: exit 0; commits, clean tree, no log for this card added on the branch: exit 2 and stderr names `/workdeck:handoff` and the blocked outcome; commits, clean tree, a log added on the branch: exit 0; a log for a different card on the branch does not satisfy the guard; malformed stdin: exit 0.
 - [ ] **Proof:** `/bin/bash test/run.sh hook-stop`.
 - [ ] **Out of scope:** forcing a log on review-fixes sessions (known limit, §13).
 - [ ] **Commit:** `feat(hooks): add stop hook log guard`
@@ -365,7 +365,7 @@ All four share one shape, tested in each: read stdin; find the repository root f
 ### Step 6.4 (HOOK-04): pre-compact marker
 
 - [ ] **Files:** create `hooks/pre-compact.sh`, `test/cases/53-hook-pre-compact.sh`, fixture JSON.
-- [ ] **Tests first:** no config: silent, exit 0, no file written; with config: `<git-dir>/mergehand/<session>.compacted` exists, exit 0, no stdout; a session id of `../../x` writes nothing; in a linked worktree the marker lands in that worktree's git directory.
+- [ ] **Tests first:** no config: silent, exit 0, no file written; with config: `<git-dir>/workdeck/<session>.compacted` exists, exit 0, no stdout; a session id of `../../x` writes nothing; in a linked worktree the marker lands in that worktree's git directory.
 - [ ] **Proof:** `/bin/bash test/run.sh hook-pre-compact`.
 - [ ] **Out of scope:** blocking compaction.
 - [ ] **Commit:** `feat(hooks): add pre-compact marker`
@@ -375,7 +375,7 @@ All four share one shape, tested in each: read stdin; find the repository root f
 ### Step 7.1 (PLUG-01): manifests and hooks.json
 
 - [ ] **Docs to re-read and cite in the card:** /docs/en/plugins/manifest-reference, /docs/en/plugins/marketplace-reference, /docs/en/hooks.
-- [ ] **Files:** create `.claude-plugin/plugin.json` (`name`, `version` 0.1.0, `description`, `author`, `license` left until DOC-02, `repository` omitted until there is one), `.claude-plugin/marketplace.json` (`name` mergehand, `owner`, `description`, one entry with the root as source), `hooks/hooks.json` (top-level `hooks` key; `SessionStart`, `PostToolUse`, `Stop`, `PreCompact`; each command `"\"${CLAUDE_PLUGIN_ROOT}\"/hooks/<name>.sh"` with `timeout: 10`); modify `.github/workflows/ci.yml` to install Claude Code and run validate; add `test_hooks_json_names_existing_scripts` (every script named in `hooks.json` exists and is executable; grep-based).
+- [ ] **Files:** create `.claude-plugin/plugin.json` (`name`, `version` 0.1.0, `description`, `author`, `license` left until DOC-02, `repository` omitted until there is one), `.claude-plugin/marketplace.json` (`name` workdeck, `owner`, `description`, one entry with the root as source), `hooks/hooks.json` (top-level `hooks` key; `SessionStart`, `PostToolUse`, `Stop`, `PreCompact`; each command `"\"${CLAUDE_PLUGIN_ROOT}\"/hooks/<name>.sh"` with `timeout: 10`); modify `.github/workflows/ci.yml` to install Claude Code and run validate; add `test_hooks_json_names_existing_scripts` (every script named in `hooks.json` exists and is executable; grep-based).
 - [ ] **Proof:** `claude plugin validate --strict .` prints `Validation passed`; `/bin/bash test/run.sh` passes.
 - [ ] **Out of scope:** `userConfig`; publishing; adding the marketplace anywhere.
 - [ ] **Commit:** `feat(plugin): add manifests and hook registration`
@@ -383,7 +383,7 @@ All four share one shape, tested in each: read stdin; find the repository root f
 ### Step 7.2 (PLUG-02): reviewer agent and templates
 
 - [ ] **Docs:** /docs/en/sub-agents (frontmatter; fields ignored for plugin agents).
-- [ ] **Files:** create `agents/reviewer.md` (`name: reviewer`, `description`, `tools: Read, Grep, Glob, Bash`; body is the §12 procedure and output format), `templates/REVIEW.md`, `templates/pull_request_template.md`, `templates/claude-md-section.md` (about 20 lines), `templates/mergehand.conf`, `templates/mergehand.yml`, `templates/settings-permissions.json`; add `test_templates_conf_parses` (`card conf check` works against the template once `check` is filled) and `test_claude_md_section_length` (at most 25 lines).
+- [ ] **Files:** create `agents/reviewer.md` (`name: reviewer`, `description`, `tools: Read, Grep, Glob, Bash`; body is the §12 procedure and output format), `templates/REVIEW.md`, `templates/pull_request_template.md`, `templates/claude-md-section.md` (about 20 lines), `templates/workdeck.conf`, `templates/workdeck.yml`, `templates/settings-permissions.json`; add `test_templates_conf_parses` (`card conf check` works against the template once `check` is filled) and `test_claude_md_section_length` (at most 25 lines).
 - [ ] **Proof:** `claude plugin validate --strict .`; `/bin/bash test/run.sh`.
 - [ ] **Out of scope:** project rules in `REVIEW.md` (the plugin ships none).
 - [ ] **Commit:** `feat(plugin): add reviewer agent and init templates`
@@ -395,7 +395,7 @@ Skills cannot be unit tested (§17). Each step's proof is `claude plugin validat
 ### Step 8.1 (SKILL-01): `reference/implement.md` and next-card
 
 - [ ] **Files:** create `reference/implement.md`, `skills/next-card/SKILL.md`, `test/cases/60-skills.sh`.
-- [ ] **Content:** the nine steps of §10.2. The skill injects `` !`"${CLAUDE_PLUGIN_ROOT}"/bin/card status --fetch` `` and points at `${CLAUDE_PLUGIN_ROOT}/reference/implement.md`. It ends by telling the user to type `/mergehand:handoff`; it never tells the model to invoke it.
+- [ ] **Content:** the nine steps of §10.2. The skill injects `` !`"${CLAUDE_PLUGIN_ROOT}"/bin/card status --fetch` `` and points at `${CLAUDE_PLUGIN_ROOT}/reference/implement.md`. It ends by telling the user to type `/workdeck:handoff`; it never tells the model to invoke it.
 - [ ] **Manual run:** scratch repository with two cards, one ready; confirm the branch name, that only the listed files are read, and that it stops before handoff.
 - [ ] **Out of scope:** worktrees; claiming; picking for the user when several are ready beyond `card next`.
 - [ ] **Commit:** `feat(skills): add next-card and shared implementation steps`
@@ -411,7 +411,7 @@ Skills cannot be unit tested (§17). Each step's proof is `claude plugin validat
 ### Step 8.3 (SKILL-02): handoff
 
 - [ ] **Files:** create `skills/handoff/SKILL.md`; extend `test/cases/60-skills.sh`.
-- [ ] **Content:** the eight steps of §10.3, with the gates as `card lint`, `card touched <id>`, `card tests <id>` in that order, stopping at the first failure. The check command comes from `card conf check`. The reviewer is launched as the `mergehand:reviewer` subagent with the card id and base branch.
+- [ ] **Content:** the eight steps of §10.3, with the gates as `card lint`, `card touched <id>`, `card tests <id>` in that order, stopping at the first failure. The check command comes from `card conf check`. The reviewer is launched as the `workdeck:reviewer` subagent with the card id and base branch.
 - [ ] **Manual run, which also settles the open item in section B:** confirm the reviewer subagent actually launches under its scoped name; confirm the stop after the push when `gh` is absent; confirm split mode creates `<id>b` depending on `<id>`. If the scoped name does not launch, that is a finding and I stop.
 - [ ] **Out of scope:** merging; backfilling `pr:`; starting the next card.
 - [ ] **Commit:** `feat(skills): add handoff`
@@ -441,7 +441,7 @@ After 8.4 I stop. You load the plugin with `claude --plugin-dir .` and run the D
 
 - [ ] **Docs:** /docs/en/plugin-evals (case layout, `case.yaml` schema 1.1, `scaffold_script`, graders).
 - [ ] `evals/init-empty-project/`, `evals/next-card-one-ready/`, `evals/quick-one-line-bug/`, each with `prompt.md`, a `case.yaml` and `fixture.sh` where a repository is needed, and graders that check files and tool use, not prose. `evals/results/` goes in `.gitignore`.
-- [ ] Open point to settle in the card: whether an eval prompt of `/mergehand:init` runs a skill that has `disable-model-invocation: true`. If it does not, that is a finding.
+- [ ] Open point to settle in the card: whether an eval prompt of `/workdeck:init` runs a skill that has `disable-model-invocation: true`. If it does not, that is a finding.
 - [ ] Evals call the model on your account. I ask before each run and report the cost printed. They are not added to CI.
 
 ---
@@ -481,7 +481,7 @@ Each item names the step that owns its test.
 13. `done` on the base branch is read with one call, `git grep -n -e '^done: true$' -e '^---$' <ref> -- <cards_dir>`, and a card is done only if the `done` line falls between a `---` on line 1 and the next `---`. A `done: true` line in a card body cannot flip its state. Test in 3.1.
 14. Front matter values: a value that begins with `"` or `'` is the "quotes" lint error; quotes inside a title are allowed. Required sections are "empty" when they have no `- ` item, and `card new` writes empty sections, so a fresh card fails lint until someone fills it in. That is intended: a vacuous card should not pass.
 15. Log entries: the 40-line limit counts lines after the front matter. The latest entry for a card is chosen with `sort -V`, so `-10` sorts after `-9`.
-16. The post-tool-use hook exits in this order, cheapest first, and reads stdin only at step 3: no `mergehand.conf`; branch is not `card/*`; then parse stdin, skip if `agent_id` or the warned marker exists; then measure. The marker is written before the warning is printed, so a failure can lose a warning but can never repeat one on every tool call. The benchmark in 6.2 adds a 20 MB transcript and a 1 MB stdin payload to the 2 MB case.
+16. The post-tool-use hook exits in this order, cheapest first, and reads stdin only at step 3: no `workdeck.conf`; branch is not `card/*`; then parse stdin, skip if `agent_id` or the warned marker exists; then measure. The marker is written before the warning is printed, so a failure can lose a warning but can never repeat one on every tool call. The benchmark in 6.2 adds a 20 MB transcript and a 1 MB stdin payload to the 2 MB case.
 17. Hooks locate the repository from their own working directory (`git rev-parse --show-toplevel`), not from the `cwd` field, so the no-config exit needs no JSON parsing. Fields are taken as the first match of `"key":"value"`; a key of the same name inside a string value is escaped in JSON and cannot match.
 18. `reference/implement.md` tells the agent not to commit before handoff. Handoff commits in its step 7; an earlier commit with a clean tree would make the stop hook block every turn end until a log exists.
 19. A branch name for a card is `card/` plus the card's file name without `.md`. Skills derive it that way; no extra command.
@@ -491,4 +491,4 @@ Each item names the step that owns its test.
 20. Superseded on 2026-10-06 (spec §19.2 item 22): `done` is read from both `origin/<base>` and the local base branch. The original rule made `card next` offer a card that had been merged locally and not pushed.
 21. Whether a skill's `` !`...` `` injection needs an `allowed-tools` grant to run `card status --fetch` is not clear from the skills page. Settled by the manual run in 8.1.
 22. Two branches for the same card that each add a log on the same day produce the same file name and an add/add conflict. One card has one branch, so this is left alone.
-23. Marker files in `<git-dir>/mergehand/` are never removed. They are empty files; cleanup is in `docs/development/later.md`.
+23. Marker files in `<git-dir>/workdeck/` are never removed. They are empty files; cleanup is in `docs/development/later.md`.

@@ -1,12 +1,12 @@
 {
-  "name": "mergehand",
-  "description": "Mergehand: run a project as cards, one card per Claude Code session, with a scope gate, a separate review and one pull request.",
+  "name": "workdeck",
+  "description": "WorkDeck: run a project as cards, one card per Claude Code session, with a scope gate, a separate review and one pull request.",
   "owner": {
     "name": "Ashwin Sathian"
   },
   "plugins": [
     {
-      "name": "mergehand",
+      "name": "workdeck",
       "source": "./",
       "description": "Cards, a card command, hooks, a reviewer agent and the skills that run the loop."
     }

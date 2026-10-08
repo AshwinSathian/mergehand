@@ -74,25 +74,25 @@ test_log_new_on_detached_head() {
 
 test_log_new_records_measured_tokens() {
   new_repo; mk_conf; mk_card AUTH-03 M
-  MERGEHAND_TRANSCRIPT="$FIX/transcripts/normal.jsonl" card log-new AUTH-03 done
+  WORKDECK_TRANSCRIPT="$FIX/transcripts/normal.jsonl" card log-new AUTH-03 done
   assert_rc 0
   assert_eq 57000 "$(field baseline_tokens "$OUT")" baseline
   assert_eq 141300 "$(field peak_tokens "$OUT")" peak
   assert_eq 84300 "$(field growth_tokens "$OUT")" growth
   card lint
   assert_rc 0
-  MERGEHAND_TRANSCRIPT="$FIX/transcripts/garbage.jsonl" card log-new AUTH-03 done
+  WORKDECK_TRANSCRIPT="$FIX/transcripts/garbage.jsonl" card log-new AUTH-03 done
   assert_eq unknown "$(field growth_tokens "$OUT")" 'unknown transcript'
 }
 
 test_log_new_records_compaction_from_the_marker() {
   new_repo; mk_conf; mk_card AUTH-03
-  MERGEHAND_SESSION=abc-123 card log-new AUTH-03 done
+  WORKDECK_SESSION=abc-123 card log-new AUTH-03 done
   assert_eq false "$(field compacted "$OUT")" 'no marker'
-  mkdir -p .git/mergehand && : > .git/mergehand/abc-123.compacted
-  MERGEHAND_SESSION=abc-123 card log-new AUTH-03 done
+  mkdir -p .git/workdeck && : > .git/workdeck/abc-123.compacted
+  WORKDECK_SESSION=abc-123 card log-new AUTH-03 done
   assert_eq true "$(field compacted "$OUT")" marker
-  MERGEHAND_SESSION=other card log-new AUTH-03 done
+  WORKDECK_SESSION=other card log-new AUTH-03 done
   assert_eq false "$(field compacted "$OUT")" 'another session'
   card log-new AUTH-03 done
   assert_eq unknown "$(field compacted "$OUT")" 'no session'
@@ -100,10 +100,10 @@ test_log_new_records_compaction_from_the_marker() {
 
 test_log_new_ignores_a_hostile_session_id() {
   new_repo; mk_conf; mk_card AUTH-03
-  mkdir -p .git/mergehand && : > .git/x.compacted
+  mkdir -p .git/workdeck && : > .git/x.compacted
   local s
   for s in '../x' 'a b' 'a/b' '$(touch pwned)' ''; do
-    MERGEHAND_SESSION="$s" card log-new AUTH-03 done
+    WORKDECK_SESSION="$s" card log-new AUTH-03 done
     assert_rc 0
     assert_eq unknown "$(field compacted "$OUT")" "session [$s]"
   done

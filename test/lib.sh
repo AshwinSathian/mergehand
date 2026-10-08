@@ -15,7 +15,7 @@ setup_env() {
   export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@example.invalid
   export GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@example.invalid
   export GH_STUB_DIR="$T/gh" PATH="$ROOT/test/stubs:$PATH"
-  unset MERGEHAND_TRANSCRIPT MERGEHAND_SESSION CLAUDE_ENV_FILE CLAUDE_PROJECT_DIR CLAUDE_PLUGIN_ROOT
+  unset WORKDECK_TRANSCRIPT WORKDECK_SESSION CLAUDE_ENV_FILE CLAUDE_PROJECT_DIR CLAUDE_PLUGIN_ROOT
   mkdir -p "$HOME" "$GH_STUB_DIR"
   cd "$T" || exit 1
 }
@@ -36,11 +36,11 @@ add_remote() {
   git push -q -u origin main 2>/dev/null
 }
 
-# mk_conf [line...]: mergehand.conf with a passing check plus the given lines.
+# mk_conf [line...]: workdeck.conf with a passing check plus the given lines.
 mk_conf() {
   local l
-  echo 'check = true' > mergehand.conf
-  for l in "$@"; do printf '%s\n' "$l" >> mergehand.conf; done
+  echo 'check = true' > workdeck.conf
+  for l in "$@"; do printf '%s\n' "$l" >> workdeck.conf; done
 }
 
 # mk_card <id> [size] [depends] [done] [slug]: a valid card in cards/.

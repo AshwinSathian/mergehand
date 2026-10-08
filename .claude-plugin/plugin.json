@@ -1,14 +1,14 @@
 {
-  "name": "mergehand",
-  "displayName": "Mergehand",
+  "name": "workdeck",
+  "displayName": "WorkDeck",
   "version": "0.1.2",
   "description": "Run a project as cards: one card per Claude Code session, with a scope gate, a separate review and one pull request.",
   "author": {
     "name": "Ashwin Sathian",
     "url": "https://github.com/AshwinSathian"
   },
-  "homepage": "https://github.com/AshwinSathian/mergehand",
-  "repository": "https://github.com/AshwinSathian/mergehand",
+  "homepage": "https://github.com/AshwinSathian/workdeck",
+  "repository": "https://github.com/AshwinSathian/workdeck",
   "license": "MIT",
   "keywords": ["claude-code", "workflow", "cards", "tasks", "code-review", "pull-requests", "scope", "context-budget", "hooks"]
 }

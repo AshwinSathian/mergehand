@@ -51,7 +51,7 @@ A card's branch is `card/<id>` or `card/<id>-<slug>`. Deleting the branch releas
 
 ## Configuration
 
-`mergehand.conf` is `key = value` lines. It is parsed, never run.
+`workdeck.conf` is `key = value` lines. It is parsed, never run.
 
 | Key | Default | Meaning |
 |---|---|---|
