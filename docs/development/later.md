@@ -13,3 +13,4 @@ Ideas that came up while building 0.1 and are outside it. Nothing here is built.
 - A card file renamed between the local and the remote base branch is looked up under both names.
 - Plugin eval cases for the skills. Cut from 0.1: `claude plugin eval` is built for skills the model chooses to invoke, and these four are typed by the user. Worth one probe case if the tool gains a way to run a typed skill.
 - Rename commands for consistency (`card log`, `card config`, `card check scope`), keeping the old names as aliases; a man page, shell completions and `--json`.
+- An approval commit for a quick card, as 0.2 makes for a planned one (design-0.2 section 10.4). A quick card is new in its own pull request, so a file added to `Touch` after the user approved the card does not show in the diff.
