@@ -60,7 +60,7 @@ test_skills_never_tell_the_model_to_invoke_a_skill() {
 
 test_implement_reference_says_not_to_commit() {
   grep -q -i 'do not commit' "$ROOT/reference/implement.md" || fail 'reference/implement.md does not say not to commit'
-  grep -q '/mergehand:handoff' "$ROOT/reference/implement.md" || fail 'reference/implement.md does not point at handoff'
+  grep -q '/workdeck:handoff' "$ROOT/reference/implement.md" || fail 'reference/implement.md does not point at handoff'
 }
 
 test_quick_creates_an_xs_card_with_a_time_based_id() {
@@ -90,7 +90,7 @@ test_handoff_runs_the_gates_in_order() {
   b=$(grep -n '`card lint`' "$f" | head -1 | cut -d: -f1)
   c=$(grep -n '`card touched <id>`' "$f" | head -1 | cut -d: -f1)
   d=$(grep -n '`card tests <id>`' "$f" | head -1 | cut -d: -f1)
-  e=$(grep -n 'mergehand:reviewer' "$f" | head -1 | cut -d: -f1)
+  e=$(grep -n 'workdeck:reviewer' "$f" | head -1 | cut -d: -f1)
   if [ -z "$a" ] || [ -z "$b" ] || [ -z "$c" ] || [ -z "$d" ] || [ -z "$e" ]; then
     fail "a step is missing: check=$a lint=$b touched=$c tests=$d reviewer=$e"
   fi

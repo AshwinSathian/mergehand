@@ -65,7 +65,7 @@ test_touched_counts_uncommitted_and_untracked_but_not_ignored() {
 test_touched_skips_cards_logs_and_touch_ignore() {
   start 'src/a.ts'
   mk_conf 'touch_ignore = package-lock.json, *.snap , gen/*'
-  git add mergehand.conf; git commit -q -m conf; git checkout -q main; git merge -q card/A-1-thing; git checkout -q card/A-1-thing
+  git add workdeck.conf; git commit -q -m conf; git checkout -q main; git merge -q card/A-1-thing; git checkout -q card/A-1-thing
   change src/a.ts package-lock.json src/deep/x.snap gen/a/b.ts
   mk_log A-1; mk_card A-2
   card done A-1
@@ -163,7 +163,7 @@ test_touch_pattern_character_class() { assert_eq match "$(verdict 'src/[ab].ts' 
 test_touch_ignore_directory_entry() {
   start 'src/a.ts'
   mk_conf 'touch_ignore = dist/, ./gen/'
-  git add mergehand.conf; git commit -q -m conf; git checkout -q main; git merge -q card/A-1-thing; git checkout -q card/A-1-thing
+  git add workdeck.conf; git commit -q -m conf; git checkout -q main; git merge -q card/A-1-thing; git checkout -q card/A-1-thing
   change src/a.ts dist/x.js dist/deep/y.js gen/z.ts
   card touched A-1
   assert_rc 0

@@ -28,7 +28,7 @@ done: true
 - post tool use is silent when tokens are unknown
 
 ## Acceptance
-- Over budget, stdout is the documented hookSpecificOutput JSON with the growth, the budget and /mergehand:handoff split.
+- Over budget, stdout is the documented hookSpecificOutput JSON with the growth, the budget and /workdeck:handoff split.
 - The warning appears once per session; the marker is written before the warning is printed.
 - Tool calls that carry agent_id are ignored.
 - test/bench-hook.sh reports median and 95th percentile for the no-config, under-budget and already-warned paths, with 2 MB and 20 MB transcripts, and the numbers are in docs/development/findings.md.

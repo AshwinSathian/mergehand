@@ -1,4 +1,4 @@
-# Mergehand 0.1 design
+# WorkDeck 0.1 design
 
 This is the design the build followed. Sections 19, 19.1 and 19.2 list every change made to it and why. How the build went is in [`development/`](development/).
 
@@ -6,9 +6,9 @@ Date: 2026-10-05
 Status: implemented. Approved 2026-10-05 after adversarial review; amended during the build (sections 19 to 19.2)
 Scope: release 0.1 (core, runner, quick lane). The planner (0.2) and team features (0.3) get their own specs.
 
-## 1. What Mergehand is
+## 1. What WorkDeck is
 
-Mergehand is a Claude Code plugin that runs a software project as a series of cards. A card is one unit of work sized to fit one agent session without context compaction. Each card names what to read, which files to touch, which tests must exist and what must be true at the end. A session takes one card, implements it, passes the project's check command, gets an independent review and opens one pull request. A person merges.
+WorkDeck is a Claude Code plugin that runs a software project as a series of cards. A card is one unit of work sized to fit one agent session without context compaction. Each card names what to read, which files to touch, which tests must exist and what must be true at the end. A session takes one card, implements it, passes the project's check command, gets an independent review and opens one pull request. A person merges.
 
 The plugin installs the engine: skills, hooks, a reviewer agent and a `card` command. An init skill writes the project side into the repository: cards, session logs, a config file, a PR template and a short protocol section in `CLAUDE.md`.
 
@@ -39,7 +39,7 @@ Not in 0.1:
 | State | One file per card, one file per session log, generated status | A single status file and a single log conflict on every parallel merge, and a hand-edited status file grows without limit. |
 | In-progress state | Derived from branches and PRs, not stored | No commit is needed to claim a card, and a stale claim cannot be left behind in a file. |
 | Scripts | One bash file, `bin/card`, using only git, awk, sed, grep, sort and the standard POSIX tools. It must run on bash 3.2, the version macOS ships. | Nothing to install, and one file can be fetched by CI or a person without the plugin. Ceiling: no native Windows. Upgrade path: a single Go binary with the same commands. |
-| Handoff trigger | The user types `/mergehand:handoff` | Handoff pushes a branch and opens a PR. A person starts that. Skills with `disable-model-invocation` also cannot call each other. |
+| Handoff trigger | The user types `/workdeck:handoff` | Handoff pushes a branch and opens a PR. A person starts that. Skills with `disable-model-invocation` also cannot call each other. |
 | Command name | `card` | `deck` is taken by two existing command-line tools. |
 
 ## 4. Repository layout
@@ -65,28 +65,28 @@ templates/                           # files init copies into a project
 test/                                # shell tests and fixture repositories
 ```
 
-Users install with `/plugin marketplace add AshwinSathian/mergehand` and `/plugin install mergehand@mergehand`. Skills are invoked as `/mergehand:init`, `/mergehand:next-card`, `/mergehand:handoff` and `/mergehand:quick`. The reviewer agent is addressed as `mergehand:reviewer`.
+Users install with `/plugin marketplace add AshwinSathian/workdeck` and `/plugin install workdeck@workdeck`. Skills are invoked as `/workdeck:init`, `/workdeck:next-card`, `/workdeck:handoff` and `/workdeck:quick`. The reviewer agent is addressed as `workdeck:reviewer`.
 
-This repository is also a Mergehand project: its own `mergehand.conf`, `cards/` and `log/` sit at the root, beside `docs/`, `examples/`, `scripts/` and the usual repository files.
+This repository is also a WorkDeck project: its own `workdeck.conf`, `cards/` and `log/` sit at the root, beside `docs/`, `examples/`, `scripts/` and the usual repository files.
 
 The plugin's `bin/` is on the PATH only for commands Claude runs through the Bash tool. Hooks and the commands a skill injects with `!` call `${CLAUDE_PLUGIN_ROOT}/bin/card` by full path.
 
 People and CI need `card` without Claude Code. Because it is one file that needs only git and standard Unix tools, the README gives a one-line download of `bin/card` at a release tag, and init offers a CI workflow that does the same and runs `card lint`.
 
-### 4.2 A project that uses Mergehand
+### 4.2 A project that uses WorkDeck
 
 ```
-mergehand.conf
+workdeck.conf
 cards/AUTH-03-token-refresh.md       # one file per card
 cards/REVIEW.md                      # project rules the reviewer must check; owned by the project
 log/2026-10-05-AUTH-03-1.md          # one file per session
 .github/pull_request_template.md     # only if the project has none
-.github/workflows/mergehand.yml       # optional: runs card lint on pull requests
-CLAUDE.md                            # gains one "Mergehand session protocol" section
+.github/workflows/workdeck.yml       # optional: runs card lint on pull requests
+CLAUDE.md                            # gains one "WorkDeck session protocol" section
 .claude/settings.json                # gains permission entries and the marketplace reference
 ```
 
-`cards/` and `log/` are the defaults. Both paths are set in `mergehand.conf`.
+`cards/` and `log/` are the defaults. Both paths are set in `workdeck.conf`.
 
 ## 5. Card format
 
@@ -126,7 +126,7 @@ Rules:
 - The front matter is flat `key: value` lines between two `---` lines. It is not parsed as YAML. Nested values, quotes and multi-line values are lint errors.
 - `id` matches `[A-Z][A-Z0-9]*-[0-9]+[a-z]?`. The file name starts with the id. Every command validates an id against this pattern before using it in a branch name or a search pattern.
 - `title` is at most 80 characters with no control characters.
-- `size` is one of the sizes defined in `mergehand.conf`. The defaults are `XS`, `S` and `M`.
+- `size` is one of the sizes defined in `workdeck.conf`. The defaults are `XS`, `S` and `M`.
 - `depends` is a comma-separated list of ids, or empty.
 - `done` is `true` or `false`. It is the only state stored in the file.
 - `Read`, `Touch`, `Tests` and `Acceptance` are required sections, except that an `XS` card may leave `Read` empty.
@@ -186,7 +186,7 @@ compacted: false
 
 ## 8. Configuration
 
-`mergehand.conf` is `key = value` lines with `#` comments. It is parsed with awk and never sourced, because sourcing would run whatever the repository contains.
+`workdeck.conf` is `key = value` lines with `#` comments. It is parsed with awk and never sourced, because sourcing would run whatever the repository contains.
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -218,7 +218,7 @@ A budget limits growth: the peak context size of the session minus its size at t
 | `card touched <id>` | Compares the files changed against `base` with the card's `Touch` list. Files under `cards_dir` and `log_dir` and files matching `touch_ignore` are skipped. Entries are matched as shell `case` patterns, so `*` also matches `/`. Prints files changed but not listed, and files listed but not changed. Exit 1 when unlisted files changed. "Changed" means different from the point where the branch left the base branch, including uncommitted and untracked files, because handoff runs the gates before it commits. |
 | `card tests <id>` | The tests gate of section 11. Prints each `Tests` line that has no match in the files changed. Exit 1 when any is missing. |
 | `card conf <key>` | Prints one configuration value with its default applied. Skills and hooks read `check`, `base` and `log_dir` this way. |
-| `card tokens [transcript]` | Prints baseline, peak and growth for a session transcript. Defaults to `$MERGEHAND_TRANSCRIPT`. On a card branch it also prints the card's budget and size. |
+| `card tokens [transcript]` | Prints baseline, peak and growth for a session transcript. Defaults to `$WORKDECK_TRANSCRIPT`. On a card branch it also prints the card's budget and size. |
 | `card log-new <id> <outcome>` | Creates the log file with the measured fields filled in and empty sections for the agent |
 | `card stats` | Per size: number of sessions, budget, median and maximum `growth_tokens`, share that compacted |
 | `card help`, `card version` | Print the usage text, and `card <version>`. `--help` and `--version` do the same; `card <command> --help` prints that command's arguments |
@@ -231,20 +231,20 @@ Exit codes: 0 success, 1 a check failed or nothing matched, 2 usage or configura
 
 All four skills set `disable-model-invocation: true`. They run only when the user types them.
 
-### 10.1 `/mergehand:init`
+### 10.1 `/workdeck:init`
 
-1. Stop if `mergehand.conf` exists, and say so.
+1. Stop if `workdeck.conf` exists, and say so.
 2. Detect a check command from the project (`Makefile` target, `package.json` script, and similar) and the default branch. Ask the user to confirm both.
-3. Write `mergehand.conf`, `cards/REVIEW.md` (a template with empty rule headings) and a PR template if the project has none. The log directory is created by the first `card log-new`.
+3. Write `workdeck.conf`, `cards/REVIEW.md` (a template with empty rule headings) and a PR template if the project has none. The log directory is created by the first `card log-new`.
 4. Append the session protocol section to `CLAUDE.md`, creating the file if needed. The section is about 20 lines and points at the skills.
 5. Show the user the permission entries as a diff, then merge them into `.claude/settings.json` on approval: allow `card`, the check command, read-only git commands, pushing `card/*` branches and `gh pr create`; deny force-push, `git reset --hard`, branch deletion and `gh pr merge`.
 6. Offer the CI workflow that downloads `bin/card` at the installed release tag and runs `card lint` on pull requests.
 7. Offer to add the marketplace under `extraKnownMarketplaces` and the plugin under `enabledPlugins` in `.claude/settings.json`, so the plugin is turned on for teammates, who each install it once with `claude plugin install <plugin>@<marketplace> --scope project`.
-8. Print the next step: write a card with `card new`, or use `/mergehand:quick`.
+8. Print the next step: write a card with `card new`, or use `/workdeck:quick`.
 
 Init does not commit. The user reviews and commits the result.
 
-### 10.2 `/mergehand:next-card [id]`
+### 10.2 `/workdeck:next-card [id]`
 
 1. Run `card status --fetch`.
 2. If the current user has an open card PR with changes requested, check out that branch and address the comments. Do not start a new card.
@@ -254,11 +254,11 @@ Init does not commit. The user reviews and commits the result.
 6. If the card has a `## Blocked` section, ask the question before writing code. Once it is answered, remove the section and record the answer under `Notes`.
 7. Create the branch `card/<id>-<slug>`.
 8. Follow `reference/implement.md`: read what the card lists under `Read` plus the code under `Touch`, and do not read further without saying why; state a plan of at most 10 lines; write the tests named on the card and confirm they fail for the expected reason; implement until they pass, running only the touched tests while iterating.
-9. Tell the user the card is ready and that `/mergehand:handoff` is the next command. Handoff is typed by the user (section 3).
+9. Tell the user the card is ready and that `/workdeck:handoff` is the next command. Handoff is typed by the user (section 3).
 
 Other people's open PRs do not block step 5. Only an unmerged dependency does.
 
-### 10.3 `/mergehand:handoff [split]`
+### 10.3 `/workdeck:handoff [split]`
 
 1. Run the `check` command. Fix failures that belong to this card. Report failures that predate it and stop.
 2. Run the mechanical gates (section 11).
@@ -269,7 +269,7 @@ Other people's open PRs do not block step 5. Only an unmerged dependency does.
 7. Commit, push the branch, and open the PR with the template filled in. If `gh` is missing or not authenticated, stop after the push and print the URL for opening the PR by hand.
 8. Report the PR URL, the findings left open, measured tokens against budget, and the next ready card. Then stop. A session does not start a second card.
 
-### 10.4 `/mergehand:quick "<description>"`
+### 10.4 `/workdeck:quick "<description>"`
 
 For a change that needs no plan: a bug fix, a rename, a small addition.
 
@@ -310,7 +310,7 @@ Output: findings marked `must-fix`, `should-fix` or `nit`, each with file and li
 
 ## 13. Hooks
 
-Every hook exits 0 at once when the project has no `mergehand.conf`. Plugin hooks run in every project where the plugin is enabled, so this check comes first in each script.
+Every hook exits 0 at once when the project has no `workdeck.conf`. Plugin hooks run in every project where the plugin is enabled, so this check comes first in each script.
 
 | Event | Script | Behavior |
 |---|---|---|
@@ -319,11 +319,11 @@ Every hook exits 0 at once when the project has no `mergehand.conf`. Plugin hook
 | `Stop` | `stop.sh` | Log guard, described below. |
 | `PreCompact` | `pre-compact.sh` | Writes a marker file for the session. Never blocks. |
 
-Every hook sets a 10-second timeout. Session state lives in `<git-dir>/mergehand/`, which is per worktree and never committed: one file per session id for the compaction marker and one for the budget warning.
+Every hook sets a 10-second timeout. Session state lives in `<git-dir>/workdeck/`, which is per worktree and never committed: one file per session id for the compaction marker and one for the budget warning.
 
-The session-start hook also appends `export MERGEHAND_TRANSCRIPT=<transcript_path>` and `export MERGEHAND_SESSION=<session_id>` to `$CLAUDE_ENV_FILE`. That is the documented way to hand a value from a hook to later Bash tool commands, and it is how `card tokens` and `card log-new` find the transcript.
+The session-start hook also appends `export WORKDECK_TRANSCRIPT=<transcript_path>` and `export WORKDECK_SESSION=<session_id>` to `$CLAUDE_ENV_FILE`. That is the documented way to hand a value from a hook to later Bash tool commands, and it is how `card tokens` and `card log-new` find the transcript.
 
-Budget warning (`PostToolUse`, on a `card/*` branch only). After each tool call the hook computes growth from the transcript. When growth exceeds the card's budget and no warning file exists for the session, it returns `additionalContext` with the measured figure and the instruction to finish the current step and ask the user to run `/mergehand:handoff split`, then writes the warning file. It warns once per session and never blocks. Tool calls made by a subagent are ignored (the hook input carries `agent_id`), so the reviewer cannot use up the one warning. A `Stop` hook would be too late for this: it fires only when a turn ends, and one long turn can run from under budget to compaction. Measured on macOS: 2 ms when the session is not on a card branch, 4 ms once the warning has been given, and about 45 ms on a card branch with a 2 MB transcript (127 ms at 20 MB). The cost is dominated by process start-up, not by parsing, and grows with the transcript because the whole file is read each time.
+Budget warning (`PostToolUse`, on a `card/*` branch only). After each tool call the hook computes growth from the transcript. When growth exceeds the card's budget and no warning file exists for the session, it returns `additionalContext` with the measured figure and the instruction to finish the current step and ask the user to run `/workdeck:handoff split`, then writes the warning file. It warns once per session and never blocks. Tool calls made by a subagent are ignored (the hook input carries `agent_id`), so the reviewer cannot use up the one warning. A `Stop` hook would be too late for this: it fires only when a turn ends, and one long turn can run from under budget to compaction. Measured on macOS: 2 ms when the session is not on a card branch, 4 ms once the warning has been given, and about 45 ms on a card branch with a 2 MB transcript (127 ms at 20 MB). The cost is dominated by process start-up, not by parsing, and grows with the transcript because the whole file is read each time.
 
 Log guard (`Stop`, on a `card/*` branch only). If the branch has commits, the tree is clean and no log file for this card was added on the branch, block with a message to run handoff, or to record a blocked outcome when the session is waiting on a person.
 
@@ -348,7 +348,7 @@ Known limits, stated in the README:
 
 | Situation | Behavior |
 |---|---|
-| No `mergehand.conf` | Hooks stay silent. `card` exits 2 and suggests `/mergehand:init`. |
+| No `workdeck.conf` | Hooks stay silent. `card` exits 2 and suggests `/workdeck:init`. |
 | `check` not set | `card lint` and handoff exit 2 |
 | Not a git repository | `card` exits 2 |
 | No remote, or no network | State uses local branches. Handoff stops before the push and says what remains. |
@@ -359,10 +359,10 @@ Known limits, stated in the README:
 
 ## 16. Trust and input handling
 
-Cards, logs and `mergehand.conf` are repository content. In a team repository they can arrive in someone else's pull request, and the session-start hook puts part of them into the agent's context.
+Cards, logs and `workdeck.conf` are repository content. In a team repository they can arrive in someone else's pull request, and the session-start hook puts part of them into the agent's context.
 
 - `card status` prints front matter fields only (id, state, size, title) plus the `Done` section of the current card's last log entry. It strips control characters and applies the size cap. A size is printed only when it looks like a size, a dependency only when it is a valid id, and a log file only when its name has no free text. Card bodies enter context only when a session starts that card.
-- `mergehand.conf` is parsed, never sourced or passed to `eval`. `cards_dir` and `log_dir` must be relative paths inside the repository with no `..`, and `base` must be a valid branch name; anything else is a configuration error.
+- `workdeck.conf` is parsed, never sourced or passed to `eval`. `cards_dir` and `log_dir` must be relative paths inside the repository with no `..`, and `base` must be a valid branch name; anything else is a configuration error.
 - `card status` never prints the name of a branch other than the current one, because remote branch names are chosen by whoever pushed them.
 - Ids are validated against the id pattern before they appear in a branch name, a file name or a search pattern. `Touch` entries are used only as `case` patterns.
 - The `check` command runs whatever the repository says, with the same trust as a `Makefile`. Init shows it to the user before writing the permission entry for it.
@@ -372,7 +372,7 @@ Cards, logs and `mergehand.conf` are repository content. In a team repository th
 - `test/run.sh` runs every case with plain bash: no test framework. Each case builds a temporary git repository from a fixture, runs a command and compares output and exit code.
 - Cases cover each `card` subcommand, each lint rule, each state in section 6 (using a local bare repository as the remote and a stub `gh` on the PATH), `card tokens` against fixture transcripts including a malformed one, and each hook with fixture JSON on stdin.
 - CI on macOS runs the suite with `/bin/bash`, which is 3.2, so a bash 4 feature fails there.
-- The hook tests include a project without `mergehand.conf` and assert no output and exit 0.
+- The hook tests include a project without `workdeck.conf` and assert no output and exit 0.
 - CI runs the suite on macOS and Linux, which covers BSD and GNU versions of sed, awk and grep. CI also runs `shellcheck` and `claude plugin validate --strict` on both manifests and on the `agents/` and `skills/` directories. Validate does not read `hooks/hooks.json`; a shell test checks the hook registration instead. On Linux the suite also runs with `awk` as mawk and as gawk.
 - Skills are prompts and cannot be unit tested. Shell tests check their mechanics (front matter, that every `card` command they name exists, the order of the gates), and each skill was run once by hand in a scratch repository (`development/findings.md`, findings 8 and 10). Plugin eval cases were planned and then cut: see section 19.2, item 32.
 
@@ -383,7 +383,7 @@ Cards, logs and `mergehand.conf` are repository content. In a team repository th
 | Larger context windows make session sizing matter less | Budgets are configuration. The parts that do not depend on window size are the scope gate, the review, the PR per card and the measured record. |
 | The agent ignores instructions in a skill | Checks that matter run as scripts in handoff and in the stop hook. |
 | Transcript format changes | Measurement degrades to `unknown`. Nothing else depends on it. |
-| The `Touch` gate annoys users on exploratory work | Adding a file to `Touch` is one line, and `/mergehand:quick` exists for work that has no plan. |
+| The `Touch` gate annoys users on exploratory work | Adding a file to `Touch` is one line, and `/workdeck:quick` exists for work that has no plan. |
 | Claude Code changes plugin or hook behavior | CI runs `claude plugin validate --strict` against the current release. It covers the manifests, agents and skills, not the hook registration, which a shell test checks. |
 | Users expect cards to be written for them | The README says plainly that 0.1 runs cards and 0.2 writes them. |
 
@@ -432,7 +432,7 @@ Found while building 0.1 with its own cards, and by a separate adversarial revie
 29. next-card can resume a card in progress, and a `## Blocked` section is removed once answered (section 10.2).
 30. init no longer creates the log directory (section 10.1).
 31. Text that reaches the agent's context is filtered further: a size, a dependency and a log file name are printed only when well formed (section 16).
-32. The three plugin eval cases were cut from 0.1. `claude plugin eval` measures skills that the model chooses to invoke, against a baseline without the plugin; all four Mergehand skills are typed by the user, so the tool would have measured a mismatch, at about eighteen billed agent runs (section 17).
+32. The three plugin eval cases were cut from 0.1. `claude plugin eval` measures skills that the model chooses to invoke, against a baseline without the plugin; all four WorkDeck skills are typed by the user, so the tool would have measured a mismatch, at about eighteen billed agent runs (section 17).
 33. `card` gained `--version`, per-command `--help` and strict argument counts; a usage error prints `usage:` (section 9).
 34. The license is MIT (section 20, question 1).
 35. A card that exists only on its own branch showed as `done` as soon as handoff ran, so a quick card never showed as `review`. Seen on the first pull request opened by hand against the hosted repository. Such a card is not done while it has a branch or an open pull request (section 6).

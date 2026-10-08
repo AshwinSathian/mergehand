@@ -25,9 +25,9 @@ done: true
 - session start survives a broken config
 
 ## Acceptance
-- With no mergehand.conf the hook prints nothing and exits 0.
+- With no workdeck.conf the hook prints nothing and exits 0.
 - With one, stdout is the output of card status and stays under status_max_chars.
-- CLAUDE_ENV_FILE gains MERGEHAND_TRANSCRIPT and MERGEHAND_SESSION, single-quoted.
+- CLAUDE_ENV_FILE gains WORKDECK_TRANSCRIPT and WORKDECK_SESSION, single-quoted.
 - The hook never fetches and exits 0 on every error.
 
 ## Out of scope

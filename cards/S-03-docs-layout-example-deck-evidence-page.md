@@ -13,12 +13,12 @@ done: true
 ## Touch
 - docs/*
 - examples/* (new)
-- templates/mergehand.yml
+- templates/workdeck.yml
 - test/cases/02-plugin.sh
 - test/cases/32-touched.sh (a test name changes spelling)
 - test/cases/21-state.sh (spelling and a docs path in comments)
 - test/cases/33-tests.sh (spelling and a docs path in comments)
-- mergehand.conf (the ignored notes moved)
+- workdeck.conf (the ignored notes moved)
 - CONTRIBUTING.md
 - bin/card (spelling in comments)
 - hooks/* (spelling in comments)

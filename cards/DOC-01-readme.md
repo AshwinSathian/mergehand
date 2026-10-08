@@ -21,12 +21,12 @@ done: true
 - readme links resolve
 
 ## Acceptance
-- A reader learns what Mergehand is and why in the first screen.
+- A reader learns what WorkDeck is and why in the first screen.
 - The quick start works from an empty repository and leads with the quick lane.
 - Requirements and limits are stated near the top, before the reference sections.
 - Every card command and every configuration key is listed.
 - The claim about how the project was built matches the session logs.
-- It says the project is not affiliated with the Workdeck product at workdeck.com.
+- It says the project is not affiliated with the WorkDeck product at workdeck.com.
 
 ## Out of scope
 - A website, a demo recording and a social preview image.

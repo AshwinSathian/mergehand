@@ -25,8 +25,8 @@ test_plugin_manifest_has_name_version_description_and_author() {
   for k in name version description author; do
     grep -q "\"$k\":" "$f" || fail "plugin.json has no $k"
   done
-  grep -q '"name": "mergehand"' "$f" || fail 'the plugin is not named mergehand'
-  grep -q '"name": "mergehand"' "$ROOT/.claude-plugin/marketplace.json" || fail 'the marketplace is not named mergehand'
+  grep -q '"name": "workdeck"' "$f" || fail 'the plugin is not named workdeck'
+  grep -q '"name": "workdeck"' "$ROOT/.claude-plugin/marketplace.json" || fail 'the marketplace is not named workdeck'
 }
 
 # Runs only where Claude Code is installed. HOME is the test's temp directory,
@@ -54,12 +54,12 @@ test_plugin_validates_strictly() {
 
 test_template_conf_parses() {
   new_repo
-  sed 's|<check>|make check VAR=1|; s|<base>|trunk|' "$ROOT/templates/mergehand.conf" > mergehand.conf
+  sed 's|<check>|make check VAR=1|; s|<base>|trunk|' "$ROOT/templates/workdeck.conf" > workdeck.conf
   card conf check; assert_rc 0; assert_eq 'make check VAR=1' "$OUT" check
   card conf base; assert_eq trunk "$OUT" base
   card conf budget.M; assert_eq 100000 "$OUT" 'default budget'
   # Unfilled, it must fail loudly, not run a placeholder.
-  cp "$ROOT/templates/mergehand.conf" mergehand.conf
+  cp "$ROOT/templates/workdeck.conf" workdeck.conf
   card conf base; assert_rc 2
 }
 
@@ -67,8 +67,8 @@ test_claude_md_section_is_short() {
   local f="$ROOT/templates/claude-md-section.md" n
   n=$(awk 'END { print NR }' "$f")
   [ "$n" -le 25 ] || fail "the CLAUDE.md section is $n lines; the spec says about 20"
-  grep -q '^## Mergehand session protocol$' "$f" || fail 'section heading missing'
-  grep -q '/mergehand:handoff' "$f" || fail 'the section does not point at handoff'
+  grep -q '^## WorkDeck session protocol$' "$f" || fail 'section heading missing'
+  grep -q '/workdeck:handoff' "$f" || fail 'the section does not point at handoff'
 }
 
 test_reviewer_agent_is_read_only() {
@@ -83,7 +83,7 @@ test_reviewer_agent_is_read_only() {
 
 test_templates_are_complete() {
   local f
-  for f in REVIEW.md pull_request_template.md claude-md-section.md mergehand.conf mergehand.yml settings-permissions.json; do
+  for f in REVIEW.md pull_request_template.md claude-md-section.md workdeck.conf workdeck.yml settings-permissions.json; do
     [ -s "$ROOT/templates/$f" ] || fail "templates/$f is missing or empty"
   done
   # The plugin ships no project rules: the REVIEW template has headings only.
@@ -256,7 +256,7 @@ test_readme_links_resolve() {
 
 test_evidence_names_the_first_pull_request() {
   local log="$ROOT/log/2026-10-06-DOC-02-1.md" k v
-  grep -q 'github.com/AshwinSathian/mergehand/pull/1' "$ROOT/docs/evidence.md" || fail 'evidence does not link pull request 1'
+  grep -q 'github.com/AshwinSathian/workdeck/pull/1' "$ROOT/docs/evidence.md" || fail 'evidence does not link pull request 1'
   # The figures on the page are the ones in the session log.
   for k in baseline_tokens peak_tokens growth_tokens; do
     v=$(sed -n "s/^$k: //p" "$log" | awk '{ printf "%d,%03d", $1 / 1000, $1 % 1000 }')

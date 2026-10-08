@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# card: the Mergehand command-line tool.
-# Version 0.1.2. https://github.com/AshwinSathian/mergehand
+# card: the WorkDeck command-line tool.
+# Version 0.1.2. https://github.com/AshwinSathian/workdeck
 # SPDX-License-Identifier: MIT
 #
 # One file, so people and CI can fetch it without the plugin. It must run on
 # bash 3.2 (macOS /bin/bash) with BSD or GNU awk, sed, grep and sort (with
 # -V), git, and the usual POSIX tools (cut, tr, head, tail, mktemp, date).
-# mergehand.conf and card files are parsed as text and are never sourced or
+# workdeck.conf and card files are parsed as text and are never sourced or
 # evaluated.
 #
 # Reports go to stdout. Errors go to stderr and start with "card:".
@@ -25,7 +25,7 @@ readonly TAB
 
 usage() {
   cat <<USAGE
-card $VERSION: the Mergehand command-line tool
+card $VERSION: the WorkDeck command-line tool
 
 usage: card <command> [arguments]
 
@@ -88,8 +88,8 @@ enter_repo() {
   local root
   root=$(g rev-parse --show-toplevel 2>/dev/null) || die 2 "not a git repository"
   cd "$root" || die 2 "cannot enter $root"
-  [ -f mergehand.conf ] ||
-    die 2 "no mergehand.conf in $root; run /mergehand:init in Claude Code, or create one with a 'check = <command>' line"
+  [ -f workdeck.conf ] ||
+    die 2 "no workdeck.conf in $root; run /workdeck:init in Claude Code, or create one with a 'check = <command>' line"
 }
 
 # --- configuration ---
@@ -115,7 +115,7 @@ CONF
   return 1
 }
 
-conf_die() { die 2 "mergehand.conf: $*"; }
+conf_die() { die 2 "workdeck.conf: $*"; }
 
 # load_conf: one awk pass that applies defaults, parses and validates.
 # Directory settings must stay inside the repository and the base branch must
@@ -157,10 +157,10 @@ load_conf() {
       if (c["reviewer"] != "on" && c["reviewer"] != "off") bad(": reviewer must be on or off")
       for (k in c) if (k ~ /^budget\./ && c[k] !~ /^[0-9]+$/) bad(": " k " must be a number of tokens")
       for (k in c) print k "=" c[k]
-    }' mergehand.conf)
+    }' workdeck.conf)
   case $parsed in
     '!'* | *"
-!"*) die 2 "mergehand.conf$(printf '%s\n' "$parsed" | sed -n 's/^!//p' | head -1)" ;;
+!"*) die 2 "workdeck.conf$(printf '%s\n' "$parsed" | sed -n 's/^!//p' | head -1)" ;;
   esac
   CONF=$parsed
   BASE=$(conf_get base)
@@ -184,9 +184,9 @@ need_check() { [ -n "$(conf_get check)" ] || conf_die "check is not set"; }
 
 cmd_conf() {
   [ "$#" -eq 1 ] || usage_die conf
-  printf '%s\n' "$1" | grep -Eq "^($CONF_KEYS)\$" || die 2 "mergehand.conf has no key '$1'"
+  printf '%s\n' "$1" | grep -Eq "^($CONF_KEYS)\$" || die 2 "workdeck.conf has no key '$1'"
   [ "$1" != check ] || need_check
-  conf_get "$1" || die 2 "mergehand.conf: no value for '$1'"
+  conf_get "$1" || die 2 "workdeck.conf: no value for '$1'"
 }
 
 # --- cards ---
@@ -335,7 +335,7 @@ lint_cards() {
         if (length(fm["title"]) > 80) err("title is longer than 80 characters")
         if (has_control(fm["title"])) err("title has a control character")
       }
-      if ("size" in fm && index(sizes, " " fm["size"] " ") == 0) err("size " fm["size"] " has no budget in mergehand.conf")
+      if ("size" in fm && index(sizes, " " fm["size"] " ") == 0) err("size " fm["size"] " has no budget in workdeck.conf")
       if ("done" in fm && fm["done"] != "true" && fm["done"] != "false") err("done must be true or false")
       deps[fid] = ""
       if (fm["depends"] != "") {
@@ -477,7 +477,7 @@ base_ref() {
   elif [ -n "$local_" ]; then
     BASE_REF="refs/heads/$BASE"
   else
-    die 2 "base branch '$BASE' not found; set base in mergehand.conf, or make a first commit"
+    die 2 "base branch '$BASE' not found; set base in workdeck.conf, or make a first commit"
   fi
   BASE_REFS=$BASE_REF
   if [ -n "$remote" ] && [ -n "$local_" ] && [ "$remote" != "$local_" ]; then
@@ -727,16 +727,16 @@ cmd_status() {
   id=$(printf '%s\n' "$branch" | id_of_branch)
   out=$(
     if [ -z "$branch" ]; then
-      echo 'Mergehand: detached HEAD (no card)'
+      echo 'WorkDeck: detached HEAD (no card)'
     elif [ -z "$id" ]; then
-      printf 'Mergehand: on %s (no card)\n' "$branch"
+      printf 'WorkDeck: on %s (no card)\n' "$branch"
     else
       printf '%s\n' "$table" | B="$branch" I="$id" awk -F '\t' '
-        $2 == ENVIRON["I"] { printf "Mergehand: on %s: %s %s %s (%s)\n", ENVIRON["B"], $2, $3, $4, $1; found = 1 }
-        END { if (!found) printf "Mergehand: on %s: no card %s in the deck\n", ENVIRON["B"], ENVIRON["I"] }'
+        $2 == ENVIRON["I"] { printf "WorkDeck: on %s: %s %s %s (%s)\n", ENVIRON["B"], $2, $3, $4, $1; found = 1 }
+        END { if (!found) printf "WorkDeck: on %s: no card %s in the deck\n", ENVIRON["B"], ENVIRON["I"] }'
     fi
     if [ -z "$table" ]; then
-      echo 'No cards yet. Create one with: card new <id> <title>, or use /mergehand:quick.'
+      echo 'No cards yet. Create one with: card new <id> <title>, or use /workdeck:quick.'
     else
       printf '%s\n' "$table" | awk -F '\t' '
         $1 == "active" || $1 == "review" || $1 == "blocked" {
@@ -796,7 +796,7 @@ cmd_new() {
     "["* | "{"*) die 2 "the title starts with [ or {, which card lint rejects as a nested value" ;;
     "|" | ">" | [\|\>][+-]) die 2 "the title is a multi-line marker, which card lint rejects" ;;
   esac
-  sizes | grep -qxF -- "$size" || die 2 "size $size has no budget in mergehand.conf"
+  sizes | grep -qxF -- "$size" || die 2 "size $size has no budget in workdeck.conf"
   depends=$(printf '%s' "$depends" | tr ',' '\n' | sed 's/^ *//; s/ *$//; /^$/d')
   printf '%s\n' "$depends" | while IFS= read -r d; do
     [ -z "$d" ] || valid_id "$d" || exit 1
@@ -977,11 +977,11 @@ FILES
 # --- logs ---
 
 # session_compacted: true, false or unknown. The pre-compact hook leaves a
-# marker file named after the session in <git-dir>/mergehand/. The session id
+# marker file named after the session in <git-dir>/workdeck/. The session id
 # comes from the environment and becomes part of a file name, so it is
 # checked first.
 session_compacted() {
-  local session=${MERGEHAND_SESSION-} dir
+  local session=${WORKDECK_SESSION-} dir
   case $session in
     '' | *[!A-Za-z0-9_-]*)
       echo unknown
@@ -989,7 +989,7 @@ session_compacted() {
       ;;
   esac
   dir=$(g rev-parse --absolute-git-dir 2>/dev/null) || { echo unknown; return 0; }
-  if [ -e "$dir/mergehand/$session.compacted" ]; then echo true; else echo false; fi
+  if [ -e "$dir/workdeck/$session.compacted" ]; then echo true; else echo false; fi
 }
 
 cmd_stats() {
@@ -1075,7 +1075,7 @@ cmd_log_new() {
   {
     printf -- '---\ncard: %s\ndate: %s\noutcome: %s\nbranch: %s\nsize: %s\nbudget_tokens: %s\n' \
       "$id" "$date" "$outcome" "$branch" "$size" "$budget"
-    measure "${MERGEHAND_TRANSCRIPT-}" | awk '
+    measure "${WORKDECK_TRANSCRIPT-}" | awk '
       $1 == "baseline" || $1 == "peak" || $1 == "growth" { v[$1] = $2 }
       END {
         if (!("baseline" in v)) v["baseline"] = v["peak"] = v["growth"] = "unknown"
@@ -1147,9 +1147,9 @@ branch_budget() {
 
 cmd_tokens() {
   local budget
-  [ -n "${1:-${MERGEHAND_TRANSCRIPT-}}" ] ||
-    printf 'card: no transcript: MERGEHAND_TRANSCRIPT is not set and no path was given\n' >&2
-  measure "${1:-${MERGEHAND_TRANSCRIPT-}}"
+  [ -n "${1:-${WORKDECK_TRANSCRIPT-}}" ] ||
+    printf 'card: no transcript: WORKDECK_TRANSCRIPT is not set and no path was given\n' >&2
+  measure "${1:-${WORKDECK_TRANSCRIPT-}}"
   budget=$(branch_budget)
   [ -z "$budget" ] || printf 'budget %s\n' "$budget"
 }

@@ -21,7 +21,7 @@ done: true
 - skills name only card commands that exist
 
 ## Acceptance
-- The skill follows the nine steps of spec section 10.2 and ends by telling the user to type /mergehand:handoff.
+- The skill follows the nine steps of spec section 10.2 and ends by telling the user to type /workdeck:handoff.
 - reference/implement.md tells the agent not to commit before handoff.
 - A manual run in a scratch repository is described in the log.
 
