@@ -1269,13 +1269,101 @@ outlines() {
   done
 }
 
-# Reads the lines of outlines. Prints the format findings as they are, then
-# the findings of the checks Ids and Sizes, in that order.
+# Reads a specification on stdin, with -v name=<outline path> -v level=<1-6>.
+# Prints "H <outline path> <heading>", tab-separated, for each # heading at
+# that level outside a code fence. A fence is three or more backticks or
+# tildes at the start of a line. It ends at a line of the same mark, at least
+# as many of them, and nothing else. As in Markdown, up to three spaces may
+# come before a heading or a fence; a byte-order mark on line 1 is skipped.
+HEADINGS_AWK='
+function marks(c) { return match($0, c == "~" ? "^~+" : "^`+") ? RLENGTH : 0 }
+NR == 1 { sub(/^\357\273\277/, "") }
+# mawk does not strip with sub(/^ ? ? ?/, "").
+{ sub(/\r$/, ""); if (match($0, /^ +/) && RLENGTH <= 3) $0 = substr($0, RLENGTH + 1) }
+fence != "" { if (marks(fence) >= flen && substr($0, RLENGTH + 1) ~ /^[ \t]*$/) fence = ""; next }
+/^(```|~~~)/ { fence = substr($0, 1, 1); flen = marks(fence); next }
+match($0, /^#+/) && RLENGTH == level && substr($0, RLENGTH + 1) ~ /^[ \t]+[^ \t]/ {
+  h = substr($0, RLENGTH + 1); gsub(/[\001-\037\177]/, "", h); sub(/^ +/, "", h)
+  print "H\t" name "\t" h
+}'
+
+# plan_facts: reads the lines of outlines and prints what the checks after
+# Sizes need from the repository, tab-separated:
+#   C <path> <size> <title> <depends> <done>   a card in the working tree
+#   K <id>                                     a card, in the working tree or on a base branch
+#   D <id>                                     a card that is done on a base branch
+#   S <outline path> <state> <spec>            ok, changed, missing, irregular, unreadable or untracked
+#   H <outline path> <heading>                 see HEADINGS_AWK
+# The specification is read from the working tree, as it is, and only for an
+# outline that is in the working tree: one that is only on a base branch was
+# checked where it merged, and the tree may be older than it. Needs BASE_REFS.
+plan_facts() {
+  local f spec blob level state p h
+  set --
+  while IFS= read -r p; do
+    # awk stops at a file it cannot read, and a control character in a path
+    # would break the lines of wt_meta. Such a card is still a card (K).
+    case $p in '' | *[[:cntrl:]]*) continue ;; esac
+    [ -r "$p" ] && set -- "$@" "$p"
+  done <<INDEX
+$(wt_cards | cut -f2-)
+INDEX
+  wt_meta "$@" | sed "s/^/C$TAB/"
+  { wt_cards; base_cards; } | cut -f1 | sed "s/^/K$TAB/"
+  base_done | to_index | cut -f1 | sed "s/^/D$TAB/"
+  # An empty field would be lost to read; - stands for one. The outline
+  # reader let no space into any of these.
+  awk -F '\t' '$1 == "O" && $3 != "" { print $2, $3, ($4 == "" ? "-" : $4), ($6 == "" ? "-" : $6) }' |
+    while read -r f spec blob level; do
+      [ -f "$f" ] || continue
+      # A link is not followed: it could point outside the repository.
+      if [ -L "$spec" ] || { [ -e "$spec" ] && [ ! -f "$spec" ]; }; then state=irregular
+      elif [ ! -e "$spec" ]; then state=missing
+      elif [ ! -r "$spec" ]; then state=unreadable
+      elif ! g ls-files --error-unmatch -- "$spec" > /dev/null 2>&1; then state=untracked
+      elif ! h=$(g hash-object -- "$spec" 2>/dev/null); then state=unreadable
+      elif [ "$blob" != - ] && [ "$h" != "$blob" ]; then state=changed
+      else state=ok
+      fi
+      printf 'S\t%s\t%s\t%s\n' "$f" "$state" "$spec"
+      case $state in ok | changed) [ "$level" = - ] || awk -v name="$f" -v level="$level" "$HEADINGS_AWK" < "$spec" ;; esac
+    done
+}
+
+# Reads the lines of outlines, then those of plan_facts. Prints the format
+# findings as they are, then the findings of the checks Ids, Sizes,
+# Dependencies, Specification and Coverage, in that order.
 PLAN_AWK='
 function err(f, s) { print "card: " f ": " s; bad = 1 }
-/^card: / { print; bad = 1; next }
-$1 == "R" { n++; rfile[n] = $2; rid[n] = $3; rsize[n] = $4 }
-$1 == "O" { m++; ofile[m] = $2; prefix[$2] = $5 }
+# As the tests gate compares names, but a byte above 127 is kept, so that a
+# heading in another script is still a heading. Of those bytes only the
+# UTF-8 general punctuation (dashes, curly quotes) and the Latin-1 signs are
+# removed; case is folded for ASCII alone. A heading with no letter or digit
+# at all is compared as written, less its spaces.
+function norm(s,   t) {
+  t = tolower(s); gsub(/\342\200[\200-\277]|\302[\240-\277]/, "", t)
+  gsub(/[\001-\057\072-\100\133-\140\173-\177]/, "", t)
+  if (t == "") { t = s; gsub(/[ \t]/, "", t) }
+  return t
+}
+# The C1 control characters, as UTF-8, go the way of the others.
+function show(s) { gsub(/\302[\200-\237]/, "", s); return "\"" substr(s, 1, 80) "\"" }
+function covered(f) { return (state[f] == "ok" || state[f] == "changed") && level[f] != "" }
+/^card: / { print; bad = 1; s = substr($0, 7); faulty[substr(s, 1, index(s, ": ") - 1)] = 1; next }
+$1 == "R" { n++; rfile[n] = $2; rid[n] = $3; rsize[n] = $4; rdep[n] = $6; isrow[$3] = 1 }
+$1 == "I" && $4 == "spec" { c++; cfile[c] = $2; cid[c] = $3; ctext[c] = $5; cited[$2, norm($5)] = 1 }
+$1 == "N" { np++; nfile[np] = $2; ntext[np] = $3; cited[$2, norm($3)] = 1 }
+$1 == "O" { m++; ofile[m] = $2; spec[$2] = $3; prefix[$2] = $5; level[$2] = $6 }
+$1 == "C" {
+  k = split($2, d, "/")
+  if (match(d[k], /^[A-Z][A-Z0-9]*-[0-9]+[a-z]?/)) {
+    id = substr(d[k], 1, RLENGTH); known[id] = 1; x = $5; gsub(/,/, " ", x); deps[id] = deps[id] " " x
+  }
+}
+$1 == "K" { known[$2] = 1 }
+$1 == "D" { isdone[$2] = 1 }
+$1 == "S" { state[$2] = $3 }
+$1 == "H" { q++; hfile[q] = $2; htext[q] = $3; has[$2, norm($3)] = 1 }
 END {
   for (i = 1; i <= n; i++) {
     f = rfile[i]; id = rid[i]
@@ -1300,13 +1388,63 @@ END {
   for (i = 1; i <= n; i++)
     if (rsize[i] == "?") err(rfile[i], "row " rid[i] ": size is not a size (capitals and digits, like S)")
     else if (rsize[i] != "" && index(sizes, " " rsize[i] " ") == 0) err(rfile[i], "row " rid[i] ": size " rsize[i] " has no budget in workdeck.conf")
+  for (i = 1; i <= n; i++) {
+    f = rfile[i]; id = rid[i]; k = split(rdep[i], d, ",")
+    # Of an id that is in two rows, the first row is the node.
+    own = !(id in node)
+    if (own) { node[id] = i; if (!(id in deps)) deps[id] = "" }
+    for (j = 1; j <= k; j++) {
+      x = d[j]; gsub(/^[ \t]+|[ \t]+$/, "", x)
+      if (x !~ /^[A-Z][A-Z0-9]*-[0-9]+[a-z]?$/ || length(x) > 40) err(f, "row " id ": depends has an invalid id")
+      else if (!(x in isrow) && !(x in known)) err(f, "row " id ": depends on " x ", which is neither a row nor a card")
+      else if (own) deps[id] = deps[id] " " x
+    }
+  }
+  # As in lint_cards, over rows and cards together: remove what depends only
+  # on what is removed; what stays is a cycle or depends on one.
+  do {
+    changed = 0
+    for (id in deps) {
+      if (id in gone) continue
+      free = 1; k = split(deps[id], d, " ")
+      for (j = 1; j <= k; j++) if ((d[j] in deps) && !(d[j] in gone)) free = 0
+      if (free) { gone[id] = 1; changed = 1 }
+    }
+  } while (changed)
+  for (i = 1; i <= n; i++) if (node[rid[i]] == i && !(rid[i] in gone)) err(rfile[i], "row " rid[i] " is in, or depends on, a dependency cycle")
+  for (i = 1; i <= m; i++) {
+    f = ofile[i]
+    if (state[f] == "missing") err(f, "the specification " spec[f] " is missing")
+    else if (state[f] == "irregular") err(f, "the specification " spec[f] " is not a regular file")
+    else if (state[f] == "unreadable") err(f, "the specification " spec[f] " cannot be read")
+    else if (state[f] == "untracked") err(f, "the specification " spec[f] " is not tracked by git")
+  }
+  # An outline with a format finding may have lost a row or an item, so a
+  # heading is not reported as one that no row of it cites.
+  for (i = 1; i <= q; i++) {
+    f = hfile[i]; h = norm(htext[i])
+    if (h == "" || (f in faulty) || ((f, h) in cited) || ((f, h) in told)) continue
+    told[f, h] = 1
+    err(f, "the heading " show(htext[i]) " of " spec[f] " is cited by no row and is not under Not planned")
+  }
+  for (i = 1; i <= c; i++) {
+    f = cfile[i]
+    if (covered(f) && !(cid[i] in isdone) && !((f, norm(ctext[i])) in has))
+      err(f, "row " cid[i] " cites the heading " show(ctext[i]) ", which " spec[f] " does not have at level " level[f])
+  }
+  for (i = 1; i <= np; i++) {
+    f = nfile[i]
+    if (covered(f) && !((f, norm(ntext[i])) in has))
+      err(f, "Not planned lists the heading " show(ntext[i]) ", which " spec[f] " does not have at level " level[f])
+  }
   exit bad
 }'
 
 # cmd_plan: the checks of every outline, in the order of the table in
-# section 11.1 of the design. Findings go to stderr.
+# section 11.1 of the design. Findings go to stderr. A specification that
+# differs from spec_blob is one line on stdout and not a finding.
 cmd_plan() {
-  local out
+  local out facts rc
   # Like lint, this runs where there is no base branch: a first commit not
   # yet made, or a CI checkout of one commit. Then only the working tree is read.
   if g rev-parse -q --verify "refs/remotes/origin/$BASE" > /dev/null 2>&1 ||
@@ -1320,7 +1458,11 @@ cmd_plan() {
     printf 'no outline in %s/plan\n' "$CARDS_DIR"
     return 0
   fi
-  printf '%s\n' "$out" | awk -F '\t' -v sizes=" $(sizes | tr '\n' ' ')" "$PLAN_AWK" >&2
+  facts=$(printf '%s\n' "$out" | plan_facts)
+  printf '%s\n%s\n' "$out" "$facts" | awk -F '\t' -v sizes=" $(sizes | tr '\n' ' ')" "$PLAN_AWK" >&2
+  rc=$?
+  printf '%s\n' "$facts" | awk -F '\t' '$1 == "S" && $3 == "changed" { print $2 ": the specification " $4 " differs from spec_blob" }'
+  return "$rc"
 }
 
 # --- main ---

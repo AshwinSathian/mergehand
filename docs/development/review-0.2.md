@@ -216,3 +216,23 @@ Found by the attack and not asked for by the spike:
 - **Design section 11.3 still said the spike would confirm two layouts.** It ran one, and found it other than assumed. The section now says what was seen, and lists what lies outside coverage.
 
 The reviewer at this card's handoff, which did not write this pass, found no must-fix. It found that the bound on the reviewer did not say what follows an edit by the user, that the severity of the two new checks was stated three ways, that a note in P-14 turned a guess about a neighbouring row into the hard stop, and that the cost of a reviewer run was in no record. All four are fixed above and in the cards.
+
+## Sixth pass, 2026-10-09: the reviews of P-03
+
+P-03 built the checks Dependencies, Specification and Coverage. Two agents that did not write it reviewed it: the handoff reviewer, and a second one told to break it, which ran about 110 `card plan` commands in scratch repositories and 23 mutations of `bin/card` against the tests. The maintainer left the decisions to the session that held the card and asked that each be attacked. What changed in the design, sections 5, 11.1 and 11.3:
+
+| Found | Decided | Why |
+|---|---|---|
+| A heading with no ASCII letter or digit compared as empty, so a specification in a non-Latin script was never required to be cited | A byte above 127 is kept; a heading with no letter or digit is compared as written | The rule of section 5 was written for test names, which are ASCII. |
+| With every byte above 127 kept, `Phase 1 — Setup` no longer matched `Phase 1 - Setup` | The UTF-8 general punctuation and the Latin-1 signs are removed | It restores section 5 for dashes and curly quotes without making two CJK headings one. Case outside ASCII is not folded: the command runs bytewise. |
+| An outline read from the base branch was checked against the working tree's specification: a branch cut before the plan merged failed with "is missing" | Specification and Coverage run only for an outline in the working tree | Reading the specification and the cards from the outline's ref was the other choice. It is a `git show` per file for a copy that was checked when it merged. |
+| A closing fence indented by one space left the fence open to the end of the file, and every later heading outside coverage | Up to three spaces before a heading or a fence; a longer fence; a fence ends at its own mark | The first rule failed toward silence. What is still not recognized fails toward a finding (section 11.3). |
+| An outline with a format finding got coverage findings for every heading a dropped row cited | No "cited by no row" finding for that outline | It cannot hide a fault: every format finding fails the run. The cost is a second run. |
+| A cycle of cards alone is silent in `card plan` | Left to `card lint` | It is a fault of the cards, and lint reports it with the card's file. |
+| The edges of base-only cards are not in the cycle check | Left | It needs a `git show` per card, for a card that is on the base branch and not in the tree. |
+| A specification that is a link, a directory or unreadable, or whose hash git cannot make | Each fails with its own message | A link could point outside the repository; a failing hash was reported as a changed specification, with exit 0. |
+| A byte-order mark hid a heading on line 1 | Skipped | |
+| A card that cannot be read stopped awk, and the cards after it were lost | It is left out of the edges and still counts as a card | |
+| `## C++` and `## C#` are one heading | Left, a known limit | It follows from the comparison rule. |
+
+Not changed: the line for a changed specification goes to stdout, as a report (the conventions in `cards/REVIEW.md`). A 64-character `spec_blob` in a SHA-1 repository passes the format check of P-02 and is reported as changed on every run; `card plan accept` (P-04) writes the value, so a hand-written one is the only way to it. A specification under a directory that is itself a link is reported as untracked, which is true and fails. The second edition of the one true awk reads a regular expression as UTF-8 and may not match the punctuation bytes; then a dash is not removed and the comparison is stricter, never looser. It was not run: neither it, gawk nor mawk is on the machine the session ran on, and CI runs gawk and mawk.

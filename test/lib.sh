@@ -71,15 +71,18 @@ CARD
 }
 
 # mk_outline [prefix]: a valid outline in cards/plan/, two rows and a
-# Not planned section.
+# Not planned section, and its specification in specs/, staged and not
+# committed.
 mk_outline() {
   local p=${1:-AUTH} lower
   lower=$(printf '%s' "${1:-AUTH}" | tr '[:upper:]' '[:lower:]')
-  mkdir -p "${CARDS_DIR:-cards}/plan"
+  mkdir -p "${CARDS_DIR:-cards}/plan" specs
+  printf '%s\n' '# Tokens' '' '## Overview' '' '## Storage' '' '## Refresh' '' '## Errors' '' '## Non-goals' > "specs/$lower.md"
+  git add "specs/$lower.md"
   cat > "${CARDS_DIR:-cards}/plan/$lower.md" <<OUTLINE
 ---
 spec: specs/$lower.md
-spec_blob: 3b18e512dba79e4c8300dd08aeb37f8e728b8dad
+spec_blob: $(git hash-object "specs/$lower.md")
 prefix: $p
 level: 2
 ---
