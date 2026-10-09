@@ -1278,7 +1278,8 @@ outlines() {
 HEADINGS_AWK='
 function marks(c) { return match($0, c == "~" ? "^~+" : "^`+") ? RLENGTH : 0 }
 NR == 1 { sub(/^\357\273\277/, "") }
-{ sub(/\r$/, ""); sub(/^ ? ? ?/, "") }
+# mawk does not strip with sub(/^ ? ? ?/, "").
+{ sub(/\r$/, ""); if (match($0, /^ +/) && RLENGTH <= 3) $0 = substr($0, RLENGTH + 1) }
 fence != "" { if (marks(fence) >= flen && substr($0, RLENGTH + 1) ~ /^[ \t]*$/) fence = ""; next }
 /^(```|~~~)/ { fence = substr($0, 1, 1); flen = marks(fence); next }
 match($0, /^#+/) && RLENGTH == level && substr($0, RLENGTH + 1) ~ /^[ \t]+[^ \t]/ {
