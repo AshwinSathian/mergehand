@@ -3,7 +3,7 @@ id: P-05
 title: card plan: the plan branch check
 size: S
 depends: P-02
-done: false
+done: true
 ---
 
 ## Read

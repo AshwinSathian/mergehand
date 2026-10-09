@@ -879,15 +879,20 @@ fork_point() {
   printf '%s\n' "$a"
 }
 
-# changed_files <fork point>: every path that differs from the fork point,
+# diff_files <fork point>: every path that differs from the fork point,
 # including uncommitted and untracked files, because handoff runs the gates
-# before it commits. Files under cards_dir and log_dir are left out: the
-# card and its log always change.
-changed_files() {
+# before it commits.
+diff_files() {
   {
     g diff --name-only --no-renames "$1" --
     g ls-files --others --exclude-standard
-  } | sort -u | C="$CARDS_DIR/" L="$LOG_DIR/" awk '
+  } | sort -u
+}
+
+# changed_files <fork point>: diff_files without the files under cards_dir
+# and log_dir: the card and its log always change.
+changed_files() {
+  diff_files "$1" | C="$CARDS_DIR/" L="$LOG_DIR/" awk '
     index($0, ENVIRON["C"]) != 1 && index($0, ENVIRON["L"]) != 1'
 }
 
@@ -1577,11 +1582,29 @@ cmd_plan_accept() {
   [ "$rc" -eq 0 ] || die 2 "$path: cannot write"
 }
 
+# plan_branch_check: on a plan/* branch, a finding for each file outside
+# <cards_dir>/plan/ that differs from the fork point. A plan run writes no
+# card and no code. Where there is no base branch there is no fork point,
+# and nothing is checked.
+plan_branch_check() {
+  local branch fp
+  branch=$(g symbolic-ref -q --short HEAD) || return 0
+  case $branch in plan/*) ;; *) return 0 ;; esac
+  [ -n "$BASE_REFS" ] || return 0
+  fp=$(fork_point) || exit $?
+  diff_files "$fp" | P="$CARDS_DIR/plan/" B="$branch" awk '
+    index($0, ENVIRON["P"]) != 1 {
+      print "card: " $0 ": changed on the plan branch " ENVIRON["B"] ", which may change only " ENVIRON["P"]
+      bad = 1
+    }
+    END { exit bad }' >&2
+}
+
 # cmd_plan: the checks of every outline, in the order of the table in
 # section 11.1 of the design. Findings go to stderr. A specification that
 # differs from spec_blob is one line on stdout and not a finding.
 cmd_plan() {
-  local out facts rc sub
+  local out facts rc=0 sub
   case ${1--} in
     -) [ "$#" -eq 0 ] || usage_die plan ;;
     new | accept)
@@ -1596,12 +1619,13 @@ cmd_plan() {
   out=$(outlines)
   if [ -z "$out" ]; then
     printf 'no outline in %s/plan\n' "$CARDS_DIR"
-    return 0
+  else
+    facts=$(printf '%s\n' "$out" | plan_facts)
+    printf '%s\n%s\n' "$out" "$facts" | awk -F '\t' -v sizes=" $(sizes | tr '\n' ' ')" "$PLAN_AWK" >&2
+    rc=$?
+    printf '%s\n' "$facts" | awk -F '\t' '$1 == "S" && $3 == "changed" { print $2 ": the specification " $4 " differs from spec_blob" }'
   fi
-  facts=$(printf '%s\n' "$out" | plan_facts)
-  printf '%s\n%s\n' "$out" "$facts" | awk -F '\t' -v sizes=" $(sizes | tr '\n' ' ')" "$PLAN_AWK" >&2
-  rc=$?
-  printf '%s\n' "$facts" | awk -F '\t' '$1 == "S" && $3 == "changed" { print $2 ": the specification " $4 " differs from spec_blob" }'
+  plan_branch_check || rc=1
   return "$rc"
 }
 

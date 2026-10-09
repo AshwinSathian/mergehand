@@ -458,3 +458,93 @@ test_plan_says_the_specification_changed_and_exits_zero() {
   plan_fails "the specification $S cannot be read"
   assert_empty "$OUT" stdout
 }
+
+# fresh: removes the repository of an earlier part of the case, branches and all.
+fresh() { cd "$T" && rm -rf repo; }
+# on_plan_branch: the deck committed on main, and the branch plan/auth cut from it.
+on_plan_branch() { fresh; deck; commit_all; git checkout -q -b plan/auth; }
+BRANCH_MSG='changed on the plan branch plan/auth, which may change only'
+
+test_plan_fails_on_a_plan_branch_that_changes_a_file_outside_the_outlines() {
+  on_plan_branch; echo x >> README.md; commit_all
+  card plan
+  assert_rc 1
+  assert_eq "card: README.md: $BRANCH_MSG cards/plan/" "$ERR" stderr
+  # A plan run writes no card, and a file it removes differs too.
+  on_plan_branch; mk_card AUTH-03; git rm -q README.md; commit_all
+  card plan
+  assert_rc 1
+  assert_contains "$ERR" "card: cards/AUTH-03-thing.md: $BRANCH_MSG"
+  assert_contains "$ERR" "card: README.md: $BRANCH_MSG"
+  # With no outline at all.
+  fresh; new_repo; mk_conf; commit_all; git checkout -q -b plan/auth; echo x >> README.md
+  card plan
+  assert_rc 1
+  assert_eq 'no outline in cards/plan' "$OUT" stdout
+  assert_contains "$ERR" "card: README.md: $BRANCH_MSG"
+}
+
+test_plan_passes_on_a_plan_branch_that_changes_only_outlines() {
+  on_plan_branch
+  card plan
+  assert_silent
+  edit "$O" 's/hashed, with its expiry/hashed/'; commit_all
+  mk_outline PAY; printf -- '- Storage\n- Refresh\n- Errors\n' >> cards/plan/pay.md
+  edit cards/plan/pay.md '/^## PAY-0/,/^$/d'; git rm -q --cached specs/pay.md; rm specs/pay.md
+  edit cards/plan/pay.md "s|^spec:.*|spec: $S|"
+  card plan
+  assert_silent
+}
+
+test_plan_branch_check_counts_uncommitted_and_untracked_files() {
+  on_plan_branch; echo 'build/' > .gitignore; git add .gitignore
+  mkdir -p src build; echo x > src/new.ts; echo x > build/out.js; echo x >> README.md
+  card plan
+  assert_rc 1
+  assert_contains "$ERR" "card: .gitignore: $BRANCH_MSG"
+  assert_contains "$ERR" "card: src/new.ts: $BRANCH_MSG"
+  assert_contains "$ERR" "card: README.md: $BRANCH_MSG"
+  assert_not_contains "$ERR" build/out.js
+}
+
+test_plan_branch_check_does_not_run_on_another_branch() {
+  local b
+  for b in card/AUTH-01-store planning/auth plan; do
+    fresh; deck; commit_all; git checkout -q -b "$b"; echo x >> README.md; commit_all
+    card plan
+    assert_silent
+  done
+  # Not on main, and not with no branch.
+  fresh; deck; commit_all; echo x >> README.md
+  card plan
+  assert_silent
+  on_plan_branch; echo x >> README.md; commit_all; git checkout -q --detach
+  card plan
+  assert_silent
+}
+
+test_plan_branch_check_respects_cards_dir() {
+  new_repo; mk_conf 'cards_dir = work/deck'; CARDS_DIR=work/deck mk_outline; commit_all
+  git checkout -q -b plan/auth
+  edit work/deck/plan/auth.md 's/hashed, with its expiry/hashed/'
+  card plan
+  assert_silent
+  mkdir -p cards/plan; echo x > cards/plan/auth.md; echo x > work/deck/planned.md
+  card plan
+  assert_rc 1
+  assert_contains "$ERR" "card: cards/plan/auth.md: $BRANCH_MSG work/deck/plan/"
+  assert_contains "$ERR" "card: work/deck/planned.md: $BRANCH_MSG work/deck/plan/"
+  assert_eq 2 "$(findings)" findings
+}
+
+test_plan_branch_check_names_each_file() {
+  # After the findings of the other checks, one line a file.
+  on_plan_branch; edit "$O" '/^level:/d'; echo x >> README.md; echo x > a.txt; mkdir src; echo x > src/b.ts
+  card plan
+  assert_rc 1
+  assert_eq 4 "$(findings)" findings
+  assert_eq "card: $O: front matter has no level" "$(printf '%s\n' "$ERR" | head -n 1)" 'first finding'
+  assert_eq "card: README.md: $BRANCH_MSG cards/plan/
+card: a.txt: $BRANCH_MSG cards/plan/
+card: src/b.ts: $BRANCH_MSG cards/plan/" "$(printf '%s\n' "$ERR" | tail -n 3)" 'last findings'
+}
