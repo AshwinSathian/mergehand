@@ -3,7 +3,7 @@ id: S-04
 title: Release 0.1.3: the renamed code under its own tag
 size: XS
 depends:
-done: false
+done: true
 ---
 
 ## Read

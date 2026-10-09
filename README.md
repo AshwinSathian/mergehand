@@ -77,7 +77,7 @@ In Claude Code:
 The plugin puts `card` on the PATH of the commands Claude runs. To use `card` yourself, or in CI, download the one file:
 
 ```
-curl -fsSL https://raw.githubusercontent.com/AshwinSathian/workdeck/v0.1.2/bin/card -o card && chmod +x card
+curl -fsSL https://raw.githubusercontent.com/AshwinSathian/workdeck/v0.1.3/bin/card -o card && chmod +x card
 ```
 
 From 0.1.1, each [release](https://github.com/AshwinSathian/workdeck/releases) also carries `card` and `card.sha256`, so you can check the file with `shasum -a 256 -c card.sha256`.
