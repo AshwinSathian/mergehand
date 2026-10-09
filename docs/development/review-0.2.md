@@ -263,3 +263,29 @@ P-04 built `card plan new` and `card plan accept`. Two agents that did not write
 | A `cards_dir` that is itself a link is followed | Left, for its own card | It is so for every command; the place for the check is `load_conf`. |
 
 Not run: gawk and mawk are not on the machine the session ran on, and CI runs both.
+
+## Eighth pass, 2026-10-09: the reviews of P-05
+
+P-05 built the plan branch check of `card plan`. Two agents that did not write it reviewed it: the handoff reviewer, which left two should-fix findings and two nits open for the maintainer, and a second one told to break it and to attack the decision proposed for each. It ran the check in scratch repositories against hostile paths, odd branches and odd histories, and 28 mutations of `bin/card` against the tests, of which 7 passed unnoticed. The maintainer left the decisions to the session that held the card. Neither review had a must-fix finding. What changed in the design is in sections 11.1, 11.3 and 15.
+
+| Found | Decided | Why |
+|---|---|---|
+| On a `plan/*` branch with no base branch the check passed and said nothing: a clone of the one branch, or a base branch that was deleted | `card plan` exits 2 with the message of `base_ref` | A check that cannot run has not passed. The session proposed exit 1; the reviewer argued for 2, because nothing was checked and found wrong, and because the case beside it, a branch with no shared history, already exits 2. |
+| Any file under `<cards_dir>/plan/` passed: `cards/plan/src/app.ts`, a `.txt`, a `.md` in a directory below, `.hidden.md` | Only `<cards_dir>/plan/<name>.md`, with a name that does not start with a dot, passes | That is what the outline reader reads, and the risk row of section 18 says "anything but an outline". The row of 11.1 said "outside `<cards_dir>/plan/`" and is amended. |
+| With that rule an editor's temporary file beside the outline is a finding | Accepted | The line names the file, and such a file anywhere else in the tree was a finding already. |
+| The message said "changed on the plan branch" of a file that was not tracked before the branch was cut, and of a file committed on the branch the plan branch was cut from | The line is now `card: <file>: on a plan branch only an outline, <cards_dir>/plan/<name>.md, may differ from the base branch` | It is true of both, and it names no branch. |
+| Seven mutations passed the tests: both ways out where there is no base branch, both where there is no shared history, a prefix matched anywhere in the path, and `sort -u` as `cat` and as `sort` | Tests added for all seven, and for four mutations of the new rule for a name | |
+| With a detached HEAD, and so in a CI job for a pull request, and during a rebase, the check does not run | Left, and listed as a limit in section 11.3 | The check is for the plan run, which is on the branch by name. A check that guessed the branch of a detached HEAD would guess wrong for a card's pull request. |
+| A file that is staged and then removed from the working tree is not seen | Left, for its own card, and listed as a limit | `git diff <commit>` reads the working tree. The fix is in the list that `card touched` shares, and this card may not change what `card touched` prints. |
+| A specification edited on a plan branch is a finding | Left, and said under the table of 11.1 | Section 10.1 has the plan run report an ambiguity, not edit the specification. |
+| `.hidden.md` in the plan directory of the base branch is read as an outline there and not in the working tree | Left, for its own card | It is in the reader of P-02. The rule for a name now keeps such a file out of a plan branch. |
+| When git itself fails, the list of files is empty and the check passes | Left | `card touched` has always done so; there is no `pipefail` in `bin/card`. |
+| After local and remote base branches diverge and both are merged into the plan branch, a file of the base branch is a finding | Left | A limit of `fork_point` that `card touched` shares. The fast-forward pull of the skills refuses a diverged base branch. |
+| With `base = plan/main`, the check runs on the base branch itself | Left | A configuration nobody has. |
+| `PLAN/x` is not a plan branch | Left | The plan skill makes `plan/<yymmddhhmm>`. |
+| A file ignored through `.git/info/exclude` or a global excludes file passes | Left | As for `card touched`; it cannot be committed without force. |
+| The findings go to stderr, though the conventions send what a gate found to stdout | Left | Every finding of `card plan` since P-02 is a `card:` line on stderr. |
+
+Looked for and not found: a path with a space, a tab, a line break, a quote, an escape character or a leading hyphen gives one line and no raw control byte, since git quotes such a name; `cards/planning/x`, `cards/plan.md`, and `cards/plan` as a file or as a link are findings; a merge of the base branch into the plan branch does not make its files count; no hook writes a file into the working tree of a plan branch, and the stop hook asks for a log only on a `card/` branch; `card touched` and `card tests` print byte for byte what they printed on awkward inputs.
+
+Not run: gawk and mawk are not on the machine the session ran on, and CI runs both. A checkout by GitHub Actions was imitated with local clones. Whether Claude Code writes a settings file into the working tree when a permission is approved during a plan run is for the hand run of P-21.

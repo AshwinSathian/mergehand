@@ -3,7 +3,7 @@ id: P-05
 title: card plan: the plan branch check
 size: S
 depends: P-02
-done: false
+done: true
 ---
 
 ## Read
@@ -16,6 +16,8 @@ done: false
 ## Touch
 - bin/card
 - test/cases/35-plan.sh (created by P-02)
+- docs/design-0.2.md (sections 11.1, 11.3 and 15: what the second review decided)
+- docs/development/review-0.2.md (the eighth pass: the record of both reviews)
 
 ## Tests
 - test_plan_fails_on_a_plan_branch_that_changes_a_file_outside_the_outlines
@@ -40,3 +42,5 @@ done: false
 ## Notes
 - fork_point gives the point where the branch left the base branch. changed_files cannot be used as it is: it drops every path under the cards directory and the log directory, so a card written on a plan branch would pass. Take the same two git commands without that filter, and exclude only `<cards_dir>/plan/`.
 - A card file under `<cards_dir>/` but outside `<cards_dir>/plan/` is a failure here. A plan run writes no card.
+- Decided in the second review (docs/development/review-0.2.md, eighth pass), and it replaces "exclude only `<cards_dir>/plan/`" above: only an outline, `<cards_dir>/plan/<name>.md` with a name that does not start with a dot, may differ. Any other file under that directory is a finding.
+- With no base branch, or no history shared with it, `card plan` on a `plan/*` branch exits 2.
