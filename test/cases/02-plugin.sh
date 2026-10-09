@@ -174,6 +174,24 @@ test_repository_has_the_files_a_stranger_looks_for() {
   grep -q "$("$BASH" "$CARD" version | sed 's/^card //')" "$ROOT/CHANGELOG.md" || fail 'CHANGELOG has no entry for this version'
 }
 
+# The tag v0.1.2 holds the former name. The entry is what tells a user of that
+# tag why its card stops and what to change.
+test_changelog_says_what_0_1_3_renames() {
+  local e
+  e=$(awk '/^## \[/ { on = index($0, "[0.1.3]") > 0 } on' "$ROOT/CHANGELOG.md")
+  printf '%s\n' "$e" | grep -q '^## \[0\.1\.3\] - [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$' || fail 'CHANGELOG has no dated entry for 0.1.3'
+  assert_contains "$e" 'The code of 0.1.2'
+  assert_contains "$e" 'former name'
+  assert_contains "$e" 'CI workflow'
+  assert_contains "$e" 'WorkDeck'
+  assert_contains "$e" '`workdeck.conf`'
+  assert_contains "$e" '`/workdeck:*`'
+  assert_contains "$e" '`v0.1.2`'
+  assert_contains "$e" 'exits 2'
+  assert_contains "$e" '`v0.1.3`'
+  grep -q '^\[0\.1\.3\]: .*/releases/tag/v0\.1\.3$' "$ROOT/CHANGELOG.md" || fail 'CHANGELOG has no link for 0.1.3'
+}
+
 test_plugin_manifest_names_its_repository() {
   local f="$ROOT/.claude-plugin/plugin.json" k
   for k in displayName homepage repository; do

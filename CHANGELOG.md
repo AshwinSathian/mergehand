@@ -4,6 +4,21 @@ Notable changes to WorkDeck. The format follows [Keep a Changelog](https://keepa
 
 Claude Code keeps an installed plugin at the version in `plugin.json`, so every fix that users should receive comes with a version bump and a tag.
 
+## [0.1.3] - 2026-10-09
+
+The code of 0.1.2 under the name WorkDeck. The project was renamed after `v0.1.2` was tagged and the version was not changed, so that tag holds the former name, Mergehand.
+
+### Changed
+
+- The configuration file is `workdeck.conf` and the skills are `/workdeck:*`. The plugin and its marketplace are both named `workdeck`. Nothing else differs from 0.1.2.
+
+### Upgrading from 0.1.2
+
+- A plugin installed under the former name stays as it is: its skills are `/mergehand:*` and its `card` reads `mergehand.conf`. Remove it and install `workdeck@workdeck`, as the README's install section says.
+- The `card` at the tag `v0.1.2` reads `mergehand.conf`, and exits 2 in a repository with `workdeck.conf`. Download `card` from `v0.1.3`.
+- A CI workflow that names the tag `v0.1.2` has to name `v0.1.3`.
+- `card` does not read `mergehand.conf`. A repository that still has that file renames it to `workdeck.conf`.
+
 ## [0.1.2] - 2026-10-06
 
 ### Fixed
@@ -45,6 +60,7 @@ First release: the core, the runner and the quick lane.
 - Claiming cards, worktrees and parallel sessions (planned for 0.3).
 - Hosts other than GitHub for the pull request step, and native Windows shells.
 
+[0.1.3]: https://github.com/AshwinSathian/workdeck/releases/tag/v0.1.3
 [0.1.2]: https://github.com/AshwinSathian/workdeck/releases/tag/v0.1.2
 [0.1.1]: https://github.com/AshwinSathian/workdeck/releases/tag/v0.1.1
 [0.1.0]: https://github.com/AshwinSathian/workdeck/releases/tag/v0.1.0

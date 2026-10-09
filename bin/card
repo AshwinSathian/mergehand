@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # card: the WorkDeck command-line tool.
-# Version 0.1.2. https://github.com/AshwinSathian/workdeck
+# Version 0.1.3. https://github.com/AshwinSathian/workdeck
 # SPDX-License-Identifier: MIT
 #
 # One file, so people and CI can fetch it without the plugin. It must run on
@@ -19,7 +19,7 @@ set -u
 LC_ALL=C
 export LC_ALL
 
-readonly VERSION=0.1.2
+readonly VERSION=0.1.3
 TAB=$(printf '\t')
 readonly TAB
 
