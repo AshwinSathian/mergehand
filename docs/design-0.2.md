@@ -247,7 +247,7 @@ It runs these in order and reports every failure it finds, with two exceptions t
 | Dependencies | a dependency is not an id, or names neither a row nor a card; a row is in, or depends on, a cycle through rows and cards |
 | Specification | the `spec` file is missing, untracked, not a regular file, or cannot be read |
 | Coverage | a heading of the specification at the outline's level, outside a code fence, is cited by no row and is not under `Not planned`; a row that is not done, or the `Not planned` list, cites a heading the specification does not have at that level |
-| Plan branch | the current branch is a `plan/*` branch and a file outside `<cards_dir>/plan/` differs from the point where the branch left the base branch |
+| Plan branch | the current branch is a `plan/*` branch and a file that is not an outline, `<cards_dir>/plan/<name>.md`, differs from the point where the branch left the base branch |
 
 When the specification differs from `spec_blob`, `card plan` prints one line naming the outline and still exits 0. It cannot fail on this: 0.1's design was amended 35 times while it was built, some of those by cards in their own pull requests, and a failing check would have turned every one of them red.
 
@@ -255,7 +255,7 @@ A card is one that has a file in the working tree or on the base branch. The edg
 
 The specification is read from the working tree, as it is. A link is not followed, since it could point outside the repository. Specification and Coverage run only for an outline that is in the working tree: one that is only on the base branch (section 22, decision 5) was checked where it merged, and the tree may be older than it or may have removed the specification with it.
 
-The plan branch check is the mechanical form of "a plan run writes no card and no code".
+The plan branch check is the mechanical form of "a plan run writes no card and no code". It runs last, and also where there is no outline. A change that is not committed and a file that is not tracked count; a file that git ignores does not. An outline is what the reader reads: a file in `<cards_dir>/plan/` itself whose name ends in `.md` and does not start with a dot. So the specification is not one, and a plan branch that amends it fails. Where there is no base branch, or the branch shares no history with it, there is no point to measure from, and `card plan` exits 2 and does not pass.
 
 ### 11.2 `card plan check <id>`
 
@@ -273,6 +273,7 @@ Known limits:
 - Two headings with the same text count as one. So do two that differ only in punctuation, `C++` and `C#`, and two that differ only in the case of a letter outside ASCII are two.
 - `card plan check` is true when it runs. A file may move between the yes and the first edit; that is minutes, not days.
 - No script checks that a revision left alone the rows that already have a card or a branch, or that a removed id is not used again. Both show in the plan pull request's diff.
+- The plan branch check runs only where the branch is checked out by name. With a detached HEAD, which is what a CI job for a pull request has, and during a rebase, it does not run. It reads the working tree and not the index, so a file that is staged and then removed from the tree is not seen until it is committed. The same holds for `card touched`.
 - `card plan` is not a handoff gate. A fault in an outline does not make a card's work wrong, and a 0.1 `card` on the PATH would stop every handoff with `unknown command`. CI and the next plan run report it.
 
 ## 12. Agents
@@ -340,6 +341,7 @@ The maintainer reads the record and decides whether to tag. The version in `plug
 | The specification has no heading at the outline's level | `card plan new` exits 1 and names the levels that have headings |
 | A plan pull request by this user is open | The plan skill offers to resume it, or stops |
 | The specification changed | `card plan` prints one line and exits 0. The plan skill shows the difference on its next run |
+| `card plan` on a `plan/*` branch with no base branch, or one that shares no history with it | Exit 2, after the findings of the other checks: the plan branch check cannot run |
 | `card plan accept` for a prefix with no outline in the working tree | Exit 1 with the reason |
 | `<cards_dir>/plan` is a symbolic link | `card plan new` and `card plan accept` exit 1 and write nothing |
 | `card plan start` for an id with a card file, or with no row | Exit 1 with the reason |

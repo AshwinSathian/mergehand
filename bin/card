@@ -1582,19 +1582,22 @@ cmd_plan_accept() {
   [ "$rc" -eq 0 ] || die 2 "$path: cannot write"
 }
 
-# plan_branch_check: on a plan/* branch, a finding for each file outside
-# <cards_dir>/plan/ that differs from the fork point. A plan run writes no
-# card and no code. Where there is no base branch there is no fork point,
-# and nothing is checked.
+# plan_branch_check: on a plan/* branch, a finding for each file that differs
+# from the fork point and is not an outline: <cards_dir>/plan/<name>.md, as
+# outline_files reads them, so not a name that starts with a dot and nothing
+# in a directory below. A plan run writes no card and no code. With no base
+# branch the check cannot run, and base_ref exits 2.
 plan_branch_check() {
   local branch fp
   branch=$(g symbolic-ref -q --short HEAD) || return 0
   case $branch in plan/*) ;; *) return 0 ;; esac
-  [ -n "$BASE_REFS" ] || return 0
+  base_ref
   fp=$(fork_point) || exit $?
-  diff_files "$fp" | P="$CARDS_DIR/plan/" B="$branch" awk '
-    index($0, ENVIRON["P"]) != 1 {
-      print "card: " $0 ": changed on the plan branch " ENVIRON["B"] ", which may change only " ENVIRON["P"]
+  diff_files "$fp" | P="$CARDS_DIR/plan/" awk '
+    BEGIN { p = ENVIRON["P"] }
+    { name = index($0, p) == 1 ? substr($0, length(p) + 1) : "" }
+    name !~ /^[^.\/][^\/]*\.md$/ {
+      print "card: " $0 ": on a plan branch only an outline, " p "<name>.md, may differ from the base branch"
       bad = 1
     }
     END { exit bad }' >&2
