@@ -270,6 +270,17 @@ test_spike_record_for_0_2_is_listed_and_answers_its_questions() {
   done
 }
 
+# The spike ends with a list of changes for the deck. Each is answered in the
+# review record, accepted or turned down.
+test_review_record_answers_what_the_spike_asked_for() {
+  local d="$ROOT/docs/development" n
+  grep -q '^## Fifth pass' "$d/review-0.2.md" || fail 'the review record has no fifth pass'
+  grep -q 'fifth pass of \[`review-0.2.md`\](review-0.2.md)' "$d/spike-0.2.md" || fail 'the spike record does not point at the fifth pass'
+  # Rows of the first table of that pass only.
+  n=$(awk '/^## Fifth pass/ { on = 1 } on && /^Found by the attack/ { exit } on && /^\| / && $0 !~ /^\| (The spike asked for|---)/ { n++ } END { print n + 0 }' "$d/review-0.2.md")
+  [ "$n" -eq 11 ] || fail "the fifth pass answers $n of the spike's requests"
+}
+
 test_nothing_claims_evals_that_do_not_exist() {
   cd "$ROOT" || exit 1
   [ -d evals ] && return 0

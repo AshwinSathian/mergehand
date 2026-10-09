@@ -33,21 +33,27 @@ done: false
 - test_plan_skill_creates_a_plan_branch_named_by_the_time
 - test_plan_skill_offers_to_resume_an_open_plan_pull_request
 - test_plan_skill_stops_when_card_has_no_plan_command
+- test_plan_skill_runs_the_reviewer_again_after_a_must_fix_and_at_most_twice
+- test_plan_skill_shows_the_readings_it_chose_and_the_requirements_it_left_out
 - test_plan_skill_puts_every_finding_in_the_pull_request_body
 - test_plan_skill_never_reuses_the_id_of_a_removed_row
 - test_plan_skill_writes_no_card_and_no_code
 
 ## Acceptance
 - skills/plan/SKILL.md has `name: plan`, `disable-model-invocation: true`, an `argument-hint` for the path and the request, and no `context: fork`.
-- Its steps are the ten of section 10.1, in that order.
+- Its steps are the ten of section 10.1, in that order, as that section stands after the spike.
 - It stops on a dirty tree, on a path that is not a tracked file, and when `card plan` prints `unknown command`; in the last case it says to update `card`.
 - With an open pull request from a `plan/` branch by this user, it says so; it offers to resume when the branch is local and stops otherwise. Without `gh` it goes on.
 - The branch is `plan/<yymmddhhmm>`, from `date +%y%m%d%H%M`.
 - With no outline it proposes a prefix and a heading level, asks the user to confirm both, and runs `card plan new`. It delegates the search of the code to the Explore subagent.
+- When the search finds none of the code the specification concerns, it says so in the question about the prefix and the level, and does not stop a second time for it.
 - It says that the id of a removed row is never given to another row.
 - With an outline it runs `card plan`, shows a changed specification with `git diff <spec_blob> HEAD:<spec>`, changes or removes only a row with no card file and no `card/<id>` branch, and runs `card plan accept`.
 - `card plan` runs before the reviewer, the reviewer before the user is asked, and the user's yes before the commit.
-- The pull request body has the rows, the `Not planned` list, every reviewer finding with what was done about it, the figures of `card tokens`, and for a revision its cause.
+- When a `must-fix` fix changed the outline, the reviewer is launched once more. It runs at most twice each time before the user is asked, and what the second run leaves open is shown to the user. After an edit by the user the outline is checked and reviewed again under the same bound.
+- With the outline, the user is shown each place where the specification can be read two ways and the reading the rows follow, and each requirement that is in no row.
+- The commit's subject is `plan: <PREFIX>, <n> rows`. The skill says nothing for or against a trailer: the rest of the message follows the project's history.
+- The pull request body has the rows as a table of id, size, dependencies and title, the `Not planned` list, every reviewer finding of both runs with what was done about it, the readings chosen and the requirements left out, the figures of `card tokens`, and for a revision its cause. It does not copy the `does` and `not` lines.
 - After a no it restores or deletes the outline file, checks out the base branch and stops.
 - It says the session writes no card and no code.
 - Every `card` command it names exists, and it does not tell the model to invoke a skill.
@@ -63,7 +69,9 @@ done: false
 
 ## Notes
 - Claims are read again on the pages of section 19, through Context7 (`/websites/code_claude`) as the design did. The session log gives the date and the result for each row. If a claim no longer holds, the card stops with a `## Blocked` section; it does not edit the design.
-- Row 15 is the weak one: the documentation says Claude chooses when to delegate. Use the wording the spike found to work, and say in the log if it found none.
+- Row 15 is the weak one: the documentation says Claude chooses when to delegate. The draft's wording was followed in both runs of the spike ("Do not read the code yourself: launch the built-in Explore subagent ... and wait for its answer"). Keep it. Both runs were headless and on a model the maintainer does not use; P-21 runs it interactively.
+- The second review is bounded on purpose. A reviewer told to assume the outline is wrong always finds something, and the one run whose cost the spike recorded used 30,817 tokens, outside this session's context (docs/development/spike-0.2.md, "What the reviewer was worth").
+- The spike's record asked for the `does` lines in the body and for a rule against a commit trailer. Both were turned down when attacked (review record, fifth pass): the diff of the one file is those lines, and a trailer is the user's setting, not the plugin's.
 - test_skills_disable_model_invocation and test_skills_name_only_card_commands_that_exist loop over every skill. They cover this one with no change, once `plan` is a command.
 - test_skills_do_not_use_command_substitution: give each command on its own, as the other skills do.
 - test_docs_have_one_design_file_and_a_development_folder fails on any tracked file that names one of the old documentation directories; its pattern lists them. Use another example path.

@@ -97,6 +97,8 @@ The rows name no code that exists, so nothing here says whether a planner picks 
 
 Across the two runs the draft reviewer raised ten must-fix findings, fourteen should-fix findings and five nits. Every must-fix was real on reading: a requirement with no row, a requirement in two rows, or a row that needs code it does not depend on. None could have been found by a check of section 11.1. The script checks would have passed both first drafts.
 
+What a reviewer run costs: the second session's reviewer reported 30,817 tokens of its own in the usage line of its result, read from that session's transcript. It ran in the background, outside the plan session's context. The first session's reviewer ran in the foreground and its result carries no figure.
+
 What the draft reviewer missed, by reading the outlines afterwards: the compound `does` lines, and the lines that describe tests instead of behavior.
 
 ## A card from one row
@@ -181,7 +183,7 @@ One more card was amended, for rows 16 and 17 and not for the format: P-19 gains
 
 ## What this means for the deck
 
-Not done in this card, which names faults and leaves these to the maintainer:
+Not done in this card, which names faults and leaves these to the maintainer. Each was attacked, and then made, turned down (two) or left with no change (the last), in the fifth pass of [`review-0.2.md`](review-0.2.md):
 
 - **P-13, the plan skill.** After a must-fix finding is fixed, the reviewer runs again; the draft goes back only to the hand check. The pull request body carries the `does` lines, not a pointer to the file. The session lists, beside the outline, each place where it chose between two readings of the specification, and each requirement it left in no row. The skill says what the commit message is and that it has no trailer. For a specification whose code is not in the repository, the session asks before it plans, as the draft did unprompted.
 - **P-12, the plan reviewer.** Its step 3 names two things to look for: a `does` line that joins statements, and one that describes a test and not the product. It looks for a missing `not` line where two rows cite one heading. It gives paths relative to the repository.

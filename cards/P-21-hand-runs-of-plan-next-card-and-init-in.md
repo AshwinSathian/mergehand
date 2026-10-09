@@ -26,6 +26,8 @@ done: false
 ## Acceptance
 - The plan skill, the changed next-card and the changed init were each run by hand in a scratch repository, with the plugin loaded from a checkout of the main branch with `--plugin-dir`.
 - The plan run was made under exactly the permission entries init writes, with no other settings. docs/evidence.md lists each prompt it raised.
+- The plan run was interactive, typed by the maintainer, on the model the maintainer works with. The page says whether the session delegated the search and waited for both subagents (design section 19, row 15), and whether the reviewer ran a second time.
+- The row that next-card started had a dependency, and the dependency's card was merged first.
 - The next-card run started a row: the card was written, approved, committed alone, and implemented up to handoff. The page says whether the stop hook stayed quiet after the approval commit.
 - The handoff of that card produced a pull request body with the part "Changes to the card since it was approved". The page says what it held.
 - The init run was made on a repository that already had `workdeck.conf`. The page says what each of the four steps offered.
@@ -40,5 +42,6 @@ done: false
 
 ## Notes
 - Each run is its own session in the scratch repository. This card's session tells the maintainer what to run and writes the page from the logs and transcripts that come back.
+- The spike's runs were headless, on another model, and its one card came from a row with no dependency (docs/development/spike-0.2.md, the last paragraph). The two acceptance items above close those three gaps before the trial.
 - The scratch repository needs a specification of a few sections. Write one for the example deck's code; do not use the 0.3 design, which is the trial's.
 - "Exactly the permission entries init writes" means a settings file that holds only the template's entries, and no user-level allow rules. The quick-card run of 0.1 failed to show this for handoff because the maintainer's own settings applied too.

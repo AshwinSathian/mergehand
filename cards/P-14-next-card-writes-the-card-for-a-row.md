@@ -28,6 +28,7 @@ done: false
 ## Tests
 - test_next_card_writes_the_card_for_a_row_before_the_branch_exists
 - test_next_card_fills_touch_tests_and_read_from_the_code
+- test_next_card_leaves_the_row_item_under_read_as_it_was_written
 - test_next_card_runs_lint_and_plan_check_before_it_asks
 - test_next_card_deletes_the_card_file_after_a_no
 - test_next_card_commits_the_approved_card_alone
@@ -38,6 +39,7 @@ done: false
 - Steps 1 to 5 of skills/next-card/SKILL.md are unchanged.
 - Step 6 has a branch for a card whose `card show` output starts with `row:`, with the six steps of section 10.2 in that order.
 - `Touch` is full paths taken from the code as read, with `(new)` on a file the card creates. `Tests` is one item per test, written as the innermost name the test will have, in the style of the tests it will sit beside.
+- The first `Read` item, with its `(row ...)` comment, is left as `card plan start` wrote it. The skill says so, and says why: the reviewer checks the card against those headings.
 - `Acceptance` and `Out of scope` start as the row's lines. The skill says to keep them unless they are wrong, and to add to them.
 - `card lint` and `card plan check <id>` both run before the card is shown to the user.
 - After a no, and when the row cannot be done as cut, the card file is deleted and no branch exists. In the second case the user is told to revise the outline with the plan skill.
@@ -59,4 +61,6 @@ done: false
 - test_skills_name_only_card_commands_that_exist reads every `card <word>` inside a code span as a command. The message `<id>: card as approved` in backticks reads as the command `card as` and fails the case. Teach the case the exception, or write the message so it does not match; do not drop the backticks without saying so.
 - test_implement_reference_says_not_to_commit must still pass. The reference still says not to commit; it adds that one commit already exists.
 - test_skills_never_tell_the_model_to_invoke_a_skill: the plan skill is named as something the user types.
+- In the spike a session that wrote a card from a row added a sub-heading to the `(row ...)` comment and an anchor to the path. Nothing checks this by script, on purpose: once a card exists it wins over its row (review finding 18). The user sees the card before the yes.
+- That session could not see what the neighbouring rows own, except through the row's `not` lines. Where the session has to guess what a neighbour owns, it writes the guess under `Notes` and says it to the user with the card. That is not step 4 of section 10.2: the spike's session guessed this way and the row was still enough. Step 4 is for its two cases only, and a revision it causes is the hard stop of design section 14.
 - The same reference is used by `/workdeck:quick`. Its text must stay true for a quick card, which has no approval commit.

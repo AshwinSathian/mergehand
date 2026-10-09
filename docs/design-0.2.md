@@ -3,7 +3,7 @@
 This is the design for release 0.2. It adds to [`design.md`](design.md), which stays the design of everything 0.1 shipped; where this file is silent, that one holds. The scope it follows is [`development/scope-0.2.md`](development/scope-0.2.md).
 
 Date: 2026-10-06, rewritten 2026-10-09
-Status: approved 2026-10-09. Reviewed that day by an agent that did not write it ([`development/review-0.2.md`](development/review-0.2.md)) and rewritten from that review. The maintainer decided four questions (section 20) and had the rest attacked once more and locked (section 22). The outline format of section 5 is the one part that may still change, and only from the spike (section 21). Writing the deck, and the review of it at handoff, changed sections 4.2, 5, 7, 8, 10.3, 13, 14, 18, 19, 21 and 22 the same day; each change is in the fourth pass of the review record.
+Status: approved 2026-10-09. Reviewed that day by an agent that did not write it ([`development/review-0.2.md`](development/review-0.2.md)) and rewritten from that review. The maintainer decided four questions (section 20) and had the rest attacked once more and locked (section 22). The outline format of section 5 is the one part that may still change, and only from the spike (section 21). Writing the deck, and the review of it at handoff, changed sections 4.2, 5, 7, 8, 10.3, 13, 14, 18, 19, 21 and 22 the same day; each change is in the fourth pass of the review record. The spike confirmed the outline format with one sentence added, and what it found in the plan skill and the plan reviewer changed sections 10.1, 10.2, 12.1 and 18; that is the fifth pass.
 Scope: release 0.2 (the planner, and init for a repository that is already set up). Team features (0.3) get their own design.
 
 ## 1. What 0.2 adds
@@ -193,12 +193,12 @@ Typed by the user, with `disable-model-invocation: true`, like the other four.
 3. Stop if the path is not a tracked file. Look in `<cards_dir>/plan/` for an outline whose `spec` is that path.
 4. Create the branch `plan/<yymmddhhmm>`, with the time from `date +%y%m%d%H%M` as in the quick lane.
 5. Write or revise.
-   - **No outline.** Read the specification. Get to know the code it concerns by delegating the search to the built-in Explore subagent, so file contents stay out of this session's context (section 19, rows 4 and 5). Propose a prefix and the heading level at which the specification's sections sit, and ask the user to confirm both. Run `card plan new`. Write the rows and the `Not planned` list. A row is one session's work. A dependency is written only where a row needs code that another row creates.
+   - **No outline.** Read the specification. Get to know the code it concerns by delegating the search to the built-in Explore subagent, so file contents stay out of this session's context (section 19, rows 4 and 5). Propose a prefix and the heading level at which the specification's sections sit, and ask the user to confirm both. If the search found none of the code the specification concerns, say so in the same question: the specification may belong to another repository, or the project may be new, and only the user knows which. Run `card plan new`. Write the rows and the `Not planned` list. A row is one session's work. A dependency is written only where a row needs code that another row creates.
    - **An outline exists.** Run `card plan`. If it says the specification changed, show the user the difference with `git diff <spec_blob> HEAD:<spec>` and propose the rows it calls for. Apply what the user asked for after the path. Only a row with no card file and no `card/<id>` branch may be changed or removed; for any other, the card is what gets edited. Run `card plan accept`.
 6. Run `card plan`. Fix what it reports and run it again.
-7. Launch the `workdeck:plan-reviewer` subagent with the outline's path and the base branch, and wait for it. Fix every `must-fix` finding and run step 6 again. Keep every finding, with what was done about it.
-8. Show the user the outline as a table, and under it the findings that were not fixed, each with the reason. Go on after a yes. After an edit, go back to step 6. After a no, restore or delete the outline file, check out the base branch and stop.
-9. Commit, push the branch and open the pull request with `gh pr create`. The body has the rows, the `Not planned` list, every reviewer finding with what was done about it, the figures `card tokens` prints, and, for a run that revised an outline, what the user asked for or which change to the specification caused it. With no remote, or no `gh`, stop where handoff stops and say what remains.
+7. Launch the `workdeck:plan-reviewer` subagent with the outline's path and the base branch, and wait for it. Fix every `must-fix` finding and run step 6 again. If a fix changed the outline, launch the reviewer once more: in the spike a session rewrote most of an outline after eight such findings, and the outline the user approved had been read by nobody. The reviewer runs at most twice each time before the user is asked; what the second run finds and the session does not fix goes to the user in step 8. An edit by the user in step 8 leads back here, and the edited outline is reviewed again under the same bound. Keep every finding of both runs, with what was done about it.
+8. Show the user the outline as a table, and under it the findings that were not fixed, each with the reason, each place where the specification can be read two ways and which reading the rows follow, and each requirement that is in no row. Go on after a yes. After an edit, go back to step 6. After a no, restore or delete the outline file, check out the base branch and stop.
+9. Commit, push the branch and open the pull request with `gh pr create`. The commit's subject is `plan: <PREFIX>, <n> rows`; the rest of the message follows the project's history, as handoff's does. The body has the rows as a table of id, size, dependencies and title, the `Not planned` list, every reviewer finding with what was done about it, the readings chosen and the requirements left out as shown in step 8, the figures `card tokens` prints, and, for a run that revised an outline, what the user asked for or which change to the specification caused it. The `does` and `not` lines are not copied into the body: the pull request changes one file, and its diff is those lines. With no remote, or no `gh`, stop where handoff stops and say what remains.
 10. Report the pull request URL and stop. The session writes no card and no code.
 
 ### 10.2 `/workdeck:next-card [id]`
@@ -207,7 +207,7 @@ Steps 1 to 5 are unchanged. A row is picked like any card. Step 6 gains a branch
 
 1. Run `card plan start <id>`.
 2. Read the specification headings the card lists, and the code the work concerns.
-3. Fill in the card. `Touch`: full paths taken from the code as read, with `(new)` on a file the card creates. `Tests`: one item per test, written as the innermost name the test will have, in the style of the tests it will sit beside. `Read`: the files a session must read first, after the specification. `Acceptance` and `Out of scope` start as the row's lines; keep them unless they are wrong, and add to them. Change `size` if the row's guess no longer holds.
+3. Fill in the card. `Touch`: full paths taken from the code as read, with `(new)` on a file the card creates. `Tests`: one item per test, written as the innermost name the test will have, in the style of the tests it will sit beside. `Read`: the files a session must read first, after the specification. The first item, with its `(row ...)` comment, stays as `card plan start` wrote it: the reviewer checks the card against the headings it names (section 12.2), so the session that wrote the card must not be the one that chooses them. `Acceptance` and `Out of scope` start as the row's lines; keep them unless they are wrong, and add to them. Change `size` if the row's guess no longer holds.
 4. If the row cannot be done as it was cut (it needs code that no finished card provides, or it overlaps another row), delete the card file, tell the user to revise the outline with `/workdeck:plan <spec path>`, and stop.
 5. Run `card lint` and `card plan check <id>`. Fix what they report.
 6. Show the card to the user and ask for a yes or an edit. After a no, delete the card file and stop.
@@ -263,7 +263,8 @@ Whether each requirement has a row, whether the cut is right, whether a size is 
 
 Known limits:
 
-- Coverage is a net for a section nobody planned, not a count of requirements. It works at one heading level, chosen per outline. Spec Kit files put their requirements in a list under one heading and OpenSpec files put each under a third-level heading; the spike (section 21) confirms both before the check is built.
+- Coverage is a net for a section nobody planned, not a count of requirements. It works at one heading level, chosen per outline. The spike ran one Spec Kit file: its requirements sat in lists under eleven fourth-level headings, not under one heading as the review had assumed, and the session chose level 4 for it. No OpenSpec file was run; that each requirement there sits under a third-level heading is still unchecked.
+- Whatever sits under no heading at the outline's level is outside coverage. In that file it was the user stories, the edge cases and the success criteria. The plan reviewer's step 5 reads those parts.
 - Only `#` headings count. A heading underlined with `=` or `-` is not seen, and a code fence is recognized by three backticks or tildes at the start of a line.
 - Two headings with the same text count as one.
 - `card plan check` is true when it runs. A file may move between the yes and the first edit; that is minutes, not days.
@@ -280,11 +281,11 @@ Procedure:
 
 1. Read the specification and the outline.
 2. For each heading a row cites, list every requirement under it and find the `does` line that covers it, in that row or another. A requirement with none is a finding. A requirement that two rows claim is a finding.
-3. For each row: is it one session's work; is each `does` line true or false; is the size plausible given what the row has to read and change, and given `card stats` where it has figures for that size.
-4. For the rows together: does a row need code that another row creates without depending on it; would two rows change the same code with neither depending on the other. Search the code where the answer needs it, and say what was searched.
-5. For each `Not planned` heading, confirm it asks for no work. For each row with no `spec` item, say whether the specification calls for it.
+3. For each row: is it one session's work; is each `does` line one statement about the product that is true or false, and not two joined, and not only a statement that tests exist for the row's other lines (neither is a `must-fix` finding by itself); is the size plausible given what the row has to read and change, and given `card stats` where it has figures for that size.
+4. For the rows together: does a row need code that another row creates without depending on it; would two rows change the same code with neither depending on the other; where two rows cite one heading, does each have a `not` line that tells a reader of that row alone what the other owns. Search the code where the answer needs it, and say what was searched.
+5. For each `Not planned` heading, confirm it asks for no work. For each row with no `spec` item, say whether the specification calls for it. Then read what coverage cannot see, the parts of the specification that sit under no heading at the outline's level, and say whether any of them asks for work that no row does.
 
-Output is in the form the 0.1 reviewer uses: `must-fix`, `should-fix` or `nit`, the outline's line, the problem in one sentence, and how it goes wrong.
+Output is in the form the 0.1 reviewer uses: `must-fix`, `should-fix` or `nit`, the outline's line, the problem in one sentence, and how it goes wrong. Paths are relative to the repository.
 
 ### 12.2 Reviewer
 
@@ -364,7 +365,8 @@ The specification and the outline are repository content and can arrive in someo
 | Risk | Response in 0.2 |
 |---|---|
 | The session that writes a card implements it, so the scope gate checks a list its subject wrote | The row was reviewed and approved first. The user approves the card before any code. The approved card is a commit, and handoff prints what changed in it since. The quick lane has worked this way since 0.1. |
-| A row is too little to carry the cut, and the writing session cuts again | `does` and `not` lines, checked for presence by the script and for coverage by the plan reviewer. The release gate of section 14 is aimed at this. |
+| A row is too little to carry the cut, and the writing session cuts again | `does` and `not` lines, checked for presence by the script and for coverage by the plan reviewer. The release gate of section 14 is aimed at this. In the spike the rows that carried it had 7 to 15 items, more than the example of section 5 shows, and one session wrote a card from one of them without cutting again. |
+| A long row does the card's work early: its `does` lines name files that no card has created yet | Not limited. The lines are requirements, and `Touch` is still written from the code by the session that writes the card. The plan run pays for them: about 40,000 tokens of growth for a specification of 440 lines. |
 | Writing the body uses the card's budget | Measured in the trial. The row's size is a guess that the writing session may correct, in front of the user. |
 | Sizes are guesses: three measured sessions, all XS | The trial needs two S and two M sessions. |
 | `Tests` lines are written before the tests | They are now written by the session that writes the tests, minutes before. Rewording is recorded. |
