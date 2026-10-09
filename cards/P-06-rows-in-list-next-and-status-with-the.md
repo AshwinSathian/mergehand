@@ -60,3 +60,4 @@ done: false
 - deck_table is where the set of cards is built. Rows join it there, so `list`, `next` and `status` need no change of their own beyond the `[row]` mark.
 - `card status` is printed by the session-start hook and has a cap on its length (status_max_chars). A row must not make it read an outline twice or call git once per row: finding 4 measured about 17 ms for each `git ls-tree`.
 - The `[row]` mark comes after the title, so the columns before it stay where 0.1 has them.
+- From P-02b: the outline reader prints a row's size when it is shaped like one, with no limit on its length, because `card plan` compares it with the budgets. Where a row is printed, cut the size as `META_AWK` does for a card: `?` when it is longer than 8 characters.

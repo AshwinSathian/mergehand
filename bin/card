@@ -1184,8 +1184,11 @@ outline_files() {
 #   O <path> <spec> <spec_blob> <prefix> <level>   one per outline, last
 # and one "card: <path>: <finding>" line per format fault. A front matter
 # value that fails its check is printed empty, so a reader never holds an
-# unchecked spec path or prefix. A row id is printed as written: check it
-# with valid_id before it reaches a file name, a branch name or a pattern.
+# unchecked spec path or prefix. A row id is printed as written, up to 40
+# characters: check it with valid_id before it reaches a file name, a branch
+# name or a pattern. A size is printed only when it is shaped like one, and
+# as "?" otherwise; its length is not limited, so a reader that prints sizes
+# in a table cuts them as META_AWK does.
 # Control characters are removed, as META_AWK does for cards.
 OUTLINE_AWK='
 function clean(s) { gsub(/[\001-\037\177]/, "", s); return s }
@@ -1193,7 +1196,7 @@ function end_row() {
   if (row == "") return
   if (!count["size"]) err("row " row " has no size")
   if (!count["does"]) err("row " row " has no does")
-  if (size != "" && (size !~ /^[A-Z][A-Z0-9]*$/ || length(size) > 8)) size = "?"
+  if (size != "" && size !~ /^[A-Z][A-Z0-9]*$/) size = "?"
   print "R\t" file "\t" row "\t" size "\t" title "\t" depends
   row = ""
 }
@@ -1203,6 +1206,7 @@ closed && /^## / {
   inside = "R"; i = index(cur, " ")
   row = clean(i ? substr(cur, 1, i - 1) : cur); t = (i ? trim(substr(cur, i + 1)) : "")
   if (row == "") { err("line " FNR ": a row heading is \"## <id> <title>\""); next }
+  if (length(row) > 40) { err("line " FNR ": a row id is longer than 40 characters"); row = ""; next }
   if (t == "") err("row " row " has no title")
   if (length(t) > 80) err("title of row " row " is longer than 80 characters")
   if (has_control(t)) err("title of row " row " has a control character")
@@ -1276,10 +1280,16 @@ END {
   for (i = 1; i <= n; i++) {
     f = rfile[i]; id = rid[i]
     if (id !~ /^[A-Z][A-Z0-9]*-[0-9]+[a-z]?$/) err(f, "row id " id " is not valid (expected something like AUTH-03)")
-    else if (id ~ /[a-z]$/) err(f, "row id " id " carries a letter, which is for a split remainder and is not written in an outline")
-    else if (prefix[f] != "" && substr(id, 1, index(id, "-") - 1) != prefix[f]) err(f, "row id " id " does not start with the prefix " prefix[f])
-    if (id in seen) err(f, "id " id " is in two rows")
-    seen[id] = 1
+    else {
+      if (id ~ /[a-z]$/) err(f, "row id " id " carries a letter, which is for a split remainder and is not written in an outline")
+      if (prefix[f] != "" && substr(id, 1, index(id, "-") - 1) != prefix[f]) err(f, "row id " id " does not start with the prefix " prefix[f])
+    }
+    # Reported once for an id, where its second row is.
+    if (!(id in seen)) seen[id] = f
+    else if (seen[id] != "") {
+      err(f, "id " id " is in two rows" (seen[id] == f ? "" : " (the other is in " seen[id] ")"))
+      seen[id] = ""
+    }
   }
   for (i = 1; i <= m; i++) {
     f = ofile[i]; p = prefix[f]
@@ -1288,7 +1298,8 @@ END {
     if (p == "Q") err(f, "prefix Q is the prefix of the quick lane")
   }
   for (i = 1; i <= n; i++)
-    if (rsize[i] != "" && index(sizes, " " rsize[i] " ") == 0) err(rfile[i], "row " rid[i] ": size " rsize[i] " has no budget in workdeck.conf")
+    if (rsize[i] == "?") err(rfile[i], "row " rid[i] ": size is not a size (capitals and digits, like S)")
+    else if (rsize[i] != "" && index(sizes, " " rsize[i] " ") == 0) err(rfile[i], "row " rid[i] ": size " rsize[i] " has no budget in workdeck.conf")
   exit bad
 }'
 

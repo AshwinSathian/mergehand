@@ -41,4 +41,5 @@ done: true
 ## Notes
 - The file name rule means two outlines can share a prefix only when one of them also breaks that rule. The check is still in the table; keep both messages.
 - This card was cut from P-02 after the review of the deck: 21 tests in one card was twice the largest card of 0.1.
-- 2026-10-09: the test `test_plan_reports_a_prefix_that_a_card_of_another_outline_uses` was removed from `Tests` on the maintainer's answer. No acceptance line and no row of the table in section 11.1 names a rule about cards, and `card plan new` (P-04) already refuses a prefix that a card uses.
+- 2026-10-09: the test `test_plan_reports_a_prefix_that_a_card_of_another_outline_uses` was removed from `Tests` on the maintainer's answer. No acceptance line and no row of the table in section 11.1 names a rule about cards, and `card plan new` will refuse a prefix that a card uses (P-04, `test_plan_new_refuses_a_prefix_that_a_card_uses`). `card plan` cannot decide it either: a planned card has no extra key, so it looks the same as any other card with that prefix.
+- 2026-10-09: from the second review. The reader no longer turns a size longer than 8 characters into `?`, because `card plan` would then fail a size that has a budget; P-06 cuts a size where a row is printed. A row id longer than 40 characters is a format finding, so no finding carries a longer one.
