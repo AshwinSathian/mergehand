@@ -174,8 +174,8 @@ No key is added to `workdeck.conf`. `budget.PLAN` would have been accepted by `c
 | Command | Behavior |
 |---|---|
 | `card plan` | Checks every outline (section 11.1). Prints each failure with the file. Exit 1 on any failure. With no outline it says so and exits 0. |
-| `card plan new <spec path> <PREFIX> [--level N]` | Creates the outline file with its front matter filled in and no rows. `level` defaults to 2. Refuses a prefix that an outline or a card already uses, `Q`, an existing file, a specification that is not tracked, and one with no heading at that level. |
-| `card plan accept <PREFIX>` | Sets `spec_blob` to the specification's current value. |
+| `card plan new <spec path> <PREFIX> [--level N]` | Creates the outline file with its front matter filled in and no rows. `level` defaults to 2. Refuses a prefix that an outline or a card already uses, `Q`, an existing file, a specification that is not tracked, and one with no heading at that level. The path is from the root of the repository. A prefix is at most 30 characters, because a row id is at most 40. |
+| `card plan accept <PREFIX>` | Sets `spec_blob` to the specification's current value and changes no other byte of the outline. The outline is `<cards_dir>/plan/<prefix in lowercase>.md` in the working tree. Exit 1 when there is none, when its front matter has no `spec_blob` line, or when its `spec` is not a tracked, regular file inside the repository. |
 | `card plan start <id>` | Creates the card file for a row (section 7) and prints its path. Refuses an id with no row, and one that already has a card file. |
 | `card plan check <id>` | Checks one card against the tree (section 7). Exit 1 on any failure. |
 | `card list`, `card next`, `card status`, `card show` | Include rows (section 6). Unchanged for a repository with no outline. |
@@ -340,6 +340,8 @@ The maintainer reads the record and decides whether to tag. The version in `plug
 | The specification has no heading at the outline's level | `card plan new` exits 1 and names the levels that have headings |
 | A plan pull request by this user is open | The plan skill offers to resume it, or stops |
 | The specification changed | `card plan` prints one line and exits 0. The plan skill shows the difference on its next run |
+| `card plan accept` for a prefix with no outline in the working tree | Exit 1 with the reason |
+| `<cards_dir>/plan` is a symbolic link | `card plan new` and `card plan accept` exit 1 and write nothing |
 | `card plan start` for an id with a card file, or with no row | Exit 1 with the reason |
 | The user says no to a card that next-card wrote | The card file is deleted. Nothing was committed and no branch exists |
 | A row cannot be done as cut | next-card deletes the card file and names the plan skill |

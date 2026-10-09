@@ -18,6 +18,8 @@ done: true
 - bin/card
 - test/cases/36-plan-new.sh (new)
 - docs/reference.md (the argument lines for the two commands, if `card help` gains them)
+- docs/design-0.2.md (added at handoff: sections 9 and 15 amended to what the two reviews decided)
+- docs/development/review-0.2.md (added at handoff: the seventh pass records those decisions)
 
 ## Tests
 - test_plan_new_writes_the_front_matter_and_no_rows

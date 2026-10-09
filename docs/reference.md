@@ -36,7 +36,7 @@ Exit codes: 0 ok; 1 a check failed or nothing matched; 2 usage or
 configuration error.
 ```
 
-Nothing in `card` uses the network except `--fetch`. `card new` gives a card size `S` when `--size` is left out. The outcome for `card log-new` is `done`, `split`, `blocked` or `review-fixes`.
+Nothing in `card` uses the network except `--fetch`. `card new` gives a card size `S` when `--size` is left out. `card plan new` takes the specification's path from the root of the repository, whatever directory it is run in. The outcome for `card log-new` is `done`, `split`, `blocked` or `review-fixes`.
 
 ## Card states
 

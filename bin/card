@@ -1463,9 +1463,12 @@ spec_ok() {
   printf '%s\n' "$1" | awk "$DIR_OK_AWK"'{ exit !dir_ok($0) }'
 }
 
-# need_prefix <prefix>: before it reaches a file name or a pattern.
+# need_prefix <prefix>: before it reaches a file name or a pattern. A row id
+# is the prefix, a hyphen and digits, and the outline reader stops at 40
+# characters.
 need_prefix() {
   [[ $1 =~ ^[A-Z][A-Z0-9]*$ ]] || usage_die plan "not a prefix (expected something like AUTH)"
+  [ "${#1}" -le 30 ] || usage_die plan "the prefix is longer than 30 characters"
   # A link is not followed: it could point outside the repository.
   [ ! -L "$CARDS_DIR/plan" ] || die 1 "$CARDS_DIR/plan is a symbolic link"
 }
@@ -1502,7 +1505,7 @@ cmd_plan_new() {
   [[ $level =~ ^[1-6]$ ]] || usage_die plan "--level takes a digit from 1 to 6"
 
   case $spec in
-    *[[:space:]]*) die 1 "the specification path has a space in it, and a Read entry ends at its first space" ;;
+    *" "*) die 1 "the specification path has a space in it, and a Read entry ends at its first space" ;;
   esac
   spec_ok "$spec" ||
     die 1 "the specification must be a relative path inside the repository, from its root, of letters, digits and . _ - / only (no .. and no ./)"
@@ -1546,9 +1549,13 @@ cmd_plan_accept() {
   if [ -L "$path" ] || [ ! -f "$path" ]; then die 1 "no outline for the prefix $1 ($path is not a file)"; fi
   spec=$(fm_get "$path" spec)
   spec_ok "$spec" || die 1 "$path: spec is not a relative path inside the repository; run card plan"
-  if [ -L "$spec" ] || [ ! -f "$spec" ] || ! h=$(g hash-object -- "$spec" 2>/dev/null); then
-    die 1 "$path: the specification $spec cannot be read; run card plan"
+  # Only a tracked file is hashed, as in plan new: the value is committed.
+  if [ -L "$spec" ] || [ ! -f "$spec" ] || ! g ls-files --error-unmatch -- "$spec" > /dev/null 2>&1 ||
+    ! h=$(g hash-object -- "$spec" 2>/dev/null); then
+    die 1 "$path: the specification $spec is not a tracked file that can be read; run card plan"
   fi
+  # awk may cut a line at a NUL byte.
+  [ "$(tr -d '\000' < "$path" | wc -c)" -eq "$(wc -c < "$path")" ] || die 1 "$path: has a NUL byte"
   tmp=$(mktemp) || die 2 "cannot create a temporary file"
   # Written back with cat so the file keeps its mode. A last line with no
   # newline stays without one.
@@ -1575,8 +1582,8 @@ cmd_plan_accept() {
 # differs from spec_blob is one line on stdout and not a finding.
 cmd_plan() {
   local out facts rc sub
-  case ${1-} in
-    '') ;;
+  case ${1--} in
+    -) [ "$#" -eq 0 ] || usage_die plan ;;
     new | accept)
       sub=$1
       shift
