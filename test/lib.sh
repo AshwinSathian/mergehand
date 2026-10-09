@@ -15,7 +15,7 @@ setup_env() {
   export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@example.invalid
   export GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@example.invalid
   export GH_STUB_DIR="$T/gh" PATH="$ROOT/test/stubs:$PATH"
-  unset WORKDECK_TRANSCRIPT WORKDECK_SESSION CLAUDE_ENV_FILE CLAUDE_PROJECT_DIR CLAUDE_PLUGIN_ROOT
+  unset WORKDECK_TRANSCRIPT WORKDECK_SESSION CLAUDE_ENV_FILE CLAUDE_PROJECT_DIR CLAUDE_PLUGIN_ROOT BASE_REF BASE_REFS
   mkdir -p "$HOME" "$GH_STUB_DIR"
   cd "$T" || exit 1
 }
@@ -120,12 +120,13 @@ run() {
 card() { run "$BASH" "$CARD" "$@"; }
 
 # old_card [tag]: writes bin/card of a release tag, v0.1.3 unless given, into
-# $T and sets OLD_CARD to its path. Reads this repository only; returns 1
-# and leaves no file where the clone does not have the tag.
+# $T and sets OLD_CARD to its path. Reads this repository only, and does not
+# fetch a blob that a partial clone lacks; returns 1 and leaves no file where
+# the file cannot be read.
 old_card() {
   local tag=${1:-v0.1.3}
   OLD_CARD="$T/card-$tag"
-  git -C "$ROOT" show "$tag:bin/card" > "$OLD_CARD" 2>/dev/null || { rm -f "$OLD_CARD"; return 1; }
+  GIT_NO_LAZY_FETCH=1 git -C "$ROOT" show "$tag:bin/card" > "$OLD_CARD" 2>/dev/null || { rm -f "$OLD_CARD"; return 1; }
 }
 
 fail() {

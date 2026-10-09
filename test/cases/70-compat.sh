@@ -3,11 +3,16 @@
 # Goal 5 of docs/design-0.2.md: in a repository with no outline, list, next and
 # status print what card 0.1.3 prints.
 
-# card <args...>: for list, next and status, runs card 0.1.3 and then this
-# card, and fails unless stdout, stderr and the exit code are the same. Any
-# other command runs once, as in lib.sh.
+# card <args...>: for list, next and status, with or without --fetch before
+# the command, runs card 0.1.3 and then this card, and fails unless stdout,
+# stderr and the exit code are the same. Any other command runs once, as in
+# lib.sh. With --fetch, 0.1.3 has fetched and pruned by the time this card
+# runs, so the comparison cannot tell whether this card does either:
+# 22-fetch.sh is what tests that.
 card() {
-  case ${1-} in
+  local cmd=${1-}
+  [ "$cmd" != --fetch ] || cmd=${2-}
+  case $cmd in
     list | next | status) ;;
     *) run "$BASH" "$CARD" "$@"; return ;;
   esac
@@ -24,10 +29,10 @@ card() {
     printf '  card %s differs from card 0.1.3\n' "$*"
     # The files are printed as they are: $(...) would drop a trailing newline
     # that is the whole difference.
-    printf '  0.1.3: rc=%s\n  stdout: ' "$old_rc"; cat "$T/old.out"
-    printf '  stderr: '; cat "$T/old.err"
-    printf '  now:   rc=%s\n  stdout: ' "$RC"; cat "$T/new.out"
-    printf '  stderr: '; cat "$T/new.err"
+    printf '  0.1.3: rc=%s\n  stdout:\n' "$old_rc"; cat "$T/old.out"
+    printf '  stderr:\n'; cat "$T/old.err"
+    printf '  now:   rc=%s\n  stdout:\n' "$RC"; cat "$T/new.out"
+    printf '  stderr:\n'; cat "$T/new.err"
     exit 1
   fi
 }
@@ -35,7 +40,7 @@ card() {
 test_list_next_and_status_match_card_0_1_3_when_there_is_no_outline() {
   if ! old_card; then
     [ -z "${CI-}" ] || fail 'the v0.1.3 tag is required in CI'
-    echo 'skip: this clone has no v0.1.3 tag'
+    echo 'skip: v0.1.3:bin/card cannot be read from this repository'
     return 0
   fi
   COMPARED="$T/compared"
@@ -51,5 +56,9 @@ test_list_next_and_status_match_card_0_1_3_when_there_is_no_outline() {
       done
     ) || exit 1
   done
-  [ -s "$COMPARED" ] || fail 'no call was compared'
+  # The 0.1 cases make 104 such calls. Fewer means a case stopped going
+  # through card(), or a file left the list above.
+  local n
+  n=$(grep -c '' "$COMPARED" 2>/dev/null)
+  [ "${n:-0}" -ge 104 ] || fail "${n:-0} calls were compared, and the 0.1 cases make 104"
 }
