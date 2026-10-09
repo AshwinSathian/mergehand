@@ -290,6 +290,30 @@ Looked for and not found: a path with a space, a tab, a line break, a quote, an 
 
 Not run: gawk and mawk are not on the machine the session ran on, and CI runs both. A checkout by GitHub Actions was imitated with local clones. Whether Claude Code writes a settings file into the working tree when a permission is approved during a plan run is for the hand run of P-21.
 
+## Tenth pass, 2026-10-10: the reviews of P-07
+
+P-07 made `card show` print a row that has no card file. Two agents that did not write it reviewed it: the handoff reviewer, which left one should-fix finding open for the maintainer, and a second one told to break it and to attack the decision proposed for each open item. It ran hostile outlines in scratch repositories, compared the output with that of the base branch for every id that has no row, and ran 38 mutations of `row_text` and `cmd_show` against the tests, of which 23 passed unnoticed. The maintainer left the decisions to the session that held the card. Neither review had a must-fix finding. The design did not change.
+
+| Found | Decided | Why |
+|---|---|---|
+| With `BASE_REF` set in the environment, `base_ref` returned early and `BASE_REFS` was not set. `card show` of a card that is on the base branch only then printed its row, and `card list` printed "unbound variable" | `bin/card` empties `BASE_REF` and `BASE_REFS` before it uses them | The name is a common one in CI scripts. The fault was in 0.1; `card show` turned it into a wrong answer with no message. |
+| 23 mutations passed the four tests of the card: the limit of 40, the match of an id against the card files and against a heading, the filter on the name of an outline, an outline read from the base branch, every character that is removed, the front matter, the first row of two, and what is printed of a row | Fifteen tests added | One failed on the code as it was, the one for `BASE_REF`. The others pin what was built. |
+| `card show` of a card that is in the working tree made one `git ls-tree` for each base ref before it printed: 5 git calls where 0.1 makes 1 | The working tree is looked at first, and such a card needs no base branch | It is what 0.1 does, and `card show` runs at the start of every card. |
+| With no base branch, `card show` of a row prints the "no card" message of 0.1 and exits 1, where `card list` exits 2 with "base branch not found" | Kept, and tested | The acceptance keeps the message and the exit code of 0.1 for an id with no card file. The message ends "run 'card list'", which gives the cause, and next-card runs `card next` first, which exits 2. |
+| `row_text` runs with its error output discarded, so an outline that cannot be read gives the "no card" message | Kept | The message sends the user to `card list`, which prints the cause. Letting the line of `cat` through would break the rule that an error starts with `card:`. |
+| Only the heading and the lines that start with `- ` are printed. A line of a `does` item that continues on the next line, and a line of prose in a row, are dropped | Kept for `card show`, and tested. The reader is for its own card | `card show` prints what the reader reads. `card plan` says nothing about such a line, and that is the fault: a card for the reader, which reports "text in row X that is not an item". |
+| An item with an unknown key, or with no text, is printed, and `card plan` rejects both | Kept | The text is no less trusted than what follows `- does:`, and `card plan` fails that outline. |
+| A card file whose first line is `row: no card file yet` would look like a row to next-card | Kept | `card lint` rejects a card that does not start with `---`. P-14 compares the whole first line. |
+| A row id longer than 40 characters is not a row | Kept, and tested at 40 and at 41 | `card list` does not list it. |
+| A tab is removed and not replaced, so two words join | Kept | The note on the card says control characters are removed, and the reader does the same. |
+| A byte above 127 is printed, and a row has no limit on its size | Kept | `cat` of a card file has neither limit, and the ninth pass left the same for a title. |
+| An outline whose name starts with a dot is read once it is on the base branch, and section 11.1 says it is not an outline | Left, for its own card | It is in `outline_files` of P-02. `card list` and `card show` agree on it. |
+| With rows `AUTH-01` and `AUTH-02` only, `card show AUTH-06` says "no cards with prefix AUTH" | Kept | The acceptance keeps the text of 0.1. |
+
+Looked for and not found: an id for which `card list` says `[row]` and `card show` prints no `row:` line, or the reverse, over outlines with control characters, a line ending of two bytes, a byte-order mark, no front matter or an open one, an empty file, odd file names, a link, and an outline on one of the two places only or different in the two; a byte of difference from the base branch in the output, the error output or the exit code for an id with no row; an escape, a tab or a NUL reaching the output; a second `row:` line or a `---` line forged from a row.
+
+Not run: gawk and mawk are not on the machine the session ran on, and CI runs both. A bash later than 3.2 and GNU `sort -V` were not run either.
+
 ## Ninth pass, 2026-10-09: the reviews of P-06
 
 P-06 put the rows of an outline into `card list`, `card next` and `card status`. Two agents that did not write it reviewed it: the handoff reviewer, which left one nit, and a second one told to break it and to attack the decision proposed for each open item. It ran hostile outlines in scratch repositories, compared the output with that of the base branch on nine decks that have no outline, and ran 36 mutations of `bin/card` against the tests, of which 10 passed unnoticed. The maintainer left the decisions to the session that held the card. Neither review had a must-fix finding. What changed in the design is in sections 6 and 16.

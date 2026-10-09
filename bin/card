@@ -277,8 +277,11 @@ row_text() {
   local f row
   # deck_table does not list a row whose id is longer than 40 characters.
   [ "${#1}" -le 40 ] || return 0
+  # The working tree first: a card that is there needs no base branch and
+  # no git call, as in 0.1.
+  wt_cards | ID="$1" awk -F '\t' '$1 == ENVIRON["ID"] { found = 1 } END { exit !found }' && return 0
   base_ref
-  { wt_cards; base_cards; } | ID="$1" awk -F '\t' '$1 == ENVIRON["ID"] { found = 1 } END { exit !found }' && return 0
+  base_cards | ID="$1" awk -F '\t' '$1 == ENVIRON["ID"] { found = 1 } END { exit !found }' && return 0
   outline_files | while IFS= read -r f; do
     case $f in *[!A-Za-z0-9._/-]*) continue ;; esac
     row=$(if [ -f "$f" ]; then cat "$f"; else base_show "$f"; fi | ID="$1" awk '
@@ -505,6 +508,11 @@ wt_meta() {
   [ "$#" -gt 0 ] || return 0
   awk "$META_AWK" "$@"
 }
+
+# Set by base_ref. Emptied here, so a value of the same name in the
+# environment is not taken for one that base_ref set.
+BASE_REF=""
+BASE_REFS=""
 
 # base_ref: sets BASE_REF (origin/<base> when it exists, else the local base
 # branch) and BASE_REFS, every base ref that state is read from: both of them

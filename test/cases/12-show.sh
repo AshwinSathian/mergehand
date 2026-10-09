@@ -126,3 +126,164 @@ test_show_for_an_id_with_no_card_and_no_row_lists_the_same_prefix() {
   assert_rc 1
   assert_contains "$ERR" 'card: no card DB-02 in cards; cards with prefix DB: DB-01'
 }
+
+# Tests from the second review. Each one failed against a mutation of
+# row_text or cmd_show that the four tests above let through.
+
+first_line() { printf '%s\n' "$OUT" | head -n 1; }
+# plan_file <name> <prefix> [printf format of the body]: an outline in
+# cards/plan/ with valid front matter and that body.
+plan_file() {
+  mkdir -p cards/plan
+  printf -- '---\nspec: specs/x.md\nspec_blob: %040d\nprefix: %s\nlevel: 2\n---\n' 0 "$2" > "cards/plan/$1"
+  # shellcheck disable=SC2059
+  [ -z "${3-}" ] || printf "$3" >> "cards/plan/$1"
+}
+
+test_show_row_id_of_40_characters_is_a_row_and_41_is_not() {
+  new_repo; mk_conf
+  local id=AUTH-00000000000000000000000000000000007
+  plan_file auth.md AUTH "## $id forty\n- does: x\n## ${id}0 more\n- does: y\n"
+  card show "$id"
+  assert_rc 0
+  assert_eq 'row: no card file yet' "$(first_line)" 'first line'
+  card show "${id}0"
+  assert_rc 1
+  assert_empty "$OUT" stdout
+}
+
+test_show_card_whose_id_starts_with_the_row_id_does_not_hide_the_row() {
+  new_repo; mk_conf; mk_outline; mk_card AUTH-011; commit_all
+  card show AUTH-01
+  assert_rc 0
+  assert_eq 'row: no card file yet' "$(first_line)" 'first line'
+}
+
+test_show_outline_with_a_space_in_its_name_gives_no_row() {
+  new_repo; mk_conf
+  plan_file 'o dd.md' ODD '## ODD-01 odd\n- does: o\n'
+  card show ODD-01
+  assert_rc 1
+  assert_empty "$OUT" stdout
+}
+
+test_show_row_of_an_outline_that_is_only_on_the_base_branch() {
+  new_repo; mk_conf; mk_outline; commit_all; rm cards/plan/auth.md
+  card show AUTH-01
+  assert_rc 0
+  assert_contains "$OUT" '## AUTH-01 Token store'
+}
+
+test_show_row_loses_a_tab_and_a_delete_character() {
+  new_repo; mk_conf
+  plan_file auth.md AUTH '## AUTH-01 a\tb\177c\n- does: d\te\177f\n'
+  card show AUTH-01
+  assert_eq 'row: no card file yet
+## AUTH-01 abc
+- does: def' "$OUT" row
+}
+
+test_show_row_of_an_outline_with_crlf_prints_as_one_with_lf() {
+  new_repo; mk_conf
+  plan_file auth.md AUTH '## AUTH-01 T\n- does: x\n'
+  edit cards/plan/auth.md "s/\$/$(printf '\r')/"
+  card show AUTH-01
+  assert_rc 0
+  assert_eq 'row: no card file yet
+## AUTH-01 T
+- does: x' "$OUT" row
+}
+
+test_show_no_row_from_an_outline_whose_front_matter_is_missing_or_open() {
+  new_repo; mk_conf; mkdir -p cards/plan
+  printf 'x\n---\n## AUTH-01 T\n- does: x\n' > cards/plan/auth.md
+  card show AUTH-01
+  assert_rc 1
+  printf -- '---\nprefix: AUTH\n## AUTH-01 T\n- does: x\n' > cards/plan/auth.md
+  card show AUTH-01
+  assert_rc 1
+}
+
+test_show_level_three_heading_is_not_a_row_and_does_not_end_one() {
+  new_repo; mk_conf
+  plan_file auth.md AUTH '## AUTH-01 T\n- does: x\n### AUTH-02 sub\n- does: y\n'
+  card show AUTH-02
+  assert_rc 1
+  card show AUTH-01
+  assert_contains "$OUT" '- does: y'
+}
+
+test_show_row_heading_with_spaces_around_the_id_or_no_title() {
+  new_repo; mk_conf
+  plan_file auth.md AUTH '##   AUTH-01   T\n- does: x\n## AUTH-02\n- does: y\n'
+  card show AUTH-01
+  assert_rc 0
+  assert_eq 'row: no card file yet' "$(first_line)" 'first line'
+  card show AUTH-02
+  assert_rc 0
+  assert_contains "$OUT" '- does: y'
+}
+
+test_show_row_id_with_a_control_character_is_the_id_card_list_shows() {
+  new_repo; mk_conf
+  plan_file auth.md AUTH '## AU\033TH-01 T\n- does: x\n'
+  card show AUTH-01
+  assert_rc 0
+  assert_contains "$OUT" '## AUTH-01 T'
+}
+
+test_show_does_not_confuse_neighbouring_row_ids() {
+  new_repo; mk_conf
+  plan_file auth.md AUTH '## AUTH-10 ten AUTH-1\n- does: x\n## AUTH-1b oneb\n## AUTH-1 one\n- does: y\n'
+  card show AUTH-1
+  assert_eq 'row: no card file yet
+## AUTH-1 one
+- does: y' "$OUT" row
+}
+
+test_show_row_prints_only_the_heading_and_the_items() {
+  new_repo; mk_conf
+  plan_file auth.md AUTH '## AUTH-01 T\n- does: x\nprose\n-dash\n\n  - indented\n- does: y\n'
+  card show AUTH-01
+  assert_eq 'row: no card file yet
+## AUTH-01 T
+- does: x
+- does: y' "$OUT" row
+}
+
+test_show_first_row_of_an_id_counts_across_outlines_and_within_one() {
+  new_repo; mk_conf
+  plan_file auth.md AUTH '## AUTH-01 from auth\n- does: x\n## AUTH-01 again\n- does: z\n'
+  plan_file aaa.md AAA '## AAA-01 a\n## AUTH-01 from aaa\n- does: y\n'
+  card show AUTH-01
+  assert_eq 'row: no card file yet
+## AUTH-01 from aaa
+- does: y' "$OUT" 'row of the first outline'
+  rm cards/plan/aaa.md
+  card show AUTH-01
+  assert_eq 'row: no card file yet
+## AUTH-01 from auth
+- does: x' "$OUT" 'first row of the outline'
+}
+
+test_show_with_no_base_branch_prints_a_card_and_keeps_the_message_for_a_row() {
+  new_repo; mk_conf 'base = nope'; mk_outline; mk_card DB-01
+  card show DB-01
+  assert_rc 0
+  assert_empty "$ERR" stderr
+  assert_contains "$OUT" 'id: DB-01'
+  card show AUTH-01
+  assert_rc 1
+  assert_empty "$OUT" stdout
+  assert_eq "card: no card AUTH-01 in cards (no cards with prefix AUTH; run 'card list')" "$ERR" message
+}
+
+test_show_ignores_a_base_ref_from_the_environment() {
+  new_repo; mk_conf; mk_outline; mk_card AUTH-01; commit_all; rm cards/AUTH-01-thing.md
+  BASE_REF=x card show AUTH-01
+  assert_rc 1
+  assert_empty "$OUT" stdout
+  BASE_REF=x card show AUTH-02
+  assert_rc 0
+  assert_eq 'row: no card file yet' "$(first_line)" 'first line'
+}
