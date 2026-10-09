@@ -289,3 +289,32 @@ P-05 built the plan branch check of `card plan`. Two agents that did not write i
 Looked for and not found: a path with a space, a tab, a line break, a quote, an escape character or a leading hyphen gives one line and no raw control byte, since git quotes such a name; `cards/planning/x`, `cards/plan.md`, and `cards/plan` as a file or as a link are findings; a merge of the base branch into the plan branch does not make its files count; no hook writes a file into the working tree of a plan branch, and the stop hook asks for a log only on a `card/` branch; `card touched` and `card tests` print byte for byte what they printed on awkward inputs.
 
 Not run: gawk and mawk are not on the machine the session ran on, and CI runs both. A checkout by GitHub Actions was imitated with local clones. Whether Claude Code writes a settings file into the working tree when a permission is approved during a plan run is for the hand run of P-21.
+
+## Ninth pass, 2026-10-09: the reviews of P-06
+
+P-06 put the rows of an outline into `card list`, `card next` and `card status`. Two agents that did not write it reviewed it: the handoff reviewer, which left one nit, and a second one told to break it and to attack the decision proposed for each open item. It ran hostile outlines in scratch repositories, compared the output with that of the base branch on nine decks that have no outline, and ran 36 mutations of `bin/card` against the tests, of which 10 passed unnoticed. The maintainer left the decisions to the session that held the card. Neither review had a must-fix finding. What changed in the design is in sections 6 and 16.
+
+| Found | Decided | Why |
+|---|---|---|
+| A row with a letter in its id that depends on the id without it waited for itself, and no card became ready | A row does not wait for itself | `card plan` reports such a row, but the deck must not stop on it. |
+| A row that depends on `AUTH-01b` did not wait for `AUTH-01c`, where handoff puts what a second split leaves | A dependency that ends in a letter stands for the id without it | The rule exists so that a row does not start on code a remainder has still to write. Section 6 says so. |
+| A row that names a card and its remainder under `depends` got the remainder twice in `card next` | For a row, no id is printed twice, in either order | A card with a file still prints what 0.1 prints for `depends: A-1, A-1`. |
+| `card next` prints the dependencies a row waits for, with no limit on their length, and the acceptance said id, size and title only | For a row, a dependency longer than 40 characters is `?`. Section 16 names what `card next` prints | 40 is the limit of a row id. A card's dependencies are printed as in 0.1. |
+| Ten mutations passed the tests: the check of a row id and its anchors, the first row of two, the size limit at 8, every letter of a remainder but `b`, the mark on the lines of `card status` for work in progress, a row with a letter, and what `card next` prints with a dependency and its remainder both open | Nine tests added | Four of them failed on the code as it was. |
+| `card status` prints no `[row]` | Kept, and pinned for every line of it | Sections 6 and 16 name `list` and `next`. Until P-07 a session cannot tell from status that the next card has no file; next-card runs `card next`, which says so. |
+| When two rows share an id the first read counts, and "first" is the order of the paths, so a row in `aaa.md` wins over the one in `auth.md` | Kept, said in section 6, and tested | `card plan` fails that deck. Choosing by prefix would be a second rule for a deck that is already wrong. |
+| A row whose id is not a card id is dropped and nothing says so | Kept | Printing it would put text that was not checked into a session. `card plan` reports it. |
+| The rows of an outline with format faults are listed; one with no front matter gives none | Kept | A typo must not empty the deck in the session-start hook. |
+| With no outline, one more `git ls-tree` for each base ref | Accepted | 6 calls became 7, and the output was byte for byte that of the base branch. |
+| One `git show` for each outline that is on the base branch and not in the working tree: 37 git calls for 30 outlines | Left, for its own card | It is per outline and not per row, which is what the card asked. `git cat-file --batch` is the fix when a deck has that many. |
+| An outline removed on one base ref is still read from the other | Left | `base_cards` does the same for a card file since 0.1. The fast-forward pull of the skills makes the two refs equal. |
+| An outline that is a link is followed, and one that cannot be read prints the line of `cat` | Left, for its own card | Both are in the reader of P-02, and `card plan` reads the same way. |
+| A card whose title ends in `[row]` looks like a row | Left | Nothing reads the mark but a person. |
+| Removing the file of a done card brings its row back as ready | Left, for the README of P-19 | It follows from section 6. |
+| A byte above 127 in a title is printed | Left | `META_AWK` does the same for a card. |
+| `test/lib.sh` is under `Touch` and did not change; `state_of` is now in four case files | Left | `Touch` is a limit. Moving the helper is for the card that next needs it. |
+| `sort -V` puts `AUTH-01` before `A-1` | Left | It is 0.1's order, and changing it would change a deck that has no outline. |
+
+Looked for and not found: a tab, an escape character, `$(id)`, backticks or `SYSTEM:` text reaching `list` or `status` from a title, a size or `depends`; a forged row through the name of an outline file; a line ending of two bytes or an empty outline breaking the reader; a byte of difference from the base branch with no outline, with and without `--fetch`; `card status` longer than its limit; a git call per row.
+
+Not run: gawk and mawk are not on the machine the session ran on, and CI runs both. GNU `sort -V` and a real `gh` were not run either.

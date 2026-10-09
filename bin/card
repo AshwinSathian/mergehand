@@ -609,6 +609,7 @@ INDEX
     # Each outline is read once. Its findings are for card plan, not for here.
     outlines | awk -F '\t' '$1 == "R" { print "R\t" $3 "\t" $4 "\t" $5 "\t" $6 }'
   } | awk -F '\t' '
+    function seen(list, x) { return index(" " list " ", " " x " ") > 0 }
     $1 == "W" { if (!($2 in wpath)) wpath[$2] = $3; ids[$2] = 1 }
     $1 == "G" { if (!($2 in gpath)) gpath[$2] = $3; ids[$2] = 1 }
     $1 == "D" { bdone[$2] = 1 }
@@ -616,8 +617,8 @@ INDEX
     $1 == "B" { branch[$2] = 1 }
     $1 == "K" { blocked[$2] = 1 }
     $1 == "P" { review[$2] = 1 }
-    # The first row of an id counts; card plan reports the second. The size is
-    # cut as META_AWK cuts it.
+    # The first row of an id counts, in the order of the outline paths; card
+    # plan reports the second. The size is cut as META_AWK cuts it.
     $1 == "R" && $2 ~ /^[A-Z][A-Z0-9]*-[0-9]+[a-z]?$/ && !($2 in row) {
       row[$2] = 1; p = SUBSEP $2
       size[p] = (length($3) > 8 ? "?" : $3); title[p] = $4; deps[p] = $5
@@ -639,12 +640,20 @@ INDEX
         for (j = 1; j <= m; j++) {
           x = d[j]; gsub(/ /, "", x)
           if (x != "" && x !~ /^[A-Z][A-Z0-9]*-[0-9]+[a-z]?$/) x = "?"
-          if (x != "" && !(x in isdone)) why = why (why == "" ? "" : " ") x
-          # A row also waits for what a split left of its dependency:
-          # <dependency>b, or any other letter.
-          if (id in isrow) for (c = 97; c <= 122; c++) {
+          if (!(id in isrow)) {
+            if (x != "" && !(x in isdone)) why = why (why == "" ? "" : " ") x
+            continue
+          }
+          # A row is new input: an id longer than a row id may be is not
+          # printed, and no id is printed twice.
+          if (length(x) > 40) x = "?"
+          if (x != "" && !(x in isdone) && !seen(why, x)) why = why (why == "" ? "" : " ") x
+          # A row also waits for what a split left of its dependency: the
+          # same id with a letter, or with another letter. Not for itself.
+          sub(/[a-z]$/, "", x)
+          for (c = 97; c <= 122; c++) {
             y = x sprintf("%c", c)
-            if ((y in ids) && !(y in isdone)) why = why (why == "" ? "" : " ") y
+            if (y != id && (y in ids) && !(y in isdone) && !seen(why, y)) why = why (why == "" ? "" : " ") y
           }
         }
         if (id in isdone) state = "done"

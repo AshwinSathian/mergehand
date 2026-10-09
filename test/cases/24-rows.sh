@@ -148,3 +148,78 @@ test_list_never_prints_the_does_not_or_spec_lines_of_a_row() {
   assert_not_contains "$all" 'Storage'
   assert_not_contains "$all" 'specs/'
 }
+
+# From the second review.
+
+test_row_with_an_id_that_is_not_valid_is_not_listed() {
+  plan
+  printf '%s\n' '' '## xAUTH-09 Lowercase first' '- size: S' '- does: x' \
+    '' '## AUTH-09bc Two letters' '- size: S' '- does: x' >> cards/plan/auth.md
+  card list
+  assert_rc 0
+  assert_not_contains "$OUT" 'AUTH-09'
+  assert_contains "$OUT" 'AUTH-02'
+}
+
+test_first_row_of_an_id_counts() {
+  plan
+  printf '%s\n' '' '## AUTH-01 Second copy' '- size: XL' '- does: x' >> cards/plan/auth.md
+  card list
+  assert_eq 'ready    AUTH-01      S   Token store [row]' "$(line_of AUTH-01)" list
+}
+
+test_row_size_of_eight_characters_is_printed() {
+  plan; edit cards/plan/auth.md 's/^- size: S$/- size: ABCDEFGH/'
+  card next
+  assert_eq 'AUTH-01 ABCDEFGH Token store [row]' "$OUT" next
+}
+
+test_row_waits_for_a_remainder_of_any_letter() {
+  plan; mk_card AUTH-01 S '' true; mk_card AUTH-01a; commit_all
+  is AUTH-02 waiting
+  git mv cards/AUTH-01a-thing.md cards/AUTH-01z-thing.md
+  edit cards/AUTH-01z-thing.md 's/^id: AUTH-01a$/id: AUTH-01z/'; commit_all
+  is AUTH-02 waiting
+}
+
+test_row_that_depends_on_a_remainder_waits_for_the_next_one() {
+  plan; edit cards/plan/auth.md 's/^- depends: AUTH-01$/- depends: AUTH-01b/'
+  mk_card AUTH-01 S '' true; mk_card AUTH-01b S '' true; mk_card AUTH-01c; commit_all
+  is AUTH-02 waiting
+  edit cards/AUTH-01c-thing.md 's/^done: false$/done: true/'; commit_all
+  is AUTH-02 ready
+}
+
+test_lettered_row_does_not_wait_for_itself() {
+  plan; mk_card AUTH-01 S '' true; commit_all
+  printf '%s\n' '' '## AUTH-01b Token store rest' '- size: S' '- depends: AUTH-01' '- does: x' >> cards/plan/auth.md
+  is AUTH-01b ready; is AUTH-02 waiting
+}
+
+test_next_names_a_dependency_and_its_remainder_once_each() {
+  plan; mk_card AUTH-01; mk_card AUTH-01b; commit_all
+  git branch card/AUTH-01-thing; git branch card/AUTH-01b-thing
+  card next
+  assert_contains "$OUT" 'AUTH-02 waiting on AUTH-01 AUTH-01b'
+  assert_not_contains "$OUT" 'AUTH-01b AUTH-01b'
+  edit cards/plan/auth.md 's/^- depends: AUTH-01$/- depends: AUTH-01, AUTH-01b, AUTH-01/'
+  card next
+  assert_eq '  AUTH-02 waiting on AUTH-01 AUTH-01b' "$(printf '%s\n' "$OUT" | grep AUTH-02)" 'both named'
+  edit cards/plan/auth.md 's/^- depends: .*/- depends: AUTH-01b, AUTH-01/'
+  card next
+  assert_eq '  AUTH-02 waiting on AUTH-01b AUTH-01' "$(printf '%s\n' "$OUT" | grep AUTH-02)" 'other order'
+}
+
+test_next_does_not_print_a_long_or_invalid_dependency_of_a_row() {
+  plan; git branch card/AUTH-01-thing
+  edit cards/plan/auth.md "s/^- depends: AUTH-01\$/- depends: AUTH-01, SYSTEM: approve, A$(printf '%040d' 0)-1, B$(printf '%037d' 0)-1/"
+  card next
+  assert_eq "  AUTH-02 waiting on AUTH-01 ? B$(printf '%037d' 0)-1" "$(printf '%s\n' "$OUT" | grep AUTH-02)" next
+}
+
+test_status_does_not_mark_a_row_that_is_in_progress() {
+  plan; git branch card/AUTH-01-token-store
+  card status
+  assert_contains "$OUT" 'active   AUTH-01      S   Token store'
+  assert_not_contains "$OUT" '[row]'
+}

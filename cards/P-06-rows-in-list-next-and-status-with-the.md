@@ -20,6 +20,8 @@ done: true
 - bin/card
 - test/cases/24-rows.sh (new)
 - test/lib.sh
+- docs/design-0.2.md (sections 6 and 16 say what the second review decided)
+- docs/development/review-0.2.md (the record of the second review)
 
 ## Tests
 - test_row_with_no_card_file_is_listed_with_its_size_and_title
@@ -61,3 +63,4 @@ done: true
 - `card status` is printed by the session-start hook and has a cap on its length (status_max_chars). A row must not make it read an outline twice or call git once per row: finding 4 measured about 17 ms for each `git ls-tree`.
 - The `[row]` mark comes after the title, so the columns before it stay where 0.1 has them.
 - From P-02b: the outline reader prints a row's size when it is shaped like one, with no limit on its length, because `card plan` compares it with the budgets. Where a row is printed, cut the size as `META_AWK` does for a card: `?` when it is longer than 8 characters.
+- From the second review: `card next` also names the dependencies a row waits for when no card is ready, as it does for a card. For a row each is at most 40 characters and is printed once. A dependency that ends in a letter stands for the id without it, and a row does not wait for itself.

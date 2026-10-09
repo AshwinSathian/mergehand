@@ -130,11 +130,13 @@ Rules:
 
 The set of cards (design.md, section 6) gains one source: a row whose id has no card file on the base branch or in the working tree. Outlines are read from the same two places as card files, and the working tree's copy wins.
 
-Such a row is a card with the row's title, size and dependencies and `done: false`. Its state is computed by the table of design.md, section 6, with one difference: it is `ready` only when each dependency is done and every card whose id is that dependency's id plus a letter is done too. A split leaves the original card `done` and its unfinished part in `<id>b`; without this rule a row could start on code that the remainder has still to write. The rule applies to rows only. Cards with a file keep the 0.1 rule, so nothing changes for a deck that has no outline.
+Such a row is a card with the row's title, size and dependencies and `done: false`. Its state is computed by the table of design.md, section 6, with one difference: it is `ready` only when each dependency is done and every card whose id is that dependency's id plus a letter is done too. A split leaves the original card `done` and its unfinished part in `<id>b`; without this rule a row could start on code that the remainder has still to write. A second split puts what is left in `<id>c`, so a dependency that itself ends in a letter stands for the id without it: a row that depends on `AUTH-01b` waits for `AUTH-01c` too. A row does not wait for itself. The rule applies to rows only. Cards with a file keep the 0.1 rule, so nothing changes for a deck that has no outline.
 
 A row whose card is being written or implemented has a `card/<id>` branch, and is `active`, `blocked` or `review` by the rules that already exist. Once the card file is on the base branch or in the working tree, the row's fields are ignored and the card's are used.
 
-`card list` and `card next` print `[row]` after the title of a row that has no card file. `card show <id>` for such a row prints a first line `row: no card file yet` and then the row as written in the outline.
+When two rows have the same id, the first one read counts, in the order of the outline paths, and `card plan` reports the other. A row whose id is not a card id is not listed.
+
+`card list` and `card next` print `[row]` after the title of a row that has no card file; `card status` does not. `card show <id>` for such a row prints a first line `row: no card file yet` and then the row as written in the outline.
 
 ## 7. Planned cards
 
@@ -355,7 +357,7 @@ The maintainer reads the record and decides whether to tag. The version in `plug
 The specification and the outline are repository content and can arrive in someone else's pull request.
 
 - An outline is read only from the base branch and the working tree, the two places card files are read from. `card` reads nothing from a `plan/*` branch it is not on.
-- `card list`, `card next` and `card status` print a row's id, size and title, filtered as a card's are (design.md, section 16). A row's `does`, `not` and `spec` lines reach a session only through `card show` and `card plan start`, which a skill runs when the user starts that row.
+- `card list`, `card next` and `card status` print a row's id, size and title, filtered as a card's are (design.md, section 16). When no card is ready, `card next` also names the dependencies a row waits for: only those shaped like a card id and at most 40 characters long, each once, and `?` for any other. A row's `does`, `not` and `spec` lines reach a session only through `card show` and `card plan start`, which a skill runs when the user starts that row.
 - `spec` is validated like `cards_dir`: a relative path inside the repository with no `..`. The prefix is validated before it is used in a file name or a pattern.
 - Nothing in an outline is sourced or evaluated. A `Touch` entry is used only as a `case` pattern, as in 0.1.
 - The specification is read by the plan session, which may push a `plan/*` branch and open a pull request. A specification from an untrusted source is an instruction to that session. The README says so beside the plan skill.
