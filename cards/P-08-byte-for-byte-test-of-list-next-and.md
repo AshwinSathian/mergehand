@@ -3,7 +3,7 @@ id: P-08
 title: Byte-for-byte test of list, next and status against card 0.1.3
 size: S
 depends: P-06, S-04
-done: false
+done: true
 ---
 
 ## Read

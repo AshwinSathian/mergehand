@@ -119,6 +119,15 @@ run() {
 
 card() { run "$BASH" "$CARD" "$@"; }
 
+# old_card [tag]: writes bin/card of a release tag, v0.1.3 unless given, into
+# $T and sets OLD_CARD to its path. Reads this repository only; returns 1
+# and leaves no file where the clone does not have the tag.
+old_card() {
+  local tag=${1:-v0.1.3}
+  OLD_CARD="$T/card-$tag"
+  git -C "$ROOT" show "$tag:bin/card" > "$OLD_CARD" 2>/dev/null || { rm -f "$OLD_CARD"; return 1; }
+}
+
 fail() {
   printf '  %s\n' "$1"
   printf '  rc=%s\n  stdout: %s\n  stderr: %s\n' "${RC-}" "${OUT-}" "${ERR-}"
