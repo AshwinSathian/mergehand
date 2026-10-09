@@ -254,6 +254,9 @@ test_plan_reports_a_dependency_that_is_neither_a_row_nor_a_card() {
   deck; edit "$O" 's/^- depends: AUTH-01$/- depends: AUTH-01, the store/'
   plan_fails 'row AUTH-02: depends has an invalid id'
   assert_not_contains "$ERR" 'the store'
+  deck; edit "$O" 's/^- depends: AUTH-01$/- depends: PAY-00000000000000000000000000000000000009/'
+  plan_fails 'row AUTH-02: depends has an invalid id'
+  assert_not_contains "$ERR" 'PAY-0'
   # The order is dependencies, then specifications, then coverage.
   deck; edit "$O" 's/^- depends: AUTH-01$/- depends: AUTH-01, PAY-09/'; cite Gone
   mk_outline PAY; git rm -q -f specs/pay.md
@@ -263,6 +266,16 @@ test_plan_reports_a_dependency_that_is_neither_a_row_nor_a_card() {
 
 test_plan_accepts_a_dependency_on_a_card_that_has_a_file() {
   deck; mk_card PAY-09; edit "$O" 's/^- depends: AUTH-01$/- depends: AUTH-01, PAY-09/'
+  card plan
+  assert_silent
+  # A card that is only on the base branch is a card.
+  commit_all; git checkout -q -b other; git rm -q cards/PAY-09-thing.md
+  card plan
+  assert_silent
+  # So is one that cannot be read, and the cards after it are still read.
+  git checkout -q cards/PAY-09-thing.md 2>/dev/null || git checkout -q main -- cards/PAY-09-thing.md
+  mk_card AAA-01; chmod 000 cards/AAA-01-thing.md
+  edit "$O" 's/^- depends: AUTH-01, PAY-09$/- depends: AUTH-01, PAY-09, AAA-01/'
   card plan
   assert_silent
 }
@@ -282,6 +295,11 @@ test_plan_reports_a_cycle_through_rows_and_cards() {
   deck; edit "$O" 's/^- spec: Storage$/- depends: AUTH-02\
 - spec: Storage/'
   plan_fails 'row AUTH-01 is in, or depends on, a dependency cycle'
+  # Of an id in two rows the first is the node, and it is said once.
+  deck; edit "$O" 's/^- spec: Storage$/- depends: AUTH-01\
+- spec: Storage/'; edit "$O" 's/^## AUTH-02 /## AUTH-01 /'
+  plan_fails 'row AUTH-01 is in, or depends on, a dependency cycle'
+  assert_eq 1 "$(printf '%s\n' "$ERR" | grep -c 'dependency cycle')" 'cycle findings'
 }
 
 test_plan_reports_a_specification_that_is_missing() {
@@ -297,6 +315,19 @@ test_plan_reports_a_specification_that_is_missing() {
   [ -r "$S" ] && return 0
   plan_fails "the specification $S cannot be read"
   assert_eq 1 "$(findings)" 'findings'
+}
+
+test_plan_reads_no_specification_for_an_outline_that_is_only_on_the_base_branch() {
+  # A branch cut before the plan merged has neither file, and one that is
+  # behind has an older specification.
+  new_repo; mk_conf; commit_all; git checkout -q -b card/X-01-thing
+  git checkout -q main; mk_outline; commit_all; git checkout -q card/X-01-thing
+  assert_no_file "$O"; assert_no_file "$S"
+  card plan
+  assert_silent
+  mkdir specs; echo '## Other' > "$S"; git add "$S"
+  card plan
+  assert_silent
 }
 
 test_plan_reports_a_specification_that_is_untracked() {
@@ -315,6 +346,11 @@ test_plan_reports_a_heading_that_no_row_cites() {
   plan_fails "the heading \"制限\" of $S is cited by no row"
   assert_contains "$ERR" 'the heading "???"'
   assert_eq 2 "$(findings)" 'findings'
+  # No control character of a heading is printed, and no more than 80 bytes.
+  deck; printf '\n## Li\033[31mmits\302\233 and %0100d\n' 7 >> "$S"
+  plan_fails 'the heading "Li[31mmits and 0000'
+  assert_eq 1 "$(findings)" 'findings'
+  assert_eq 1 "$(printf '%s\n' "$ERR" | grep -c '^.\{1,200\}$')" 'short lines'
 }
 
 test_plan_accepts_a_heading_listed_under_not_planned() {
@@ -337,11 +373,17 @@ test_plan_ignores_a_heading_inside_a_code_fence() {
   # A fence ends at the mark that opened it, at least as long, with no
   # text after it.
   deck; spec '' '```sh' '## In a fence' '```' '~~~' '## In tildes' '```' '## Still in tildes' '~~~'
-  spec '````' '```' '## In four' '```' '```sh' '## Still in four' '````'; accept
+  spec '````' '```' '## In four' '```' '```sh' '## Still in four' '````'
+  # A line with text after the mark does not end a fence, and a fence may be
+  # indented by up to three spaces.
+  spec '```' '``` sh' '## After text' '```' '   ```' '## Indented fence' ' ```'; accept
   card plan
   assert_silent
   cite 'In a fence'
   plan_fails 'row AUTH-02 cites the heading "In a fence"'
+  # A heading after an indented closing fence is seen again.
+  deck; spec '' '```' 'x' '  ```' '## After'
+  plan_fails 'the heading "After"'
 }
 
 test_plan_reports_a_row_that_cites_a_heading_the_specification_lacks() {
@@ -370,6 +412,16 @@ test_plan_compares_headings_without_case_or_punctuation() {
   edit "$O" 's/^- spec: Storage$/- spec: storage!/'; edit "$O" 's/^- Non-goals$/- NON GOALS/'
   card plan
   assert_silent
+  # Dashes and curly quotes are punctuation; a heading with no letter or
+  # digit is compared less its spaces.
+  deck; spec '' '## Phase 1 — Setup' "## User’s guide" '## ? ? ?'; accept
+  printf '%s\n' '- Phase 1 - Setup' "- User's guide" '- ???' >> "$O"
+  card plan
+  assert_silent
+  # Line ends of another system, and a byte-order mark.
+  deck; printf '\357\273\277## Overview\r\n## Storage\r\n## Refresh\r\n## Errors\r\n```\r\n## In a fence\r\n```\r\n   ## Non-goals\r\n' > "$S"; accept
+  card plan
+  assert_silent
 }
 
 test_plan_checks_only_headings_at_the_level_of_the_outline() {
@@ -396,4 +448,13 @@ test_plan_says_the_specification_changed_and_exits_zero() {
   card plan
   assert_rc 1
   assert_contains "$OUT" 'differs from spec_blob'
+  # A spec_blob the format check refused is not compared.
+  deck; edit "$O" 's/^spec_blob:.*/spec_blob: none/'
+  plan_fails 'spec_blob is not what git hash-object prints'
+  assert_empty "$OUT" stdout
+  # A hash that git cannot make is not a change.
+  deck; echo 'specs/*.md filter=boom' > .gitattributes
+  git config filter.boom.clean false; git config filter.boom.required true
+  plan_fails "the specification $S cannot be read"
+  assert_empty "$OUT" stdout
 }

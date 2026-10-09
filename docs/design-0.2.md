@@ -123,7 +123,7 @@ Rules:
 - A `does` line is a statement that is true or false when the card is finished. A `not` line names what a reader might expect here and the row that owns it.
 - A row with no `spec` item is allowed, for work no single heading asks for (a migration, a CI job). The plan reviewer looks at each such row.
 - `## Not planned` lists headings of the specification, at the outline's level, that produce no card. The section may be left out when nothing would be in it.
-- A heading is compared as the tests gate compares names: lowercased, with every character that is not a letter or digit removed.
+- A heading is compared as the tests gate compares names: lowercased, with every character that is not a letter or digit removed. Two things differ from the gate, both so that a heading in another script is still a heading. A byte above 127 is kept, except the UTF-8 general punctuation (dashes, curly quotes) and the Latin-1 signs; case is folded for ASCII letters only. And a heading with no letter or digit at all is compared as written, less its spaces.
 - An id is never used again after its row is removed.
 
 ## 6. Rows in the deck
@@ -237,19 +237,23 @@ Split mode is as in 0.1. The remainder is a card with a file, and section 6 make
 
 ### 11.1 `card plan`
 
-It runs these in order and reports every failure it finds.
+It runs these in order and reports every failure it finds, with two exceptions that keep one fault from being reported as several. An id that is in two rows is reported once. And an outline with a format finding is not checked for headings that no row cites: the reader may have dropped a row or an item, and each heading it cited would be reported falsely. That finding shows on the run after the format is fixed; the run with the format finding fails either way.
 
 | Check | Fails when |
 |---|---|
 | Outline format | the front matter has a missing, unknown or malformed key; the file name is not the prefix in lowercase; a row has no `size`, no `does`, a key twice that may appear once, or an unknown key |
 | Ids | a row's id is malformed, carries a letter, does not start with the prefix, or appears in two rows; two outlines share a prefix; the prefix is `Q` |
 | Sizes | a row's size has no budget |
-| Dependencies | a dependency names neither a row nor a card; the rows and cards together contain a cycle |
-| Specification | the `spec` file is missing or untracked |
+| Dependencies | a dependency is not an id, or names neither a row nor a card; a row is in, or depends on, a cycle through rows and cards |
+| Specification | the `spec` file is missing, untracked, not a regular file, or cannot be read |
 | Coverage | a heading of the specification at the outline's level, outside a code fence, is cited by no row and is not under `Not planned`; a row that is not done, or the `Not planned` list, cites a heading the specification does not have at that level |
 | Plan branch | the current branch is a `plan/*` branch and a file outside `<cards_dir>/plan/` differs from the point where the branch left the base branch |
 
 When the specification differs from `spec_blob`, `card plan` prints one line naming the outline and still exits 0. It cannot fail on this: 0.1's design was amended 35 times while it was built, some of those by cards in their own pull requests, and a failing check would have turned every one of them red.
+
+A card is one that has a file in the working tree or on the base branch. The edges of the cycle check are the rows' dependencies and those of the cards in the working tree; a cycle of cards alone is `card lint`'s to report, and `card plan` says nothing about it. Of an id in two rows, the first row is the one checked.
+
+The specification is read from the working tree, as it is. A link is not followed, since it could point outside the repository. Specification and Coverage run only for an outline that is in the working tree: one that is only on the base branch (section 22, decision 5) was checked where it merged, and the tree may be older than it or may have removed the specification with it.
 
 The plan branch check is the mechanical form of "a plan run writes no card and no code".
 
@@ -265,8 +269,8 @@ Known limits:
 
 - Coverage is a net for a section nobody planned, not a count of requirements. It works at one heading level, chosen per outline. The spike ran one Spec Kit file: its requirements sat in lists under eleven fourth-level headings, not under one heading as the review had assumed, and the session chose level 4 for it. No OpenSpec file was run; that each requirement there sits under a third-level heading is still unchecked.
 - Whatever sits under no heading at the outline's level is outside coverage. In that file it was the user stories, the edge cases and the success criteria. The plan reviewer's step 5 reads those parts.
-- Only `#` headings count. A heading underlined with `=` or `-` is not seen, and a code fence is recognized by three backticks or tildes at the start of a line.
-- Two headings with the same text count as one.
+- Only `#` headings count. A heading underlined with `=` or `-` is not seen. A code fence is three or more backticks or tildes at the start of a line, and ends at a line of the same mark, at least as many of them, with nothing after. Up to three spaces may come before a heading or a fence, as in Markdown. A fence inside a list item or a quotation that is indented further, and an HTML comment, are not recognized: a `#` line there counts as a heading, which fails toward a finding and not toward silence.
+- Two headings with the same text count as one. So do two that differ only in punctuation, `C++` and `C#`, and two that differ only in the case of a letter outside ASCII are two.
 - `card plan check` is true when it runs. A file may move between the yes and the first edit; that is minutes, not days.
 - No script checks that a revision left alone the rows that already have a card or a branch, or that a removed id is not used again. Both show in the plan pull request's diff.
 - `card plan` is not a handoff gate. A fault in an outline does not make a card's work wrong, and a 0.1 `card` on the PATH would stop every handoff with `unknown command`. CI and the next plan run report it.

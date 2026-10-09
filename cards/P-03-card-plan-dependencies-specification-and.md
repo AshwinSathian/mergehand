@@ -19,6 +19,8 @@ done: true
 - bin/card
 - test/cases/35-plan.sh (created by P-02)
 - test/lib.sh
+- docs/design-0.2.md (added at handoff: sections 5, 11.1 and 11.3 amended to what the two reviews decided)
+- docs/development/review-0.2.md (added at handoff: the sixth pass records those decisions)
 
 ## Tests
 - test_plan_reports_a_dependency_that_is_neither_a_row_nor_a_card
@@ -36,6 +38,7 @@ done: true
 - test_plan_compares_headings_without_case_or_punctuation
 - test_plan_checks_only_headings_at_the_level_of_the_outline
 - test_plan_says_the_specification_changed_and_exits_zero
+- test_plan_reads_no_specification_for_an_outline_that_is_only_on_the_base_branch
 
 ## Acceptance
 - A dependency that names neither a row nor a card fails. A cycle through rows and cards together fails.
@@ -57,4 +60,5 @@ done: true
 ## Notes
 - docs/design.md has ten `#` lines inside code fences (review finding 7). It is a ready fixture for the fence rule.
 - A row is done when its card file says `done: true` on the base branch. This card does not need rows in the deck table; base_done is enough.
+- The reviews at handoff changed the comparison of a heading, the fence rule and which outlines are checked against a specification. The acceptance items above are as the card was written; design sections 5, 11.1 and 11.3 say what was built, and the sixth pass of the review record says why.
 - The cycle rule of lint_cards removes nodes whose dependencies are gone. The same loop works over rows and cards together.

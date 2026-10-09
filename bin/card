@@ -1273,10 +1273,12 @@ outlines() {
 # Prints "H <outline path> <heading>", tab-separated, for each # heading at
 # that level outside a code fence. A fence is three or more backticks or
 # tildes at the start of a line. It ends at a line of the same mark, at least
-# as many of them, and nothing else.
+# as many of them, and nothing else. As in Markdown, up to three spaces may
+# come before a heading or a fence; a byte-order mark on line 1 is skipped.
 HEADINGS_AWK='
 function marks(c) { return match($0, c == "~" ? "^~+" : "^`+") ? RLENGTH : 0 }
-{ sub(/\r$/, "") }
+NR == 1 { sub(/^\357\273\277/, "") }
+{ sub(/\r$/, ""); sub(/^ ? ? ?/, "") }
 fence != "" { if (marks(fence) >= flen && substr($0, RLENGTH + 1) ~ /^[ \t]*$/) fence = ""; next }
 /^(```|~~~)/ { fence = substr($0, 1, 1); flen = marks(fence); next }
 match($0, /^#+/) && RLENGTH == level && substr($0, RLENGTH + 1) ~ /^[ \t]+[^ \t]/ {
@@ -1287,32 +1289,39 @@ match($0, /^#+/) && RLENGTH == level && substr($0, RLENGTH + 1) ~ /^[ \t]+[^ \t]
 # plan_facts: reads the lines of outlines and prints what the checks after
 # Sizes need from the repository, tab-separated:
 #   C <path> <size> <title> <depends> <done>   a card in the working tree
-#   K <id>                                     a card on a base branch
+#   K <id>                                     a card, in the working tree or on a base branch
 #   D <id>                                     a card that is done on a base branch
 #   S <outline path> <state> <spec>            ok, changed, missing, irregular, unreadable or untracked
 #   H <outline path> <heading>                 see HEADINGS_AWK
-# The specification is read from the working tree, as it is. Needs BASE_REFS.
+# The specification is read from the working tree, as it is, and only for an
+# outline that is in the working tree: one that is only on a base branch was
+# checked where it merged, and the tree may be older than it. Needs BASE_REFS.
 plan_facts() {
-  local f spec blob level state p
+  local f spec blob level state p h
   set --
   while IFS= read -r p; do
-    [ -n "$p" ] && set -- "$@" "$p"
+    # awk stops at a file it cannot read, and a control character in a path
+    # would break the lines of wt_meta. Such a card is still a card (K).
+    case $p in '' | *[[:cntrl:]]*) continue ;; esac
+    [ -r "$p" ] && set -- "$@" "$p"
   done <<INDEX
-$(wt_cards | cut -f2)
+$(wt_cards | cut -f2-)
 INDEX
   wt_meta "$@" | sed "s/^/C$TAB/"
-  base_cards | cut -f1 | sed "s/^/K$TAB/"
+  { wt_cards; base_cards; } | cut -f1 | sed "s/^/K$TAB/"
   base_done | to_index | cut -f1 | sed "s/^/D$TAB/"
   # An empty field would be lost to read; - stands for one. The outline
   # reader let no space into any of these.
   awk -F '\t' '$1 == "O" && $3 != "" { print $2, $3, ($4 == "" ? "-" : $4), ($6 == "" ? "-" : $6) }' |
     while read -r f spec blob level; do
+      [ -f "$f" ] || continue
       # A link is not followed: it could point outside the repository.
       if [ -L "$spec" ] || { [ -e "$spec" ] && [ ! -f "$spec" ]; }; then state=irregular
       elif [ ! -e "$spec" ]; then state=missing
       elif [ ! -r "$spec" ]; then state=unreadable
       elif ! g ls-files --error-unmatch -- "$spec" > /dev/null 2>&1; then state=untracked
-      elif [ "$blob" != - ] && [ "$(g hash-object -- "$spec" 2>/dev/null)" != "$blob" ]; then state=changed
+      elif ! h=$(g hash-object -- "$spec" 2>/dev/null); then state=unreadable
+      elif [ "$blob" != - ] && [ "$h" != "$blob" ]; then state=changed
       else state=ok
       fi
       printf 'S\t%s\t%s\t%s\n' "$f" "$state" "$spec"
@@ -1326,14 +1335,18 @@ INDEX
 PLAN_AWK='
 function err(f, s) { print "card: " f ": " s; bad = 1 }
 # As the tests gate compares names, but a byte above 127 is kept, so that a
-# heading in another script is still a heading; and one with no letter or
-# digit at all is compared as written, less its spaces.
+# heading in another script is still a heading. Of those bytes only the
+# UTF-8 general punctuation (dashes, curly quotes) and the Latin-1 signs are
+# removed; case is folded for ASCII alone. A heading with no letter or digit
+# at all is compared as written, less its spaces.
 function norm(s,   t) {
-  t = tolower(s); gsub(/[^a-z0-9\200-\377]/, "", t)
+  t = tolower(s); gsub(/\342\200[\200-\277]|\302[\240-\277]/, "", t)
+  gsub(/[\001-\057\072-\100\133-\140\173-\177]/, "", t)
   if (t == "") { t = s; gsub(/[ \t]/, "", t) }
   return t
 }
-function show(s) { return "\"" substr(s, 1, 80) "\"" }
+# The C1 control characters, as UTF-8, go the way of the others.
+function show(s) { gsub(/\302[\200-\237]/, "", s); return "\"" substr(s, 1, 80) "\"" }
 function covered(f) { return (state[f] == "ok" || state[f] == "changed") && level[f] != "" }
 /^card: / { print; bad = 1; s = substr($0, 7); faulty[substr(s, 1, index(s, ": ") - 1)] = 1; next }
 $1 == "R" { n++; rfile[n] = $2; rid[n] = $3; rsize[n] = $4; rdep[n] = $6; isrow[$3] = 1 }
