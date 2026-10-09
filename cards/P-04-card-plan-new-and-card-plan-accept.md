@@ -3,7 +3,7 @@ id: P-04
 title: card plan new and card plan accept
 size: S
 depends: P-03
-done: false
+done: true
 ---
 
 ## Read

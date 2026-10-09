@@ -23,6 +23,9 @@ usage: card <command> [arguments]
   log-new <id> <outcome>    create a session log entry
   stats                     growth per card size across session logs
   plan                      check every outline in <cards_dir>/plan
+  plan new <spec path> <PREFIX> [--level N]
+                            create an outline with no rows
+  plan accept <PREFIX>      set spec_blob to the specification's hash
   conf <key>                print one configuration value
   help, version
 

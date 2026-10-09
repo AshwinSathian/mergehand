@@ -43,6 +43,9 @@ usage: card <command> [arguments]
   log-new <id> <outcome>    create a session log entry
   stats                     growth per card size across session logs
   plan                      check every outline in <cards_dir>/plan
+  plan new <spec path> <PREFIX> [--level N]
+                            create an outline with no rows
+  plan accept <PREFIX>      set spec_blob to the specification's hash
   conf <key>                print one configuration value
   help, version
 
@@ -58,7 +61,8 @@ USAGE
 synopsis() {
   case $1 in
     next | list | status) echo "card $1 [--fetch]" ;;
-    lint | stats | plan) echo "card $1" ;;
+    lint | stats) echo "card $1" ;;
+    plan) echo 'card plan [new <spec path> <PREFIX> [--level N] | accept <PREFIX>]' ;;
     show | done | touched | tests) echo "card $1 <id>" ;;
     new) echo 'card new <id> <title> [--size XS|S|M] [--depends ID,ID]' ;;
     tokens) echo 'card tokens [transcript]' ;;
@@ -1440,19 +1444,148 @@ END {
   exit bad
 }'
 
-# cmd_plan: the checks of every outline, in the order of the table in
-# section 11.1 of the design. Findings go to stderr. A specification that
-# differs from spec_blob is one line on stdout and not a finding.
-cmd_plan() {
-  local out facts rc
-  # Like lint, this runs where there is no base branch: a first commit not
-  # yet made, or a CI checkout of one commit. Then only the working tree is read.
+# plan_refs: sets BASE_REFS for the plan commands. Like lint, they run where
+# there is no base branch: a first commit not yet made, or a CI checkout of
+# one commit. Then only the working tree is read.
+plan_refs() {
   if g rev-parse -q --verify "refs/remotes/origin/$BASE" > /dev/null 2>&1 ||
     g rev-parse -q --verify "refs/heads/$BASE" > /dev/null 2>&1; then
     base_ref
   else
     BASE_REFS=""
   fi
+}
+
+# spec_ok <path>: a specification path, held to the rule of the outline
+# reader. Nothing but its characters is looked at.
+spec_ok() {
+  case $1 in '' | *[!A-Za-z0-9._/-]*) return 1 ;; esac
+  printf '%s\n' "$1" | awk "$DIR_OK_AWK"'{ exit !dir_ok($0) }'
+}
+
+# need_prefix <prefix>: before it reaches a file name or a pattern.
+need_prefix() {
+  [[ $1 =~ ^[A-Z][A-Z0-9]*$ ]] || usage_die plan "not a prefix (expected something like AUTH)"
+  # A link is not followed: it could point outside the repository.
+  [ ! -L "$CARDS_DIR/plan" ] || die 1 "$CARDS_DIR/plan is a symbolic link"
+}
+
+# outline_path <prefix>: the file of the outline with that prefix.
+outline_path() { printf '%s/plan/%s.md\n' "$CARDS_DIR" "$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"; }
+
+# cmd_plan_new <spec path> <PREFIX> [--level N]: an outline with its front
+# matter and no rows. A refusal is exit 1; the path is printed only once it
+# has passed spec_ok.
+cmd_plan_new() {
+  local spec="" prefix="" have=0 level=2 path hit n levels=""
+  while [ "$#" -gt 0 ]; do
+    case $1 in
+      --level)
+        [ "$#" -ge 2 ] || usage_die plan "$1 needs a value"
+        level=$2
+        shift 2
+        ;;
+      --*) usage_die plan "unknown option $1" ;;
+      *)
+        case $have in
+          0) spec=$1 ;;
+          1) prefix=$1 ;;
+          *) usage_die plan ;;
+        esac
+        have=$((have + 1))
+        shift
+        ;;
+    esac
+  done
+  if [ "$have" -ne 2 ] || [ -z "$spec" ]; then usage_die plan; fi
+  need_prefix "$prefix"
+  [[ $level =~ ^[1-6]$ ]] || usage_die plan "--level takes a digit from 1 to 6"
+
+  case $spec in
+    *[[:space:]]*) die 1 "the specification path has a space in it, and a Read entry ends at its first space" ;;
+  esac
+  spec_ok "$spec" ||
+    die 1 "the specification must be a relative path inside the repository, from its root, of letters, digits and . _ - / only (no .. and no ./)"
+  [ "$prefix" != Q ] || die 1 "prefix Q is the prefix of the quick lane"
+  plan_refs
+  hit=$(outlines | P="$prefix" awk -F '\t' '$1 == "O" && $5 == ENVIRON["P"] { print $2; exit }')
+  [ -z "$hit" ] || die 1 "prefix $prefix is the prefix of $hit"
+  hit=$({ wt_cards; base_cards; } | cut -f1 | P="$prefix-" awk 'index($0, ENVIRON["P"]) == 1 { print; exit }')
+  [ -z "$hit" ] || die 1 "card $hit has the prefix $prefix"
+  path=$(outline_path "$prefix")
+  if [ -e "$path" ] || [ -L "$path" ]; then die 1 "$path already exists"; fi
+
+  # The states of plan_facts, in its order.
+  if [ -L "$spec" ] || { [ -e "$spec" ] && [ ! -f "$spec" ]; }; then die 1 "the specification $spec is not a regular file"
+  elif [ ! -e "$spec" ]; then die 1 "the specification $spec is missing"
+  elif [ ! -r "$spec" ]; then die 1 "the specification $spec cannot be read"
+  elif ! g ls-files --error-unmatch -- "$spec" > /dev/null 2>&1; then die 1 "the specification $spec is not tracked by git"
+  fi
+  hit=$(g hash-object -- "$spec" 2>/dev/null) || die 1 "the specification $spec cannot be read"
+  for n in 1 2 3 4 5 6; do
+    [ -z "$(awk -v name=- -v level="$n" "$HEADINGS_AWK" < "$spec")" ] || levels="$levels${levels:+, }$n"
+  done
+  case ", $levels," in
+    *", $level,"*) ;;
+    *) die 1 "$spec has no heading at level $level; ${levels:+levels with headings: }${levels:-it has no headings}" ;;
+  esac
+
+  mkdir -p "$CARDS_DIR/plan" || die 2 "cannot create $CARDS_DIR/plan"
+  printf -- '---\nspec: %s\nspec_blob: %s\nprefix: %s\nlevel: %s\n---\n' "$spec" "$hit" "$prefix" "$level" > "$path" ||
+    die 2 "cannot write $path"
+  printf '%s\n' "$path"
+}
+
+# cmd_plan_accept <PREFIX>: sets spec_blob, in the working tree's outline, to
+# the hash of the specification as it is now. No other line changes.
+cmd_plan_accept() {
+  local path spec h tmp rc
+  [ "$#" -eq 1 ] || usage_die plan
+  need_prefix "$1"
+  path=$(outline_path "$1")
+  if [ -L "$path" ] || [ ! -f "$path" ]; then die 1 "no outline for the prefix $1 ($path is not a file)"; fi
+  spec=$(fm_get "$path" spec)
+  spec_ok "$spec" || die 1 "$path: spec is not a relative path inside the repository; run card plan"
+  if [ -L "$spec" ] || [ ! -f "$spec" ] || ! h=$(g hash-object -- "$spec" 2>/dev/null); then
+    die 1 "$path: the specification $spec cannot be read; run card plan"
+  fi
+  tmp=$(mktemp) || die 2 "cannot create a temporary file"
+  # Written back with cat so the file keeps its mode. A last line with no
+  # newline stays without one.
+  H="$h" awk -v nl="$(tail -c 1 "$path" | wc -l | tr -d ' ')" '
+    function put(s) { printf "%s%s", sep, s; sep = "\n" }
+    NR == 1 && /^---\r?$/ { infm = 1; put($0); next }
+    infm && /^---\r?$/ { infm = 0 }
+    infm && !set && /^spec_blob:/ { put("spec_blob: " ENVIRON["H"] (/\r$/ ? "\r" : "")); set = 1; next }
+    { put($0) }
+    END { if (nl + 0) printf "\n"; exit !set }' "$path" > "$tmp"
+  rc=$?
+  if [ "$rc" -ne 0 ]; then
+    rm -f "$tmp"
+    die 1 "$path: front matter has no spec_blob line; run card plan"
+  fi
+  cat "$tmp" > "$path"
+  rc=$?
+  rm -f "$tmp"
+  [ "$rc" -eq 0 ] || die 2 "$path: cannot write"
+}
+
+# cmd_plan: the checks of every outline, in the order of the table in
+# section 11.1 of the design. Findings go to stderr. A specification that
+# differs from spec_blob is one line on stdout and not a finding.
+cmd_plan() {
+  local out facts rc sub
+  case ${1-} in
+    '') ;;
+    new | accept)
+      sub=$1
+      shift
+      "cmd_plan_$sub" "$@"
+      return
+      ;;
+    *) usage_die plan ;;
+  esac
+  plan_refs
   out=$(outlines)
   if [ -z "$out" ]; then
     printf 'no outline in %s/plan\n' "$CARDS_DIR"
@@ -1501,13 +1634,13 @@ main() {
     esac
   done
 
-  # How many arguments each command takes; new parses its own.
+  # How many arguments each command takes; new and plan parse their own.
   case $cmd in
-    next | list | status | lint | stats | plan) want=0 ;;
+    next | list | status | lint | stats) want=0 ;;
     show | done | touched | tests | conf) want=1 ;;
     log-new) want=2 ;;
     tokens) [ "$#" -le 1 ] || usage_die "$cmd"; want=$# ;;
-    new) want=$# ;;
+    new | plan) want=$# ;;
   esac
   [ "$#" -eq "$want" ] || usage_die "$cmd"
 
@@ -1526,7 +1659,7 @@ main() {
     tests) cmd_tests "$@" ;;
     log-new) cmd_log_new "$@" ;;
     stats) cmd_stats ;;
-    plan) cmd_plan ;;
+    plan) cmd_plan "$@" ;;
     tokens) cmd_tokens "$@" ;;
   esac
 }
