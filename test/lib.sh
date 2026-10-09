@@ -70,6 +70,41 @@ done: $done
 CARD
 }
 
+# mk_outline [prefix]: a valid outline in cards/plan/, two rows and a
+# Not planned section.
+mk_outline() {
+  local p=${1:-AUTH} lower
+  lower=$(printf '%s' "${1:-AUTH}" | tr '[:upper:]' '[:lower:]')
+  mkdir -p "${CARDS_DIR:-cards}/plan"
+  cat > "${CARDS_DIR:-cards}/plan/$lower.md" <<OUTLINE
+---
+spec: specs/$lower.md
+spec_blob: 3b18e512dba79e4c8300dd08aeb37f8e728b8dad
+prefix: $p
+level: 2
+---
+
+## $p-01 Token store
+- size: S
+- spec: Storage
+- does: A token is stored hashed, with its expiry
+- does: A stored token can be looked up by its hash
+
+## $p-02 Token refresh
+- size: S
+- depends: $p-01
+- spec: Refresh
+- spec: Errors
+- does: A refresh returns a new token and makes the old one invalid
+- does: An expired token is refused with 401
+- not: Counting refreshes ($p-03)
+
+## Not planned
+- Overview
+- Non-goals
+OUTLINE
+}
+
 commit_all() { git add -A && git commit -q -m "${1:-change}"; }
 
 # run <cmd...>: sets OUT, ERR, RC.
