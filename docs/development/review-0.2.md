@@ -236,3 +236,30 @@ P-03 built the checks Dependencies, Specification and Coverage. Two agents that 
 | `## C++` and `## C#` are one heading | Left, a known limit | It follows from the comparison rule. |
 
 Not changed: the line for a changed specification goes to stdout, as a report (the conventions in `cards/REVIEW.md`). A 64-character `spec_blob` in a SHA-1 repository passes the format check of P-02 and is reported as changed on every run; `card plan accept` (P-04) writes the value, so a hand-written one is the only way to it. A specification under a directory that is itself a link is reported as untracked, which is true and fails. The second edition of the one true awk reads a regular expression as UTF-8 and may not match the punctuation bytes; then a dash is not removed and the comparison is stricter, never looser. It was not run: neither it, gawk nor mawk is on the machine the session ran on, and CI runs gawk and mawk.
+
+## Seventh pass, 2026-10-09: the reviews of P-04
+
+P-04 built `card plan new` and `card plan accept`. Two agents that did not write it reviewed it: the handoff reviewer, and a second one told to break it, which ran both commands against hostile arguments and hostile repository content in scratch repositories, and 17 mutations of `bin/card` against the tests, of which 14 passed unnoticed. The maintainer left the decisions to the session that held the card and asked that each be attacked. Neither review had a must-fix finding. What changed in the design is in sections 9 and 15.
+
+| Found | Decided | Why |
+|---|---|---|
+| A malformed prefix or level was exit 2 with no usage line | It prints the usage line | The conventions in `cards/REVIEW.md` ask for it. |
+| `card plan accept` added a newline to an outline that ended without one | The last line stays as it is | The card says no other line changes. |
+| `<cards_dir>/plan` as a link to a directory outside the repository was followed, by both commands | Both exit 1 | A tracked link can arrive in a pull request (section 16). |
+| `card plan accept` hashed any readable file the outline named, `.git/HEAD` among them, and the value is committed | The specification must be tracked, as in `card plan new` | An outline from someone else can name a file that is only on this machine. |
+| A prefix of 40 characters made an outline that can hold no row; one of 300 failed with bash's own message | A prefix is at most 30 characters | A row id is at most 40, and it is the prefix, a hyphen and digits. |
+| A NUL byte in an outline made the awk of macOS cut that line when `accept` wrote the file back | `accept` exits 1 for such a file | Reading a file with NUL bytes line by line is not portable; nothing puts one in an outline. |
+| Fourteen mutations passed the tests: the checks of `accept` on `spec`, links, the body and CRLF, and the base-branch half of the prefix checks | Tests added for all but one | The branch for a specification that cannot be read is not tested: a test that removes read permission passes for root. |
+| `card plan ""` ran the checks | Usage error, as before this card | |
+| A tab or line break in the path was reported as a space | It gets the message for a path that is not inside the repository | |
+| From a subdirectory, a path relative to it is reported as missing | The reference says the path is from the root | Every `card` path is from the root, and the outline stores it that way. |
+| With two `spec_blob` lines `accept` sets the first and the reader uses the last | Left | `card plan` already fails that outline with "spec_blob appears twice". |
+| With no closing `---` the whole file counts as front matter, so `accept` can set a line of the body | Left | `card plan` fails that outline, and `card done` reads a card the same way. |
+| `accept` finds the outline by its file name and does not read `prefix` | Left | The file name follows from the prefix (section 5), and `card plan` reports a file where it does not. |
+| An outline removed in the working tree and still on the base branch does not stop `card plan new` from writing that path | Left | The removal is in the same branch, and the pull request shows both. |
+| A second `--level` replaces the first | Left | `--size` of `card new` does the same. |
+| `accept` writes the outline in place, so an interrupt can cut it short | Left | `card done` does the same; the file is tracked, and a rename would lose its mode. |
+| A failed `mkdir` or write prints the tool's own line before the `card:` line | Left | `card new` does the same. The prefix limit closes the easy way to it. |
+| A `cards_dir` that is itself a link is followed | Left, for its own card | It is so for every command; the place for the check is `load_conf`. |
+
+Not run: gawk and mawk are not on the machine the session ran on, and CI runs both.
