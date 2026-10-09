@@ -148,3 +148,22 @@ test_new_slug_ends_at_a_word() {
   card new R-05 'Supercalifragilisticexpialidociousandthensomemore'
   assert_eq cards/R-05-supercalifragilisticexpialidociousandthe.md "$OUT" 'one long word'
 }
+
+test_new_depends_is_trimmed_and_empty_items_are_dropped() {
+  new_repo; mk_conf
+  card new AUTH-03 'Title' --depends ' AUTH-01 ,,AUTH-02, '
+  assert_rc 0
+  assert_eq 'depends: AUTH-01, AUTH-02' "$(grep '^depends:' "$OUT")" depends
+  card new AUTH-04 'Title' --depends ','
+  assert_rc 0
+  assert_eq 'depends:' "$(grep '^depends:' "$OUT")" 'no ids'
+}
+
+test_new_does_not_write_through_a_symbolic_link() {
+  new_repo; mk_conf; mkdir cards
+  ln -s "$T/outside.md" cards/AUTH-03-title.md
+  card new AUTH-03 'Title'
+  assert_rc 1
+  assert_contains "$ERR" 'card: cards/AUTH-03-title.md is a symbolic link'
+  assert_no_file "$T/outside.md"
+}
