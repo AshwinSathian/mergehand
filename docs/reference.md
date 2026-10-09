@@ -22,6 +22,7 @@ usage: card <command> [arguments]
   tokens [transcript]       baseline, peak and growth for a session transcript
   log-new <id> <outcome>    create a session log entry
   stats                     growth per card size across session logs
+  plan                      check every outline in <cards_dir>/plan
   conf <key>                print one configuration value
   help, version
 

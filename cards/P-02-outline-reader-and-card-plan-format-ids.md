@@ -3,7 +3,7 @@ id: P-02
 title: Outline reader and card plan: the format check
 size: M
 depends: P-01, S-04
-done: false
+done: true
 ---
 
 ## Read

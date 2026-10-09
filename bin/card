@@ -42,6 +42,7 @@ usage: card <command> [arguments]
   tokens [transcript]       baseline, peak and growth for a session transcript
   log-new <id> <outcome>    create a session log entry
   stats                     growth per card size across session logs
+  plan                      check every outline in <cards_dir>/plan
   conf <key>                print one configuration value
   help, version
 
@@ -57,7 +58,7 @@ USAGE
 synopsis() {
   case $1 in
     next | list | status) echo "card $1 [--fetch]" ;;
-    lint | stats) echo "card $1" ;;
+    lint | stats | plan) echo "card $1" ;;
     show | done | touched | tests) echo "card $1 <id>" ;;
     new) echo 'card new <id> <title> [--size XS|S|M] [--depends ID,ID]' ;;
     tokens) echo 'card tokens [transcript]' ;;
@@ -98,6 +99,14 @@ CONF_KEYS='version|check|base|cards_dir|log_dir|touch_ignore|status_max_chars|re
 readonly CONF_KEYS
 CONF=""
 
+# dir_ok: a relative path inside the repository. Shared by load_conf and the
+# outline reader.
+DIR_OK_AWK='
+function dir_ok(v) {
+  return v ~ /^[A-Za-z0-9._][A-Za-z0-9._\/-]*$/ && v !~ /(^|\/)\.\.?(\/|$)/ && v !~ /\/\// && v !~ /\/$/
+}'
+readonly DIR_OK_AWK
+
 # conf_get <key>: prints the value; fails when the key has none. Pure bash:
 # it runs many times per command and a process costs milliseconds.
 conf_get() {
@@ -123,11 +132,8 @@ conf_die() { die 2 "workdeck.conf: $*"; }
 # file names. Nothing in the file is ever evaluated.
 load_conf() {
   local parsed
-  parsed=$(awk -v keys="^($CONF_KEYS)\$" '
+  parsed=$(awk -v keys="^($CONF_KEYS)\$" "$DIR_OK_AWK"'
     function bad(msg) { if (!failed) { failed = 1; print "!" msg } }
-    function dir_ok(v) {
-      return v ~ /^[A-Za-z0-9._][A-Za-z0-9._\/-]*$/ && v !~ /(^|\/)\.\.?(\/|$)/ && v !~ /\/\// && v !~ /\/$/
-    }
     function branch_ok(v) {
       return v ~ /^[A-Za-z0-9_][A-Za-z0-9._\/-]*$/ && v !~ /\.\./ && v !~ /\/$/ && v !~ /\/\// && v !~ /\/\./ && v !~ /\.lock$/
     }
@@ -294,7 +300,7 @@ function require(keys,   i, n, k) {
   for (i = 1; i <= n; i++) if (!(k[i] in fm)) err("front matter has no " k[i])
 }
 function reset() {
-  file = FILENAME; opened = 0; closed = 0; crlf = 0; cur = ""; body = 0
+  file = (name != "" ? name : FILENAME); opened = 0; closed = 0; crlf = 0; cur = ""; body = 0
   split("", fm); split("", seen); split("", items)
 }
 { cr = sub(/\r$/, "") }
@@ -1154,6 +1160,130 @@ cmd_tokens() {
   [ -z "$budget" ] || printf 'budget %s\n' "$budget"
 }
 
+# --- plan ---
+
+# outline_files: the paths of the outlines in the working tree and on the
+# base refs, each once. Needs BASE_REFS.
+outline_files() {
+  local f ref
+  {
+    for f in "$CARDS_DIR"/plan/*.md; do
+      [ -f "$f" ] && printf '%s\n' "$f"
+    done
+    for ref in $BASE_REFS; do
+      g ls-tree --name-only "$ref" "$CARDS_DIR/plan/" 2>/dev/null | grep '\.md$'
+    done
+  } | sort -u
+}
+
+# Reads one outline on stdin, with -v name=<path>, after DIR_OK_AWK and
+# LINT_LIB. Prints tab-separated lines, the first field a tag:
+#   R <path> <id> <size> <title> <depends>   one per row, after its I lines
+#   I <path> <id> <spec|does|not> <text>
+#   N <path> <heading>                       an item under Not planned
+#   O <path> <spec> <spec_blob> <prefix> <level>   one per outline, last
+# and one "card: <path>: <finding>" line per format fault. A front matter
+# value that fails its check is printed empty, so a reader never holds an
+# unchecked spec path or prefix. A row id is printed as written: check it
+# with valid_id before it reaches a file name, a branch name or a pattern.
+# Control characters are removed, as META_AWK does for cards.
+OUTLINE_AWK='
+function clean(s) { gsub(/[\001-\037\177]/, "", s); return s }
+function end_row() {
+  if (row == "") return
+  if (!count["size"]) err("row " row " has no size")
+  if (!count["does"]) err("row " row " has no does")
+  if (size != "" && (size !~ /^[A-Z][A-Z0-9]*$/ || length(size) > 8)) size = "?"
+  print "R\t" file "\t" row "\t" size "\t" title "\t" depends
+  row = ""
+}
+closed && /^## / {
+  end_row(); split("", count); size = ""; depends = ""; inside = "N"
+  if (cur == "Not planned") next
+  inside = "R"; i = index(cur, " ")
+  row = clean(i ? substr(cur, 1, i - 1) : cur); t = (i ? trim(substr(cur, i + 1)) : "")
+  if (row == "") { err("line " FNR ": a row heading is \"## <id> <title>\""); next }
+  if (t == "") err("row " row " has no title")
+  if (length(t) > 80) err("title of row " row " is longer than 80 characters")
+  if (has_control(t)) err("title of row " row " has a control character")
+  title = substr(clean(t), 1, 80)
+  next
+}
+closed && /^- / {
+  s = trim(substr($0, 3))
+  if (inside == "N") { if (s != "") print "N\t" file "\t" clean(s); next }
+  if (row == "") { if (inside == "") err("line " FNR ": an item before the first row heading"); next }
+  i = index(s, ":"); k = substr(s, 1, i - 1); v = clean(trim(substr(s, i + 1)))
+  if (k !~ /^[a-z]+$/) { err("line " FNR ": an item of a row is \"- <key>: <text>\""); next }
+  if (index(" size depends spec does not ", " " k " ") == 0) { err("line " FNR ": unknown row key " k); next }
+  if (v == "") { err("line " FNR ": " k " has no text"); next }
+  count[k]++
+  if (k == "size" || k == "depends") {
+    if (count[k] == 2) err("line " FNR ": " k " appears twice in row " row)
+    if (count[k] == 1) { if (k == "size") size = v; else depends = v }
+  } else print "I\t" file "\t" row "\t" k "\t" v
+}
+function finish(   n, d) {
+  if (file == "") return
+  end_row()
+  if (!shape_ok()) return
+  require("spec spec_blob prefix level")
+  if (("spec" in fm) && !dir_ok(fm["spec"])) {
+    err("spec must be a relative path inside the repository, of letters, digits and . _ - / only (no .. and no space)"); fm["spec"] = ""
+  }
+  if (("spec_blob" in fm) && (fm["spec_blob"] !~ /^[0-9a-f]+$/ || (length(fm["spec_blob"]) != 40 && length(fm["spec_blob"]) != 64))) {
+    err("spec_blob is not what git hash-object prints"); fm["spec_blob"] = ""
+  }
+  if ("prefix" in fm) {
+    n = split(file, d, "/")
+    if (fm["prefix"] !~ /^[A-Z][A-Z0-9]*$/) { err("prefix is not valid (expected something like AUTH)"); fm["prefix"] = "" }
+    else if (d[n] != tolower(fm["prefix"]) ".md") err("file name is not the prefix in lowercase (expected " tolower(fm["prefix"]) ".md)")
+  }
+  if (("level" in fm) && fm["level"] !~ /^[1-6]$/) { err("level must be a digit from 1 to 6"); fm["level"] = "" }
+  print "O\t" file "\t" fm["spec"] "\t" fm["spec_blob"] "\t" fm["prefix"] "\t" fm["level"]
+}
+END {
+  if (NR == 0) { file = name; err("is empty") } else finish()
+  exit bad
+}'
+
+# outlines: every outline as the lines of OUTLINE_AWK. For each file the
+# working tree's copy is read if there is one, otherwise the base branch's;
+# rows are not merged from the two. Needs BASE_REFS.
+outlines() {
+  local f
+  outline_files | while IFS= read -r f; do
+    # The path goes into tab-separated lines and an awk -v value.
+    case $f in
+      *[!A-Za-z0-9._/-]*)
+        printf 'card: %s: file name is not a prefix in lowercase\n' "$(printf '%s' "$f" | tr -c 'A-Za-z0-9._/-' '?')"
+        continue
+        ;;
+    esac
+    if [ -f "$f" ]; then cat "$f"; else base_show "$f"; fi |
+      awk -v name="$f" -v allowed=" spec spec_blob prefix level " "$DIR_OK_AWK$LINT_LIB$OUTLINE_AWK"
+  done
+}
+
+# cmd_plan: the format check of every outline. Findings go to stderr.
+cmd_plan() {
+  local out
+  # Like lint, this runs where there is no base branch: a first commit not
+  # yet made, or a CI checkout of one commit. Then only the working tree is read.
+  if g rev-parse -q --verify "refs/remotes/origin/$BASE" > /dev/null 2>&1 ||
+    g rev-parse -q --verify "refs/heads/$BASE" > /dev/null 2>&1; then
+    base_ref
+  else
+    BASE_REFS=""
+  fi
+  out=$(outlines)
+  if [ -z "$out" ]; then
+    printf 'no outline in %s/plan\n' "$CARDS_DIR"
+    return 0
+  fi
+  if printf '%s\n' "$out" | grep '^card: ' >&2; then return 1; fi
+}
+
 # --- main ---
 
 main() {
@@ -1178,7 +1308,7 @@ main() {
       printf 'card %s\n' "$VERSION"
       exit 0
       ;;
-    next | show | list | status | new | done | lint | touched | tests | tokens | log-new | stats | conf) ;;
+    next | show | list | status | new | done | lint | touched | tests | tokens | log-new | stats | plan | conf) ;;
     *) die 2 "unknown command '$cmd'; run 'card help'" ;;
   esac
   for arg in "$@"; do
@@ -1192,7 +1322,7 @@ main() {
 
   # How many arguments each command takes; new parses its own.
   case $cmd in
-    next | list | status | lint | stats) want=0 ;;
+    next | list | status | lint | stats | plan) want=0 ;;
     show | done | touched | tests | conf) want=1 ;;
     log-new) want=2 ;;
     tokens) [ "$#" -le 1 ] || usage_die "$cmd"; want=$# ;;
@@ -1215,6 +1345,7 @@ main() {
     tests) cmd_tests "$@" ;;
     log-new) cmd_log_new "$@" ;;
     stats) cmd_stats ;;
+    plan) cmd_plan ;;
     tokens) cmd_tokens "$@" ;;
   esac
 }
