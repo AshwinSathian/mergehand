@@ -2,8 +2,16 @@
 # shellcheck disable=SC2154
 
 O=cards/plan/auth.md
+S=specs/auth.md
 
 deck() { new_repo; mk_conf; mk_outline; }
+# spec <line...>: adds lines to the specification. accept: records its hash.
+spec() { printf '%s\n' "$@" >> "$S"; }
+accept() { edit "$O" "s/^spec_blob:.*/spec_blob: $(git hash-object "$S")/"; }
+# cite <heading>: one more spec item in row AUTH-02.
+cite() { edit "$O" "s/^- spec: Errors\$/- spec: Errors\\
+- spec: $1/"; }
+findings() { printf '%s\n' "$ERR" | grep -c '^card: '; }
 plan_fails() {
   card plan
   assert_rc 1
@@ -42,7 +50,7 @@ test_plan_passes_a_well_formed_outline() {
 }
 
 test_plan_passes_an_outline_with_no_not_planned_section() {
-  deck; edit "$O" '/^## Not planned$/,$d'
+  deck; edit "$O" '/^## Not planned$/,$d'; printf -- '- spec: Overview\n- spec: Non-goals\n' >> "$O"
   card plan
   assert_silent
 }
@@ -234,4 +242,158 @@ test_plan_reports_a_size_with_no_budget() {
   new_repo; mk_conf 'budget.L = 150000'; mk_outline; edit "$O" 's/^- size: S$/- size: L/'
   card plan
   assert_silent
+}
+
+# --- dependencies, specification and coverage ---
+
+test_plan_reports_a_dependency_that_is_neither_a_row_nor_a_card() {
+  deck; edit "$O" 's/^- depends: AUTH-01$/- depends: AUTH-01, PAY-09/'
+  plan_fails 'row AUTH-02: depends on PAY-09, which is neither a row nor a card'
+  assert_eq 1 "$(findings)" 'findings'
+  # What is not an id is not printed.
+  deck; edit "$O" 's/^- depends: AUTH-01$/- depends: AUTH-01, the store/'
+  plan_fails 'row AUTH-02: depends has an invalid id'
+  assert_not_contains "$ERR" 'the store'
+  # The order is dependencies, then specifications, then coverage.
+  deck; edit "$O" 's/^- depends: AUTH-01$/- depends: AUTH-01, PAY-09/'; cite Gone
+  mk_outline PAY; git rm -q -f specs/pay.md
+  card plan
+  assert_eq 'dependency,specification,coverage' "$(printf '%s\n' "$ERR" | sed -e 's/.*neither a row.*/dependency/' -e 's/.*is missing$/specification/' -e 's/.*cites the heading.*/coverage/' | paste -sd, -)" 'order'
+}
+
+test_plan_accepts_a_dependency_on_a_card_that_has_a_file() {
+  deck; mk_card PAY-09; edit "$O" 's/^- depends: AUTH-01$/- depends: AUTH-01, PAY-09/'
+  card plan
+  assert_silent
+}
+
+test_plan_reports_a_cycle_through_rows_and_cards() {
+  # AUTH-01 -> PAY-09 (a card) -> AUTH-02 -> AUTH-01.
+  deck; edit "$O" 's/^- spec: Storage$/- depends: PAY-09\
+- spec: Storage/'
+  mk_card PAY-09
+  card plan
+  assert_silent
+  mk_card PAY-09 S AUTH-02
+  plan_fails 'row AUTH-01 is in, or depends on, a dependency cycle'
+  assert_contains "$ERR" 'row AUTH-02 is in, or depends on, a dependency cycle'
+  assert_eq 2 "$(findings)" 'findings'
+  # Rows alone.
+  deck; edit "$O" 's/^- spec: Storage$/- depends: AUTH-02\
+- spec: Storage/'
+  plan_fails 'row AUTH-01 is in, or depends on, a dependency cycle'
+}
+
+test_plan_reports_a_specification_that_is_missing() {
+  deck; git rm -q -f "$S"
+  plan_fails "the specification $S is missing"
+  # Coverage has nothing to read, and says nothing.
+  assert_eq 1 "$(findings)" 'findings'
+  # A link could point outside the repository.
+  deck; rm "$S"; ln -s ../README.md "$S"; git add "$S"
+  plan_fails "the specification $S is not a regular file"
+  rm "$S"; deck; chmod 000 "$S"
+  # Root reads any file.
+  [ -r "$S" ] && return 0
+  plan_fails "the specification $S cannot be read"
+  assert_eq 1 "$(findings)" 'findings'
+}
+
+test_plan_reports_a_specification_that_is_untracked() {
+  deck; git rm -q --cached "$S"
+  plan_fails "the specification $S is not tracked by git"
+  assert_eq 1 "$(findings)" 'findings'
+}
+
+test_plan_reports_a_heading_that_no_row_cites() {
+  deck; spec '' '## Limits' '## Limits'
+  plan_fails "the heading \"Limits\" of $S is cited by no row and is not under Not planned"
+  assert_eq 1 "$(findings)" 'findings'
+  # A heading with no ASCII letter or digit is a heading too, and two of
+  # them are not one.
+  deck; spec '' '## 概要' '## 制限' '## ???'; echo '- 概要' >> "$O"
+  plan_fails "the heading \"制限\" of $S is cited by no row"
+  assert_contains "$ERR" 'the heading "???"'
+  assert_eq 2 "$(findings)" 'findings'
+}
+
+test_plan_accepts_a_heading_listed_under_not_planned() {
+  deck; spec '' '## Limits'; accept; echo '- Limits' >> "$O"
+  card plan
+  assert_silent
+}
+
+test_plan_checks_coverage_of_an_outline_with_no_not_planned_section() {
+  deck; edit "$O" '/^## Not planned$/,$d'
+  plan_fails "the heading \"Overview\" of $S is cited by no row and is not under Not planned"
+  assert_contains "$ERR" 'the heading "Non-goals"'
+  assert_eq 2 "$(findings)" 'findings'
+  printf -- '- spec: Overview\n- spec: Non-goals\n' >> "$O"
+  card plan
+  assert_silent
+}
+
+test_plan_ignores_a_heading_inside_a_code_fence() {
+  # A fence ends at the mark that opened it, at least as long, with no
+  # text after it.
+  deck; spec '' '```sh' '## In a fence' '```' '~~~' '## In tildes' '```' '## Still in tildes' '~~~'
+  spec '````' '```' '## In four' '```' '```sh' '## Still in four' '````'; accept
+  card plan
+  assert_silent
+  cite 'In a fence'
+  plan_fails 'row AUTH-02 cites the heading "In a fence"'
+}
+
+test_plan_reports_a_row_that_cites_a_heading_the_specification_lacks() {
+  deck; cite Gone
+  plan_fails "row AUTH-02 cites the heading \"Gone\", which $S does not have at level 2"
+  assert_eq 1 "$(findings)" 'findings'
+}
+
+test_plan_lets_a_done_row_cite_a_heading_that_is_gone() {
+  # Done is read from the base branch.
+  deck; cite Gone; mk_card AUTH-02 S '' true
+  plan_fails 'row AUTH-02 cites the heading "Gone"'
+  commit_all
+  card plan
+  assert_silent
+}
+
+test_plan_reports_a_not_planned_heading_the_specification_lacks() {
+  deck; echo '- Gone' >> "$O"
+  plan_fails "Not planned lists the heading \"Gone\", which $S does not have at level 2"
+  assert_eq 1 "$(findings)" 'findings'
+}
+
+test_plan_compares_headings_without_case_or_punctuation() {
+  deck; edit "$S" 's/^## Refresh$/## Re-fresh: ##/'; accept
+  edit "$O" 's/^- spec: Storage$/- spec: storage!/'; edit "$O" 's/^- Non-goals$/- NON GOALS/'
+  card plan
+  assert_silent
+}
+
+test_plan_checks_only_headings_at_the_level_of_the_outline() {
+  # "# Tokens" is in the specification from the start.
+  deck; spec '' '### Detail' '##No space' '' 'Underlined' '----------'; accept
+  card plan
+  assert_silent
+  cite Detail
+  plan_fails "row AUTH-02 cites the heading \"Detail\", which $S does not have at level 2"
+  deck; spec '' '### Detail'; accept; edit "$O" 's/^level: 2$/level: 3/'
+  plan_fails "the heading \"Detail\" of $S is cited by no row"
+  assert_contains "$ERR" "row AUTH-01 cites the heading \"Storage\", which $S does not have at level 3"
+  assert_contains "$ERR" 'Not planned lists the heading "Overview"'
+}
+
+test_plan_says_the_specification_changed_and_exits_zero() {
+  deck; spec '' 'A sentence more.'
+  card plan
+  assert_rc 0
+  assert_eq "$O: the specification $S differs from spec_blob" "$OUT" stdout
+  assert_empty "$ERR" stderr
+  # It is said beside the findings too.
+  cite Gone
+  card plan
+  assert_rc 1
+  assert_contains "$OUT" 'differs from spec_blob'
 }

@@ -3,7 +3,7 @@ id: P-03
 title: card plan: dependencies, specification and coverage
 size: M
 depends: P-02
-done: false
+done: true
 ---
 
 ## Read
