@@ -3,7 +3,7 @@ id: P-01
 title: Spike: plan two specifications by hand before any check is built
 size: S
 depends:
-done: false
+done: true
 ---
 
 ## Read

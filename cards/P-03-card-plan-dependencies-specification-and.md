@@ -28,6 +28,7 @@ done: false
 - test_plan_reports_a_specification_that_is_untracked
 - test_plan_reports_a_heading_that_no_row_cites
 - test_plan_accepts_a_heading_listed_under_not_planned
+- test_plan_checks_coverage_of_an_outline_with_no_not_planned_section
 - test_plan_ignores_a_heading_inside_a_code_fence
 - test_plan_reports_a_row_that_cites_a_heading_the_specification_lacks
 - test_plan_lets_a_done_row_cite_a_heading_that_is_gone
@@ -41,6 +42,7 @@ done: false
 - A `spec` file that is missing or untracked fails.
 - A heading of the specification at the outline's level, outside a code fence, that no row cites and that is not under `Not planned` fails.
 - A row that is not done, or the `Not planned` list, citing a heading the specification does not have at that level fails. A row whose card is done on the base branch may cite a heading that is gone.
+- An outline with no `## Not planned` section is checked as one whose list is empty: it passes when every heading is cited, and a heading no row cites fails (added by the spike, P-01).
 - A heading is compared as the tests gate compares names: lowercased, with every character that is not a letter or digit removed.
 - Only `#` headings count. A code fence is three backticks or three tildes at the start of a line.
 - When the specification differs from `spec_blob`, `card plan` prints one line naming the outline and still exits 0.
