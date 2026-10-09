@@ -246,6 +246,30 @@ test_development_records_for_0_2_are_listed_and_exist() {
   done
 }
 
+# The spike of design-0.2 section 21, item 1. The record is finished when no
+# part of it still says it was not run.
+test_spike_record_for_0_2_is_listed_and_answers_its_questions() {
+  local d="$ROOT/docs/development" rec f h n
+  rec="$d/spike-0.2.md"
+  [ -s "$rec" ] || fail 'docs/development/spike-0.2.md is missing'
+  grep -q '^| \[`spike-0.2.md`\](spike-0.2.md) |' "$d/README.md" || fail 'docs/development/README.md has no row for spike-0.2.md'
+  for f in plan-skill.md plan-reviewer.md outline-design.md outline-sample.md; do
+    [ -s "$d/spike-0.2/$f" ] || fail "docs/development/spike-0.2/$f is missing"
+  done
+  for h in 'What was run' 'Outline of docs/design.md' 'Outline of the Spec Kit sample' 'A card from one row' 'Heading levels' 'Growth of the plan runs' 'Claude Code behavior' 'Outline format'; do
+    grep -q "^## $h\$" "$rec" || fail "the record has no section '$h'"
+  done
+  ! grep -n 'Not run yet' "$rec" || fail 'a part of the record was not run'
+  # Each fault names the check of design section 11.1 that catches it, or none.
+  assert_eq 2 "$(grep -c '^| Fault | Caught by |$' "$rec")" 'tables of faults with the check that catches each, one per outline'
+  assert_eq 2 "$(grep -c '^growth [0-9][0-9]*$' "$rec")" 'growth figures as card tokens prints them'
+  grep -Eq '^The outline format of design section 5 is (confirmed|changed)' "$rec" || fail 'the record does not say whether the outline format is confirmed'
+  for n in 14 15 16 17; do
+    grep -q "^| $n | .*[0-9]\.[0-9][0-9]*\.[0-9]" "$rec" || fail "the record has no result with a Claude Code version for row $n"
+    grep "^| $n | " "$ROOT/docs/design-0.2.md" | grep -q 'spike-0\.2\.md' || fail "design section 19, row $n, does not give the spike's result"
+  done
+}
+
 test_nothing_claims_evals_that_do_not_exist() {
   cd "$ROOT" || exit 1
   [ -d evals ] && return 0

@@ -27,6 +27,7 @@ done: false
 ## Tests
 - test_plan_with_no_outline_says_so_and_exits_zero
 - test_plan_passes_a_well_formed_outline
+- test_plan_passes_an_outline_with_no_not_planned_section
 - test_plan_reports_a_missing_front_matter_key
 - test_plan_reports_an_unknown_front_matter_key
 - test_plan_reports_a_spec_path_that_leaves_the_repository
@@ -47,6 +48,7 @@ done: false
 - With no outline, `card plan` prints one line that says so and exits 0.
 - Each condition in the row Outline format of the table in section 11.1 fails the check.
 - A `spec` with a space in it fails.
+- An outline with no `## Not planned` section passes the format check (added by the spike, P-01).
 - For each outline file, the working tree's copy is read if there is one, otherwise the base branch's. Rows are not merged from the two.
 - `spec` is refused unless it is a relative path inside the repository with no `..`. The prefix is validated before it is used in a file name or a pattern.
 - Nothing in an outline is sourced or evaluated.

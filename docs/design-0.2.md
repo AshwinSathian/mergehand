@@ -122,7 +122,7 @@ Rules:
 - The items of a row are `- <key>: <text>`, one line each. `size` appears once and names a size that has a budget. `depends` appears at most once and is a comma-separated list of ids. `spec` appears any number of times, each naming one heading of the specification at the outline's level. `does` appears at least once. `not` appears any number of times. Any other key is an error.
 - A `does` line is a statement that is true or false when the card is finished. A `not` line names what a reader might expect here and the row that owns it.
 - A row with no `spec` item is allowed, for work no single heading asks for (a migration, a CI job). The plan reviewer looks at each such row.
-- `## Not planned` lists headings of the specification, at the outline's level, that produce no card.
+- `## Not planned` lists headings of the specification, at the outline's level, that produce no card. The section may be left out when nothing would be in it.
 - A heading is compared as the tests gate compares names: lowercased, with every character that is not a letter or digit removed.
 - An id is never used again after its row is removed.
 
@@ -394,10 +394,10 @@ Read on 2026-10-06 through Context7 (`/websites/code_claude`). Pages are under `
 | 10 | `$ARGUMENTS` and `${CLAUDE_PLUGIN_ROOT}` are substituted in a plugin skill's body and in the Bash rules of `allowed-tools` | `slash-commands` ("Available string substitutions") | read |
 | 11 | `` !`command` `` in a skill body runs before the prompt is sent and its output replaces it | `slash-commands` | read |
 | 12 | A Bash permission rule matches the command as written; deny is evaluated before allow; the rules are not a security boundary | `permissions` | read |
-| 14 | The Agent tool accepts a plugin agent's scoped name (`workdeck:plan-reviewer`) | none | unverified in the documentation; `workdeck:reviewer` launched this way in a real session (finding 10) |
-| 15 | Claude follows a skill's instruction to delegate a search to Explore and to wait for a subagent before going on | none | unverified; the page says Claude chooses when to delegate and that subagents run in the background by default |
-| 16 | A skill with `disable-model-invocation: true` adds nothing to every session's context | `slash-commands` says "Description not in context" | unverified: `claude plugin details` reported about 335 always-on tokens for 0.1.1 and the README attributes them to the four skills and the agent. One of the two is wrong. |
-| 17 | A new plugin agent's description is in every session's context | `plugins/measure` shows agents with an always-on cost | read; the size for `plan-reviewer` is not measured |
+| 14 | The Agent tool accepts a plugin agent's scoped name (`workdeck:plan-reviewer`) | none | not in the documentation; held for `workdeck:plan-reviewer` in both plan runs of the spike ([`development/spike-0.2.md`](development/spike-0.2.md), Claude Code 2.1.291) |
+| 15 | Claude follows a skill's instruction to delegate a search to Explore and to wait for a subagent before going on | none | not in the documentation; followed in both plan runs of the spike, with Explore in the background and the session waiting for its result ([`development/spike-0.2.md`](development/spike-0.2.md)). Two headless runs: an instruction that was followed, not a guarantee |
+| 16 | A skill with `disable-model-invocation: true` adds nothing to every session's context | `slash-commands` says "Description not in context" | holds: a session with the draft skill loaded did not list it, and its first turn grew by 83 tokens for the skill and the agent together ([`development/spike-0.2.md`](development/spike-0.2.md)). The projection of `claude plugin details` is the one that is wrong, and with it the README's attribution, which P-19 corrects |
+| 17 | A new plugin agent's description is in every session's context | `plugins/measure` shows agents with an always-on cost | read, and seen: the agent is listed in every session. At most 83 tokens, from one reading ([`development/spike-0.2.md`](development/spike-0.2.md)) |
 | 18 | A user who installed the plugin from the marketplace keeps the cached copy until `version` in `plugin.json` changes, and then receives whatever the marketplace's branch holds | `plugins/host-marketplace` ("Release a new version"), `plugins/loading` ("Versions and updates") | read on 2026-10-09 |
 
 Row 13 of the first draft, about the post-tool-use hook's input, is gone with the change it supported.
