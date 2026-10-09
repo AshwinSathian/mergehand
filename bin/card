@@ -567,12 +567,13 @@ has_blocked() {
 # awk pass. The tags: W a card file in the working tree, G a card file on a
 # base ref, D a path that is done on a base ref, M front matter of one card,
 # B an id that has a branch, K an id whose branch says Blocked, P an id with
-# an open pull request.
+# an open pull request, R a row of an outline.
 #
 # deck_table: one line per card in natural id order, tab-separated:
-# "<state> <id> <size> <title> <why>". <why> lists unmet dependencies.
+# "<state> <id> <size> <title> <why> <mark>". <why> lists unmet dependencies.
 # The deck is the union of the cards on the base branch and in the working
-# tree. Needs BASE_REF.
+# tree, and of the rows whose id has no card file in either; <mark> is [row]
+# for those. Needs BASE_REF.
 deck_table() {
   local wt base tagged f p id ref seen
   wt=$(wt_cards)
@@ -605,6 +606,8 @@ INDEX
       has_blocked "$id" "$ref" && printf 'K\t%s\n' "$id"
     done
     printf '%s\n' "$PR_IDS" | awk 'NF { print "P\t" $0 }'
+    # Each outline is read once. Its findings are for card plan, not for here.
+    outlines | awk -F '\t' '$1 == "R" { print "R\t" $3 "\t" $4 "\t" $5 "\t" $6 }'
   } | awk -F '\t' '
     $1 == "W" { if (!($2 in wpath)) wpath[$2] = $3; ids[$2] = 1 }
     $1 == "G" { if (!($2 in gpath)) gpath[$2] = $3; ids[$2] = 1 }
@@ -613,6 +616,12 @@ INDEX
     $1 == "B" { branch[$2] = 1 }
     $1 == "K" { blocked[$2] = 1 }
     $1 == "P" { review[$2] = 1 }
+    # The first row of an id counts; card plan reports the second. The size is
+    # cut as META_AWK cuts it.
+    $1 == "R" && $2 ~ /^[A-Z][A-Z0-9]*-[0-9]+[a-z]?$/ && !($2 in row) {
+      row[$2] = 1; p = SUBSEP $2
+      size[p] = (length($3) > 8 ? "?" : $3); title[p] = $4; deps[p] = $5
+    }
     END {
       for (id in ids) {
         path[id] = (id in wpath) ? wpath[id] : gpath[id]
@@ -622,6 +631,8 @@ INDEX
         # handoff ran, and the card is not merged yet.
         else if ((wpath[id] in wdone) && !(id in branch) && !(id in review)) isdone[id] = 1
       }
+      # A row whose id has no card file is a card that is not done.
+      for (id in row) if (!(id in ids)) { ids[id] = 1; path[id] = SUBSEP id; isrow[id] = 1 }
       for (id in ids) {
         p = path[id]; why = ""
         m = split(deps[p], d, ",")
@@ -629,6 +640,12 @@ INDEX
           x = d[j]; gsub(/ /, "", x)
           if (x != "" && x !~ /^[A-Z][A-Z0-9]*-[0-9]+[a-z]?$/) x = "?"
           if (x != "" && !(x in isdone)) why = why (why == "" ? "" : " ") x
+          # A row also waits for what a split left of its dependency:
+          # <dependency>b, or any other letter.
+          if (id in isrow) for (c = 97; c <= 122; c++) {
+            y = x sprintf("%c", c)
+            if ((y in ids) && !(y in isdone)) why = why (why == "" ? "" : " ") y
+          }
         }
         if (id in isdone) state = "done"
         else if (id in review) state = "review"
@@ -636,9 +653,9 @@ INDEX
         else if (id in branch) state = "active"
         else if (why == "") state = "ready"
         else state = "waiting"
-        print id "\t" state "\t" size[p] "\t" title[p] "\t" why
+        print id "\t" state "\t" size[p] "\t" title[p] "\t" why "\t" ((id in isrow) ? "[row]" : "")
       }
-    }' | sort -t "$TAB" -k1,1V | awk -F '\t' '{ print $2 "\t" $1 "\t" $3 "\t" $4 "\t" $5 }'
+    }' | sort -t "$TAB" -k1,1V | awk -F '\t' '{ print $2 "\t" $1 "\t" $3 "\t" $4 "\t" $5 "\t" $6 }'
 }
 
 cmd_next() {
@@ -648,7 +665,7 @@ cmd_next() {
   table=$(deck_table)
   printf '%s\n' "$table" | D="$CARDS_DIR" awk -F '\t' '
     NF { n++ }
-    $1 == "ready" { print $2, $3, $4; found = 1; exit }
+    $1 == "ready" { print $2, $3, $4 ($6 == "" ? "" : " " $6); found = 1; exit }
     $1 == "waiting" { open[++o] = $2 " waiting on " $5 }
     $1 == "active" || $1 == "blocked" || $1 == "review" { open[++o] = $2 " " $1 }
     $1 == "active" || $1 == "blocked" { held = 1 }
@@ -671,7 +688,7 @@ cmd_next() {
 cmd_list() {
   sync_remote
   base_ref
-  deck_table | awk -F '\t' '{ printf "%-8s %-12s %-3s %s\n", $1, $2, $3, $4 }'
+  deck_table | awk -F '\t' '{ printf "%-8s %-12s %-3s %s%s\n", $1, $2, $3, $4, ($6 == "" ? "" : " " $6) }'
 }
 
 # --- remote ---

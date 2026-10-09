@@ -3,7 +3,7 @@ id: P-06
 title: Rows in list, next and status, with the remainder rule
 size: M
 depends: P-02
-done: false
+done: true
 ---
 
 ## Read
