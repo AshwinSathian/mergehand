@@ -52,8 +52,8 @@ done: false
 
 ## Out of scope
 - `card show` for a row. P-07 owns it.
-- The comparison with the output of `card` 0.1.2. P-08 owns it.
-- `card lint` for a card that depends on a row. It fails in 0.1.2 and it fails in 0.2; lint does not change.
+- The comparison with the output of `card` 0.1.3. P-08 owns it.
+- `card lint` for a card that depends on a row. It fails in 0.1.3 and it fails in 0.2; lint does not change.
 - Any change to how a card with a file gets its state.
 
 ## Notes

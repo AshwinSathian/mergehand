@@ -37,10 +37,10 @@ done: false
 ## Acceptance
 - The README's Skills table has a row for `/workdeck:plan <spec path> [what to change]`, and the rows for next-card, handoff and init say what changed.
 - Beside the plan skill the README says that a specification from an untrusted source is an instruction to a session that may push a `plan/*` branch and open a pull request.
-- The README's Known limits or FAQ says what a 0.1 user does to plan: run `/workdeck:init` again; and to run `card plan` in CI: change the tag in the workflow.
+- The README's Known limits or FAQ says what a 0.1 user does to plan: run `/workdeck:init` again; and to run `card plan` in CI once 0.2 is released: change the tag in the workflow and add the step that runs it.
 - The README's Known limits has the limits of section 11.3 that a user meets: coverage works at one heading level, only `#` headings count, and `card plan` is not a handoff gate.
 - The README's Roadmap says 0.2 is built on the main branch and not yet released. The Skills row for the plan skill says the same.
-- docs/reference.md lists `card plan`, `card plan new`, `card plan accept`, `card plan start` and `card plan check` with their arguments and exit codes, and describes the outline format: the front matter keys, the row keys and `Not planned`.
+- docs/reference.md lists `card plan`, `card plan new`, `card plan accept`, `card plan start` and `card plan check` with their arguments and exit codes, and describes the outline format: the front matter keys, the row keys, `Not planned`, and that the id of a removed row is not used again.
 - docs/reference.md's Card states says a row with no card file has the same states, and gives the remainder rule.
 - docs/design.md says at its top that docs/design-0.2.md adds to it. No section of docs/design.md changes.
 - test_readme_links_resolve and test_reference_names_every_card_command pass.

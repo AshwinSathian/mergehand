@@ -35,7 +35,7 @@ done: false
 ## Acceptance
 - When `workdeck.conf` exists, init says so and continues with the four steps of section 10.3. It no longer stops.
 - For a repository with no `workdeck.conf`, steps 2 to 8 of docs/design.md section 10.1 are unchanged, and the `touch_ignore` and review rules steps follow its step 7.
-- Each of the four steps asks first and writes nothing without a yes. Nothing existing is overwritten and nothing is committed.
+- Each of the four steps asks first and writes nothing without a yes. Nothing is committed. Nothing existing is overwritten, with one exception that the skill states: the protocol section is replaced after the user has seen the difference and said yes.
 - Permission entries: init shows the entries the settings file lacks and merges them on approval.
 - `touch_ignore`: init looks for tracked `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `Cargo.lock`, `go.sum`, `*.snap`, and files a `.gitattributes` marks `linguist-generated`, shows the list, and adds the approved ones.
 - Review rules: init reads `CLAUDE.md`, the contributing guide, linter configuration and CI workflows, and proposes at most ten rules, each one sentence a reviewer can check against a diff, each with the file it came from. Approved rules go under the existing headings. Rules already in the file are left as they are.
@@ -51,7 +51,7 @@ done: false
 
 ## Notes
 - SKILL-04 has the acceptance item "A second run stops at step 1". This card reverses it on purpose.
-- `touch_ignore` is one line of comma-separated patterns in `workdeck.conf`. Init adds to the line that is there and does not write a second one: `card` 0.1.2 would read only one of them.
+- `touch_ignore` is one line of comma-separated patterns in `workdeck.conf`. Init adds to the line that is there and does not write a second one: `card` 0.1.3 would read only one of them.
 - The protocol section in an existing `CLAUDE.md` may have been edited by the project. That is why the step shows the difference and asks, where 0.1 left the section alone.
 - test_init_names_only_templates_that_exist counts six templates. The count stays six unless this card names a new one.
 - test_skills_never_tell_the_model_to_invoke_a_skill reads the closing line.

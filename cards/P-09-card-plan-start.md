@@ -30,7 +30,7 @@ done: false
 - test_plan_start_refuses_an_id_with_no_row
 - test_plan_start_refuses_an_id_that_has_a_card_file
 - test_plan_start_rejects_a_malformed_id
-- test_plan_start_card_has_no_front_matter_key_that_card_0_1_2_does_not_know
+- test_plan_start_card_has_no_front_matter_key_that_card_0_1_3_does_not_know
 
 ## Acceptance
 - `card plan start <id>` creates the card file for a row and prints its path. The file name is the one `card new` would give for that id and title.

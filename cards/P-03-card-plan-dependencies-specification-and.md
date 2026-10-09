@@ -12,7 +12,7 @@ done: false
 - docs/design-0.2.md#113-what-a-script-cannot-decide (the known limits of coverage)
 - docs/development/review-0.2.md (findings 7, 14, 15 and 16)
 - docs/development/spike-0.2.md (the heading levels the spike found)
-- bin/card (the outline reader of P-02, lint_cards for the cycle rule, base_done, cmd_tests for the comparison of names)
+- bin/card (the outline reader of P-02, the id checks of P-02b, lint_cards for the cycle rule, base_done, cmd_tests for the comparison of names)
 - test/cases/35-plan.sh
 
 ## Touch

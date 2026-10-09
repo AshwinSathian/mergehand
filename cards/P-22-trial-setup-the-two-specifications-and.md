@@ -2,7 +2,7 @@
 id: P-22
 title: Trial setup: the two specifications and what is measured
 size: S
-depends: P-20, P-21, T-01
+depends: P-20, P-21, S-04, T-01
 done: false
 ---
 
@@ -27,7 +27,7 @@ done: false
 - docs/design-0.3.md exists on the base branch when this card starts.
 - The question under `Blocked` is answered, and the answer is in docs/evidence.md: the second repository, its language, whether its tests nest, and the specification the planner is run on there.
 - docs/evidence.md has a section for the trial that names both specifications and says the two repositories' figures are kept apart, with the reason design section 14 gives.
-- The section says how the trial is run: the plugin from a checkout of the main branch with `--plugin-dir`, and each trial repository's CI on `card lint` 0.1.2.
+- The section says how the trial is run: the plugin from a checkout of the main branch with `--plugin-dir`, and each trial repository's CI on `card lint` 0.1.3.
 - The section has the table of measures of design section 14, with where each is read from, and no figures yet.
 - The section records the baseline: 9 of the 24 hand-written cards of 0.1 had a `Touch` entry at the end that was not there when the card was first committed.
 - The section states the one result that stops the release, and the rule of section 22, decision 1, for a trial card that adds a reachable command or skill of 0.3.
@@ -43,6 +43,7 @@ done: false
 Which other repository does the second trial run in? Name the repository, its language, whether its tests nest (a `describe` block, a class or a module around the test name: finding 1), and the one markdown specification in it that the planner is run on. Design section 22 defers this to after the build.
 
 ## Notes
+- Each trial repository's workflow names `v0.1.3`. A workflow that names `v0.1.2` fails on every pull request: that tag's `card` reads another configuration file.
 - This card depends on T-01 so that `card next` does not offer it before the 0.3 design is on the base branch. T-01 depends on no card of this deck.
 - The 0.3 design is planned with a prefix of its own. `card plan new` refuses a prefix that a card already uses, so it cannot be `P`, `PLAN` or `T`.
 - If the second repository's tests nest, say so beside the measure "`Tests` lines reworded": the tests gate does not join an outer name to an inner one, and rewording there is the gate's known weakness, not only the planner's.

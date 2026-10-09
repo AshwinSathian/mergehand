@@ -1,6 +1,6 @@
 # Development records
 
-How WorkDeck 0.1 was built. None of this is needed to use it; the design is in [`../design.md`](../design.md).
+How WorkDeck 0.1 was built, and how 0.2 was planned. None of this is needed to use it; the design is in [`../design.md`](../design.md).
 
 | File | What it is |
 |---|---|

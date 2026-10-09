@@ -2,7 +2,7 @@
 id: P-13
 title: Plan skill
 size: M
-depends: P-01, P-03, P-04, P-05, P-12
+depends: P-01, P-02b, P-03, P-04, P-05, P-12
 done: false
 ---
 
@@ -34,6 +34,7 @@ done: false
 - test_plan_skill_offers_to_resume_an_open_plan_pull_request
 - test_plan_skill_stops_when_card_has_no_plan_command
 - test_plan_skill_puts_every_finding_in_the_pull_request_body
+- test_plan_skill_never_reuses_the_id_of_a_removed_row
 - test_plan_skill_writes_no_card_and_no_code
 
 ## Acceptance
@@ -43,6 +44,7 @@ done: false
 - With an open pull request from a `plan/` branch by this user, it says so; it offers to resume when the branch is local and stops otherwise. Without `gh` it goes on.
 - The branch is `plan/<yymmddhhmm>`, from `date +%y%m%d%H%M`.
 - With no outline it proposes a prefix and a heading level, asks the user to confirm both, and runs `card plan new`. It delegates the search of the code to the Explore subagent.
+- It says that the id of a removed row is never given to another row.
 - With an outline it runs `card plan`, shows a changed specification with `git diff <spec_blob> HEAD:<spec>`, changes or removes only a row with no card file and no `card/<id>` branch, and runs `card plan accept`.
 - `card plan` runs before the reviewer, the reviewer before the user is asked, and the user's yes before the commit.
 - The pull request body has the rows, the `Not planned` list, every reviewer finding with what was done about it, the figures of `card tokens`, and for a revision its cause.
@@ -53,7 +55,7 @@ done: false
 
 ## Out of scope
 - The plan reviewer's text. P-12 owns it.
-- The `card plan` commands. P-02 to P-05 own them.
+- The `card plan` commands. P-02 to P-05 own them, P-02b among them.
 - The permission entries for `plan/*`. P-16 owns the template.
 - The README's line on an untrusted specification. P-19 owns it.
 - A run of the skill by hand. P-21 owns it.

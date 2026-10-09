@@ -35,19 +35,21 @@ One person with an existing codebase and a written specification. The first two 
 
 ## Compatibility
 
-The config, card and log formats stay at `version = 1`, and 0.2 adds no configuration key, because `card` 0.1 exits 2 on a key it does not know and CI workflows pin `card` to a tag. A deck that passes `card lint` 0.1.2 still passes, with or without an outline beside it. `card` 0.1.2 does not see rows; a card exists for it once its file does.
+"`card` 0.1.3" below is the last release of 0.1: the code of 0.1.2 under the project's present name. The tag `v0.1.2` holds it under the former name and reads another configuration file.
 
-A 0.1 user updates the plugin and nothing changes until they plan. To plan, they run init again for the permission entries and the changed `CLAUDE.md` section. To run `card plan` in CI they move the workflow's tag.
+The config, card and log formats stay at `version = 1`, and 0.2 adds no configuration key, because `card` 0.1 exits 2 on a key it does not know and CI workflows pin `card` to a tag. A deck that passes `card lint` 0.1.3 still passes, with or without an outline beside it. `card` 0.1.3 does not see rows; a card exists for it once its file does.
+
+A 0.1 user updates the plugin and nothing changes until they plan. To plan, they run init again for the permission entries and the changed `CLAUDE.md` section. To run `card plan` in CI they move the workflow's tag and add the step that runs it.
 
 ## How we will know it works
 
 Before any check is built, the plan prompt is run by hand on two specifications. What it gets wrong decides what the checks have to catch, and settles the open claims about Claude Code that the design depends on.
 
-Then the planner is run on two specifications, the 0.3 design in this repository and one in the maintainer's other repository, until ten planned cards have been implemented, at least two of them S and two M. The trial runs from the main branch with `--plugin-dir`; the trial repositories' CI stays on `card` 0.1.2, which tests the compatibility claim as a side effect.
+Then the planner is run on two specifications, the 0.3 design in this repository and one in the maintainer's other repository, until ten planned cards have been implemented, at least two of them S and two M. The trial runs from the main branch with `--plugin-dir`; the trial repositories' CI stays on `card` 0.1.3, which tests the compatibility claim as a side effect.
 
 For each card the evidence page records: whether the row had to be cut again before its card could be written; what changed in the card after the approval commit (files added to `Touch`, `Tests` lines reworded); whether the size changed when the body was written; a split; growth against budget. The baseline is beside them: by the same measure, 9 of the 24 hand-written cards of 0.1 had a file added to `Touch` after the card was first committed.
 
-Ten cards cannot carry a numeric threshold. With ten, a planner that misses a file on half its cards passes a "more than half" test six times in ten. The maintainer reads the record and decides whether to tag. One result stops the release whatever the rest says: a row whose card could not be written without changing the outline first. The release then waits for a change to the plan skill, or for the maintainer's written reason why not.
+Ten cards cannot carry a numeric threshold. With ten, a planner that misses a file on half its cards passes a "more than half" test six times in ten. The maintainer reads the record and decides whether to tag. One result stops the release whatever the rest says: a row whose card could not be written without changing the outline first. The release then waits for a change to the plan skill or the outline format, or for the maintainer's written reason why not.
 
 ## Open risks
 

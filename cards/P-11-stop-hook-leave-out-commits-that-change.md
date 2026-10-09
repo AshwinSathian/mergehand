@@ -2,13 +2,13 @@
 id: P-11
 title: Stop hook: leave out commits that change only the cards directory
 size: XS
-depends:
+depends: S-04
 done: false
 ---
 
 ## Read
 - docs/design-0.2.md#13-hooks
-- docs/development/review-0.2.md (finding 19, which gives the command and what it printed)
+- docs/development/review-0.2.md (finding 19 for why; its command is the unanchored one that the fourth pass corrects)
 - hooks/stop.sh
 - test/cases/52-hook-stop.sh
 
@@ -40,4 +40,4 @@ done: false
 - A directory named like the cards directory deeper in the tree, `src/cards/` for one, is code. The anchored exclude leaves it counted.
 - Given up, by decision: a commit that only adds a `## Blocked` section to the card no longer trips the guard.
 - `card conf cards_dir` is one more process per stop. The hook already calls `card conf` twice.
-- This card has no dependency. It can be done at any point before P-14.
+- It can be done at any point after S-04 and before P-14.

@@ -3,7 +3,7 @@
 This is the design for release 0.2. It adds to [`design.md`](design.md), which stays the design of everything 0.1 shipped; where this file is silent, that one holds. The scope it follows is [`development/scope-0.2.md`](development/scope-0.2.md).
 
 Date: 2026-10-06, rewritten 2026-10-09
-Status: approved 2026-10-09. Reviewed that day by an agent that did not write it ([`development/review-0.2.md`](development/review-0.2.md)) and rewritten from that review. The maintainer decided four questions (section 20) and had the rest attacked once more and locked (section 22). The outline format of section 5 is the one part that may still change, and only from the spike (section 21). Writing the deck found five faults, which changed sections 4.2, 5, 7, 13, 14, 19, 21 and 22 the same day; they are the fourth pass of the review record.
+Status: approved 2026-10-09. Reviewed that day by an agent that did not write it ([`development/review-0.2.md`](development/review-0.2.md)) and rewritten from that review. The maintainer decided four questions (section 20) and had the rest attacked once more and locked (section 22). The outline format of section 5 is the one part that may still change, and only from the spike (section 21). Writing the deck, and the review of it at handoff, changed sections 4.2, 5, 7, 8, 10.3, 13, 14, 18, 19, 21 and 22 the same day; each change is in the fourth pass of the review record.
 Scope: release 0.2 (the planner, and init for a repository that is already set up). Team features (0.3) get their own design.
 
 ## 1. What 0.2 adds
@@ -22,7 +22,7 @@ Goals for 0.2:
 2. The planner's output is checked by a script wherever a script can decide, as goal 4 of 0.1 requires of a session's output.
 3. A card body is written against code that exists: no card names a file that an unfinished card has yet to create.
 4. Planning costs one pull request per outline, not one per card.
-5. A repository set up with 0.1 keeps working with no change, and a CI workflow pinned to `card` 0.1.2 keeps passing on a deck that 0.2 planned.
+5. A repository set up with 0.1 keeps working with no change, and a CI workflow pinned to `card` 0.1.3 keeps passing on a deck that 0.2 planned.
 6. 0.2 produces the first measured S and M sessions and the first record of how planned cards hold up.
 
 Not in 0.2:
@@ -39,14 +39,14 @@ Not in 0.2:
 |---|---|---|
 | Form of the planner | A fifth typed skill, `/workdeck:plan`, running in the main session | It has to show the user an outline and wait for an answer. A skill with `context: fork` runs in a subagent that does not see the conversation and, by default, in the background (section 19, rows 1 and 2), and a subagent has no tool for asking the user (row 6). |
 | Input | One markdown file committed in the repository | Cards can cite it under `Read` and the planner needs no network. |
-| Outline | One file per specification, outside the card files | An outline-only card would have empty sections and fail `card lint`. A marker key in the front matter would fail `card lint` 0.1.2 (`unknown front matter key`). |
+| Outline | One file per specification, outside the card files | An outline-only card would have empty sections and fail `card lint`. A marker key in the front matter would fail `card lint` 0.1.3 (`unknown front matter key`). |
 | When a body is written | By next-card, at the start of the session that implements it | Writing bodies in plan runs as dependencies finished cost one plan pull request per dependency wave. 0.1's own deck has a longest chain of seven: at least nine plan pull requests beside its 25 card pull requests, each plan run reading the specification and the code again. Writing every body up front names files that do not exist yet. Just in time has neither cost. What it gives up is in section 18. |
 | What a row holds | The cut: title, size, dependencies, headings, what it does and what it does not | The writing session has no memory of the planning session. A title and a heading do not say which part of the heading is this row's. |
 | A row in the deck | A card with no file. Same states, same commands | No second state model, no hint that sends the user to another skill, and `card next` stays the one answer to "what now". |
 | Landing | A pull request from a `plan/` branch that changes only outlines | Merging it is the record that the outline was approved. |
 | Plans in flight | No state for them. One person plans; a second run for the same specification writes the same file and git reports the conflict | Finding an unmerged plan needed a scan of every `plan/*` branch, and branches stay behind after a squash merge because the permission entries deny deleting them. |
 | Row fields once a card exists | Ignored. The card file wins | Keeping both equal needs a check, and the check fails every time a user edits a card. |
-| Formats | `version = 1` stays. No configuration key, no front matter key, no new file at the top level of the cards directory or in the log directory | `card` 0.1.2 exits 2 on an unknown configuration key and fails lint on the other three. |
+| Formats | `version = 1` stays. No configuration key, no front matter key, no new file at the top level of the cards directory or in the log directory | `card` 0.1.3 exits 2 on an unknown configuration key and fails lint on the other three. |
 | Script checks | A new command, `card plan`. `card lint` is unchanged | A deck that passes lint today must still pass. |
 
 ## 4. Repository layout
@@ -82,7 +82,7 @@ cards/plan/auth.md                   # the outline for that specification
 cards/AUTH-01-token-store.md         # a card, as in 0.1, once next-card has written it
 ```
 
-`cards/plan/` is `<cards_dir>/plan/`. `card` 0.1.2 lists card files with a glob over the top level of the cards directory, so no command of it reads an outline as a card. Its state lookup greps the whole cards directory on the base branch for `done: true` lines and discards every path that is not a card; an outline has no such line. The scope gate already skips everything under the cards directory.
+`cards/plan/` is `<cards_dir>/plan/`. `card` 0.1.3 lists card files with a glob over the top level of the cards directory, so no command of it reads an outline as a card. Its state lookup greps the whole cards directory on the base branch for `done: true` lines and discards every path that is not a card; an outline has no such line. The scope gate already skips everything under the cards directory.
 
 ## 5. Outline format
 
@@ -117,7 +117,7 @@ level: 2
 Rules:
 
 - The file is `<cards_dir>/plan/<prefix in lowercase>.md`. The name follows from the prefix, so two specifications that are both called `spec.md`, as every Spec Kit specification is, cannot collide.
-- The front matter is flat `key: value` lines, as in a card. `spec` is a path inside the repository with no `..`. `spec_blob` is what `git hash-object` prints for that file when the outline was written or last accepted. `prefix` matches `[A-Z][A-Z0-9]*` and is not `Q`, which the quick lane uses. `level` is a digit from 1 to 6: the heading level at which this specification's sections sit.
+- The front matter is flat `key: value` lines, as in a card. `spec` is a path inside the repository with no `..` and no space, because a `Read` entry ends at its first space. `spec_blob` is what `git hash-object` prints for that file when the outline was written or last accepted. `prefix` matches `[A-Z][A-Z0-9]*` and is not `Q`, which the quick lane uses. `level` is a digit from 1 to 6: the heading level at which this specification's sections sit.
 - A row is a second-level heading `## <id> <title>` followed by items. The id is the prefix, a hyphen and digits; a letter suffix is for split remainders and is not written in an outline. The title follows the rules of a card title.
 - The items of a row are `- <key>: <text>`, one line each. `size` appears once and names a size that has a budget. `depends` appears at most once and is a comma-separated list of ids. `spec` appears any number of times, each naming one heading of the specification at the outline's level. `does` appears at least once. `not` appears any number of times. Any other key is an error.
 - A `does` line is a statement that is true or false when the card is finished. A `not` line names what a reader might expect here and the row that owns it.
@@ -155,15 +155,17 @@ These are true when the body is written and stop being true as soon as the work 
 
 ## 8. Configuration and compatibility
 
-No key is added to `workdeck.conf`. `budget.PLAN` would have been accepted by `card` 0.1.2, which takes any `budget.<NAME>`, but every budget key is also a card size, so it would have made `PLAN` one.
+"`card` 0.1.3" in this design is the last release of 0.1: the code of 0.1.2 under the project's present name. The tag `v0.1.2` holds that code under the former name, and its `card` reads `mergehand.conf` and exits 2 in a repository that has `workdeck.conf`, so it cannot be the baseline. 0.1.3 is released by card S-04 before any 0.2 code reaches the main branch.
+
+No key is added to `workdeck.conf`. `budget.PLAN` would have been accepted by `card` 0.1.3, which takes any `budget.<NAME>`, but every budget key is also a card size, so it would have made `PLAN` one.
 
 | Situation | What happens |
 |---|---|
 | A 0.1 repository, plugin updated to 0.2, planner not used | Nothing changes. With no outline, `card plan` prints one line and exits 0, and every other command prints what it prints today. |
-| CI workflow pinned to `card` 0.1.2, deck planned by 0.2 | `card lint` passes. An outline is in a subdirectory it does not read. A planned card arrives in its own pull request with a body, and the cards it depends on are done, so they exist. |
-| `card` 0.1.2 used by hand in a planned repository | It does not see rows: `card next` offers only cards that have a file. |
-| A hand-written card that depends on a row with no card file | `card lint` fails in 0.1.2 and in 0.2: `depends on X, which is not a card`. Start the row first, or do not depend on it. |
-| A user wants `card plan` in CI | They change the tag in the workflow. The template gains a second step. |
+| CI workflow pinned to `card` 0.1.3, deck planned by 0.2 | `card lint` passes. An outline is in a subdirectory it does not read. A planned card arrives in its own pull request with a body, and the cards it depends on are done, so they exist. |
+| `card` 0.1.3 used by hand in a planned repository | It does not see rows: `card next` offers only cards that have a file. |
+| A hand-written card that depends on a row with no card file | `card lint` fails in 0.1.3 and in 0.2: `depends on X, which is not a card`. Start the row first, or do not depend on it. |
+| A user wants `card plan` in CI | They change the tag in the workflow and add the step that runs `card plan`. The template gains that step when 0.2 is released, so a workflow written before then has only the lint step. |
 | A 0.1 repository whose user wants the planner | They run `/workdeck:init` again (section 10.3). |
 | A 0.2 plugin with a 0.1 `card` first on the PATH | `card plan` prints `unknown command 'plan'` and exits 2. The plan skill stops and says to update `card`. |
 
@@ -214,7 +216,7 @@ The file is written on the base branch and is untracked until the yes, as a quic
 
 ### 10.3 `/workdeck:init`
 
-Steps 2 to 8 of design.md section 10.1 are unchanged for a repository with no `workdeck.conf`. Step 1 changes: when the file exists, init says so and continues with the steps below instead of stopping. A new repository gets steps 2 and 3 below after its step 7. Each step asks first and writes nothing without a yes. Nothing existing is overwritten, and nothing is committed.
+Steps 2 to 8 of design.md section 10.1 are unchanged for a repository with no `workdeck.conf`. Step 1 changes: when the file exists, init says so and continues with the steps below instead of stopping. A new repository gets steps 2 and 3 below after its step 7. Each step asks first and writes nothing without a yes. Nothing existing is overwritten, with one exception: step 4 replaces the protocol section after the user has seen the difference and said yes. Nothing is committed.
 
 1. **Permission entries that are missing.** The template gains `git push -u origin plan/*` and `git push origin plan/*` under `allow`, and under `deny` the same two patterns followed by a further argument, as it has for `card/*` (finding 9). Init shows the entries the settings file lacks and merges them on approval.
 2. **`touch_ignore`.** Look for tracked lockfiles and generated files (`package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `Cargo.lock`, `go.sum`, `*.snap`, and files a `.gitattributes` marks `linguist-generated`). Show the list and add the approved ones to `touch_ignore`.
@@ -292,7 +294,7 @@ One step is added to `agents/reviewer.md`. When a `Read` item of the card has a 
 
 One hook changes.
 
-- **Log guard.** `stop.sh` blocks the end of a turn on a card branch that has commits, a clean tree and no session log. The approval commit of section 10.2 would trip it on the first turn that ends before any code is written. The count of commits now leaves out those that change nothing outside the cards directory: `git rev-list --count HEAD --not <base refs> -- ':(top)' ':(top,exclude)<cards_dir>'`. Both pathspecs are anchored at the root of the repository, because the hook runs in whatever directory the session is in: without `top`, the same command run in a subdirectory counts 0 for a branch with a code commit outside it (checked with git 2.54). One thing is given up. A commit that only adds a `## Blocked` section to the card no longer trips the guard, so nothing reminds that session to write its log.
+- **Log guard.** `stop.sh` blocks the end of a turn on a card branch that has commits, a clean tree and no session log. The approval commit of section 10.2 would trip it on the first turn that ends before any code is written. The count of commits now leaves out those that change nothing outside the cards directory: `git rev-list --count HEAD --not <base refs> -- ':(top)' ':(top,exclude)<cards_dir>'`. Both pathspecs are anchored at the root of the repository, because the hook does not change directory and nothing read for section 19 says which directory it starts in: without `top`, the same command run in a subdirectory counts 0 for a branch with a code commit outside it (checked with git 2.54). One thing is given up. A commit that only adds a `## Blocked` section to the card no longer trips the guard, so nothing reminds that session to write its log.
 
 The budget warning is unchanged. It fires on a `card/*` branch, and growth is measured over the whole transcript from the session's first turn, so the reading and writing that next-card does before the branch exists is counted.
 
@@ -304,7 +306,7 @@ The session-start hook prints `card status`, whose "Next ready" line may now nam
 
 **Before the build.** The plan prompt is drafted and run by hand, with no `card plan`, on two specifications: `docs/design.md` and a Spec Kit sample. This is the first card of the deck (section 21).
 
-**After the build.** The planner is run on the 0.3 design in this repository and on one specification in the maintainer's other repository, until ten planned cards have been implemented, at least two of size S and two of size M. If ten cards do not include them, the evidence page says goal 6 was not met. The trial repositories run the plugin from a checkout of the main branch with `--plugin-dir` (finding 8), and their CI stays on `card lint` 0.1.2.
+**After the build.** The planner is run on the 0.3 design in this repository and on one specification in the maintainer's other repository, until ten planned cards have been implemented, at least two of size S and two of size M. If ten cards do not include them, the evidence page says goal 6 was not met. The trial repositories run the plugin from a checkout of the main branch with `--plugin-dir` (finding 8), and their CI stays on `card lint` 0.1.3.
 
 Nothing new is stored. For each trial card `docs/evidence.md` records:
 
@@ -352,8 +354,8 @@ The specification and the outline are repository content and can arrive in someo
 ## 17. Testing
 
 - Shell tests as in 0.1: one case per row of the table in section 11.1 and per rule of section 7; a row in each state of design.md section 6, and the remainder rule; `card plan new`, `accept` and `start`; `card show`, `list` and `next` with rows; the stop hook after a card-only commit.
-- A case runs `card` 0.1.2 `lint` against a fixture deck with an outline, a planned card and a split remainder, so the compatibility claim of section 8 is a test. The 0.1.2 file is fetched from the release tag in CI and the case is skipped when offline.
-- A case runs every 0.1 test of `list`, `next` and `status` in a repository with no outline and compares the output byte for byte with 0.1.2's.
+- A case runs `card` 0.1.3 `lint` against a fixture deck with an outline, a planned card and a split remainder, so the compatibility claim of section 8 is a test. The 0.1.3 file is fetched from the release tag in CI and the case is skipped when offline.
+- A case runs every 0.1 test of `list`, `next` and `status` in a repository with no outline and compares the output byte for byte with 0.1.3's.
 - The skills cannot be unit tested. Shell tests check the mechanics, as for the other four: front matter, that every `card` command a skill names exists, and the order of check, review and approval.
 - The plan skill, the changed next-card and the changed init are each run by hand in a scratch repository before the trial. The plan skill's run is made under exactly the permission entries init writes, and the prompts it raises are recorded: `docs/evidence.md` still lists that as not shown for handoff.
 
@@ -372,6 +374,7 @@ The specification and the outline are repository content and can arrive in someo
 | The specification changes while it is built | `card plan` says so without failing. Coverage is checked against the file as it is, so a new section fails until it has a row or a `Not planned` entry. |
 | The trial builds part of 0.3 on the main branch before 0.2 is tagged | Section 22, decision 1. |
 | Rows make dependencies cost a wait, so a planner leaves real ones out | The plan reviewer's step 4. Not measured in 0.2. |
+| A new install takes the main branch as it is, so between the plan skill's merge and the release it receives a planner that is not released | Not gated. The README says so until the release, and the hand runs follow the skills directly. A user who has the plugin already is not affected until the version changes. |
 
 ## 19. Claude Code behavior this design relies on
 
@@ -429,15 +432,15 @@ The deck is written by hand in PLAN-01. Its order, riskiest first:
 
 1. **Spike.** A draft of `skills/plan/SKILL.md` and `agents/plan-reviewer.md`, run by hand on `docs/design.md` and on a Spec Kit sample, with no `card` code. It records: what an outline looks like and what is wrong with it; whether a second session can write a card from a row alone; the heading levels of both files; rows 14 to 17 of section 19; the growth of a plan run. The outline format of section 5 is confirmed or changed here, before anything parses it.
 2. The outline format, `card plan` and its checks, `card plan new` and `accept`.
-3. Rows in `list`, `next`, `status` and `show`, with the remainder rule, and the byte-for-byte test against 0.1.2.
+3. Rows in `list`, `next`, `status` and `show`, with the remainder rule, and the byte-for-byte test against 0.1.3.
 4. `card plan start` and `card plan check`.
 5. The stop hook's condition.
 6. The plan skill and the plan reviewer, from the spike's drafts.
 7. next-card, `reference/implement.md`, the reviewer's step and handoff's line.
-8. Init, and the three templates.
-9. The 0.1.2 compatibility test, the README, the reference and the changelog.
+8. Init, and two of the three templates. The workflow template gains its step with the version (item 11): until then the tag it names has no `plan` command.
+9. The 0.1.3 compatibility test, the README, the reference and the changelog.
 10. The hand runs of section 17, the trial and the evidence page.
-11. The version, as the last commit before the tag. Changing `version` on the main branch is what delivers the plugin to everyone who installed it (section 19, row 18), so it waits for the maintainer's decision.
+11. The version, as the last commit before the tag. Changing `version` on the main branch is what delivers the plugin to everyone who installed it (section 19, row 18), so it waits for the maintainer's decision. The workflow template's step for `card plan` lands in the same commit.
 
 ## 22. Decisions locked, and what is deferred
 

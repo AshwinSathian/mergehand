@@ -21,15 +21,18 @@ done: false
 - .claude-plugin/plugin.json
 - CHANGELOG.md
 - README.md (the download line, the Upgrade section and the Roadmap line)
+- templates/workdeck.yml (the step that runs `card plan`)
 - test/cases/02-plugin.sh
 
 ## Tests
 - test_plugin_manifest_and_card_agree_on_the_version
+- test_workflow_template_runs_card_plan_after_card_lint
 
 ## Acceptance
 - The question under `Blocked` is answered yes, and the answer is under `Notes` with its date.
 - `card version` prints `card 0.2.0`, and `.claude-plugin/plugin.json` has `"version": "0.2.0"`.
 - CHANGELOG.md's entry for the planner is headed `## [0.2.0]` with the date of this card, and nothing is left under `## [Unreleased]`.
+- templates/workdeck.yml has a second step that runs `card plan`, after the step that runs `card lint`.
 - The README's download line names `v0.2.0`, its Upgrade section says what a 0.1 user does, and its Roadmap says 0.2 is released.
 - test_repository_has_the_files_a_stranger_looks_for and test_readme_install_line_matches_the_manifests pass.
 - Row 18 of design section 19 was read again for this card. The session log gives the result.

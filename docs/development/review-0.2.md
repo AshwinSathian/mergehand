@@ -128,7 +128,7 @@ The maintainer answered the four open points: lock the remaining choices after a
 
 ## Fourth pass, 2026-10-09: the deck, and what writing it found in the design
 
-The deck is cards P-01 to P-24, and T-01 for the 0.3 design. This pass is by the agent that wrote the deck, with no second agent, so it is the weakest evidence in this record. What it measured is marked with how. The reviewer that handoff launches for PLAN-01 is the first independent reader of the deck.
+The deck is cards P-01 to P-24 with P-02b, T-01 for the 0.3 design, and S-04 for the release of 0.1.3. This pass is by the agent that wrote the deck, with no second agent, so it is the weakest evidence in this record. What it measured is marked with how. The reviewer that handoff launches for PLAN-01 is the first independent reader of the deck.
 
 ### Faults in the design
 
@@ -165,7 +165,28 @@ The deck is cards P-01 to P-24, and T-01 for the 0.3 design. This pass is by the
 | T-01 at size M | PLAN-01 needed several sessions for the same four outputs. | Kept as one card, as asked. Its notes name the split. |
 | The spike at size S | Two drafts, two plan runs, a second session and four claims. | Kept: the plan runs and the second session are sessions of their own, and the card's session writes the drafts and the record. If it does not fit, that is the first measured S. |
 
+### Found by the handoff reviewer
+
+The reviewer that handoff launched for PLAN-01 did not write the deck or this pass. It confirmed the pathspec result and the `changed_files` reading above, and found what follows. Three were must-fix.
+
+| Finding | Evidence | Outcome |
+|---|---|---|
+| The baseline of every compatibility claim, `card` at the tag `v0.1.2`, cannot run in a WorkDeck repository | The project was renamed after that tag and the version was not changed. `git show v0.1.2:bin/card` reads `mergehand.conf` (line 91) and exits 2 where there is a `workdeck.conf`. The README's download line and every workflow init writes name that tag today. | Must-fix. The baseline is 0.1.3, the same code under the present name. Card S-04 releases it, outside the deck, and P-02, P-11 and P-12 depend on it so that no 0.2 code is in that release. Design section 8; the design, the scope and the deck say 0.1.3 where they said 0.1.2. The first three parts of this record are left as written. |
+| A card named a specification format, and the rule's new exception covered only the design and the records | | Must-fix. The exception covers a card too, and the tool a claim was read through. |
+| The scope's hard stop waited for "a change to the plan skill"; the design's for "the plan skill or the outline format" | | Must-fix. The scope has both. |
+| "Change the tag" does not run `card plan` in CI: a workflow written by 0.1 has only the lint step | `templates/workdeck.yml` | The design, the scope and P-19 say to add the step. |
+| The workflow template would have gained a step that fails until the release | The tag init writes has no `plan` command before P-24. | The template changes in P-24, with the version. Design section 21, items 8 and 11. |
+| A new install takes the main branch whatever the version says | The marketplace source is the repository itself. | Accepted, as a row of design section 18. Not gated. |
+| Splitting T-01 defeats P-22's dependency on it | A card with a file does not wait for a remainder. | T-01's notes say to move the dependency to the remainder in that handoff. |
+| A specification path with a space | A `Read` entry ends at its first space, so `card plan check` would report half a path. | Refused. Design section 5, P-02 and P-04. |
+| "Nothing existing is overwritten" beside "replaces the section on approval" | Design section 10.3. | The exception is stated. P-17. |
+| "An id is never used again" was in no card | | P-13 and P-19. |
+| P-02 had 21 tests at size M | The largest M card of 0.1 had 10. A split would have left eight cards on a half-built reader. | The id and size checks are P-02b. P-03 and P-06 keep 14 and 16: each is one change with many short cases. |
+
+Left as they are: the scope note is longer than one printed page, and was approved at that length.
+
 ### Still open
 
 - Which repository the second trial runs in. P-22 carries the question.
 - Whether to release. P-24 carries the question.
+- The tag `v0.1.3`, which the maintainer makes when S-04 merges.

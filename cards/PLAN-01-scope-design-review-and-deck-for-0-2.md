@@ -3,7 +3,7 @@ id: PLAN-01
 title: Scope, design, review and deck for 0.2
 size: M
 depends:
-done: false
+done: true
 ---
 
 ## Read
@@ -50,4 +50,4 @@ done: false
 - The maintainer approves each of the four outputs before the next is started.
 - 2026-10-09: a second review rewrote the scope and the design (docs/development/review-0.2.md). The maintainer decided its four questions and had the rest attacked again and locked (design section 22). The first three outputs are approved; the deck is next.
 - The 0.3 design is written by Claude Code as its own card, not by a card of this deck. The second trial repository is chosen after the build; the trial card carries that question.
-- 2026-10-09: the deck is P-01 to P-24, in the order of design section 21. T-01 is the card for the 0.3 design and is outside the deck; its id sorts after the deck so that `card next` offers the spike first. Writing the deck found five faults in the design, the largest that changing the version on the main branch releases the plugin. They are amended in the design and recorded as the fourth pass of docs/development/review-0.2.md, with one exception added to cards/REVIEW.md.
+- 2026-10-09: the deck is P-01 to P-24, with P-02b, in the order of design section 21. T-01 is the card for the 0.3 design and is outside the deck; its id sorts after the deck so that `card next` offers the spike first. Writing the deck found faults in the design, the largest that changing the version on the main branch releases the plugin. The reviewer at handoff found that the tag v0.1.2 holds the code under its former name, so the compatibility baseline is 0.1.3 and card S-04 releases it before any 0.2 code. All of it is amended in the design and recorded as the fourth pass of docs/development/review-0.2.md, with one exception added to cards/REVIEW.md.

@@ -31,7 +31,7 @@ done: false
 - The page gives, for each plan run, its growth and the outline findings with what was done about each, from the plan pull request's body.
 - The page says how many of the ten were S and how many M, and says in words whether goal 6 was met.
 - The page says whether any row had to be cut again before its card could be written. If one was, the page says the release waits, and for what.
-- The page says whether either trial repository's CI, on `card lint` 0.1.2, failed on a planned deck.
+- The page says whether either trial repository's CI, on `card lint` 0.1.3, failed on a planned deck.
 - The page says which case of section 22, decision 1, holds on the main branch: no reachable half of a 0.3 feature, or one, named.
 - The page states no threshold and no verdict. The maintainer reads the record and decides whether to tag.
 - Every figure on the page can be traced to a pull request, a session log or a command, and the page says which.

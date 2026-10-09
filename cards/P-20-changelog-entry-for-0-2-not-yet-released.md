@@ -19,10 +19,10 @@ done: false
 - test_changelog_has_an_unreleased_entry_for_the_planner
 
 ## Acceptance
-- CHANGELOG.md has an entry headed `## [Unreleased]`, above the entry for 0.1.2, that lists what 0.2 adds and changes in the form of the entries for 0.1.
+- CHANGELOG.md has an entry headed `## [Unreleased]`, above the entry for 0.1.3, that lists what 0.2 adds and changes in the form of the entries for 0.1.
 - The entry says that the config, card and log formats stay at `version = 1`, and what a 0.1 user does to plan.
 - The entry carries no version number and no date.
-- `card version` still prints `card 0.1.2`, and `.claude-plugin/plugin.json` still has `"version": "0.1.2"`.
+- `card version` still prints `card 0.1.3`, and `.claude-plugin/plugin.json` still has `"version": "0.1.3"`.
 - test_repository_has_the_files_a_stranger_looks_for passes.
 
 ## Out of scope

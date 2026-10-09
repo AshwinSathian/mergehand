@@ -49,7 +49,7 @@ done: false
 - This card is outside the 0.2 deck and depends on none of its cards. It can be started by id at any time while 0.2 is built. P-22 waits for it.
 - Its id sorts after the deck on purpose, so `card next` offers the deck first. A design written after the spike (P-01) knows whether the outline format of 0.2 changed; one written before it does not.
 - 0.2 serves the plugin to users from the main branch when its version changes (docs/design-0.2.md, section 19, row 18). The 0.3 design has to say how a half-built team feature stays unreachable on that branch.
-- PLAN-01 took more than one session for the same four outputs. If the budget warning appears, hand off with `/workdeck:handoff split`: the scope note is the natural first part.
+- PLAN-01 took more than one session for the same four outputs. If the budget warning appears, hand off with `/workdeck:handoff split`: the scope note is the natural first part. P-22 is a card with a file and does not wait for a remainder, so in that handoff change P-22's `depends` from T-01 to the remainder that writes docs/design-0.3.md.
 - 0.2 left these to 0.3: claiming, worktrees and parallel sessions, a script check that orders cards touching the same file, and two people planning at once (docs/design-0.2.md, section 2).
 - The reviewer is a subagent launched for the purpose, not the session that wrote the design. Its reading stays out of this session's context, which is most of what makes the card fit. A pass by the writing agent is weaker evidence and the record says so where one is made, as the third part of docs/development/review-0.2.md does.
 - test_docs_have_one_design_file_and_a_development_folder fails on any tracked file that names one of the old documentation directories; its pattern lists them.
