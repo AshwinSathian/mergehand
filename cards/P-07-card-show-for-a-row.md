@@ -3,7 +3,7 @@ id: P-07
 title: card show for a row
 size: S
 depends: P-06
-done: false
+done: true
 ---
 
 ## Read
