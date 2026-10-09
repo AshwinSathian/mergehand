@@ -55,7 +55,7 @@ Ten cards cannot carry a numeric threshold. With ten, a planner that misses a fi
 
 1. **The session that writes a card also implements it.** The card is no longer written by someone else. What remains: the row was reviewed and approved before, the user approves the card before any code, and later changes to the card show as commits. The quick lane already works this way.
 2. **Writing the body uses the card's budget.** Sizes are still guesses: the repository's logs hold one measured session, and two more were measured elsewhere, all XS. The trial gives the first S and M figures, and they now include the writing.
-3. **A row is a few lines.** If the cut cannot be carried in that little, the writing session will cut it again in its own way. The release gate above is aimed at this.
+3. **A row is short.** In the spike a row that worked had 7 to 15 lines. If the cut cannot be carried in that little, the writing session will cut it again in its own way. The release gate above is aimed at this.
 4. **`Tests` lines are still written before the tests,** though now by the session that writes them next. Finding 1 gave seven false failures in sixteen.
 5. **The plan run has no budget.** It writes one file, so its growth is reading. A specification too large to plan in one session has to be split by the user.
 6. **The planner cannot be tested by a script.** It is a prompt. `card plan` checks its output, and the spike and the trial are the rest of the evidence.

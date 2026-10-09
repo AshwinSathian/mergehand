@@ -1,6 +1,6 @@
 # Reviews of the 0.2 scope and design
 
-Two adversarial reviews, each by an agent that did not write what it reviewed, a third pass in which the second reviewer attacked its own amendments before they were locked, and a fourth made by the agent that wrote the deck. "The scope" is [`scope-0.2.md`](scope-0.2.md) and "the design" is [`../design-0.2.md`](../design-0.2.md).
+Two adversarial reviews, each by an agent that did not write what it reviewed, a third pass in which the second reviewer attacked its own amendments before they were locked, a fourth made by the agent that wrote the deck, and a fifth on what the spike asked for. "The scope" is [`scope-0.2.md`](scope-0.2.md) and "the design" is [`../design-0.2.md`](../design-0.2.md).
 
 ## First review, 2026-10-06: the scope note
 
@@ -190,3 +190,29 @@ Left as they are: the scope note is longer than one printed page, and was approv
 - Which repository the second trial runs in. P-22 carries the question.
 - Whether to release. P-24 carries the question.
 - The tag `v0.1.3`, which the maintainer makes when S-04 merges.
+
+## Fifth pass, 2026-10-09: what the spike asked for
+
+The spike ([`spike-0.2.md`](spike-0.2.md)) ends with a list of changes for the deck. This pass attacked each before making it. It is by the agent that ran the spike, with no second reader, and the spike's own limits apply: two plan runs and one card, headless, on a model the maintainer does not use. Card Q-2610091341.
+
+| The spike asked for | Attack | Outcome |
+|---|---|---|
+| Run the reviewer again after a must-fix finding is fixed | A reviewer told to assume the outline is wrong always finds something, so "again" has no end. The one run whose cost was recorded used 30,817 tokens (spike record). | Accepted with a bound: once more when a fix changed the outline, at most two runs each time before the user is asked, and what is left goes to the user. An edit by the user is reviewed under the same bound. Design section 10.1, step 7; P-13. |
+| Put the `does` lines in the pull request body | The pull request changes one file and its diff is those lines. For a revision the diff shows what changed, which a full table hides. The draft failed its own instruction; the instruction was the fault. | Turned down. The body has a table of id, size, dependencies and title. Step 9 says why. |
+| Show the readings chosen and the requirements left out | Shown in the conversation only, they are gone when the session ends, and the person who merges may not be the person who planned. | Accepted, and they go in the pull request body as well. Steps 8 and 9; P-13. |
+| The skill forbids a commit trailer | A trailer is a setting of the user's Claude Code, and the plugin is used in other people's repositories. This repository's wish is its own. | Turned down. The skill gives the subject line and follows the project's history for the rest, as handoff does. The maintainer turns the trailer off in their own Claude Code settings. |
+| Ask before planning a specification whose code is not in the repository | The scope supports a new project with no code. A stop on every such run is noise for exactly that user. | Accepted as one more sentence in the question the skill already asks. Step 5; P-13. |
+| The reviewer looks for `does` lines that join statements, and for ones that describe a test | "And" does not always join two statements. A row whose work is tests may say so. A rule a script could apply would be wrong both ways. | Accepted as things the agent is told to look for. Neither is a must-fix finding by itself. Section 12.1, step 3; P-12. |
+| The reviewer looks for a missing `not` line where two rows cite one heading | Could a script decide it? Only that the line is absent, not that it is needed. | Accepted, for the reviewer. Step 4; P-12. |
+| The reviewer gives relative paths | None. | Accepted. |
+| next-card leaves the `(row ...)` item alone | The session might have a better heading. But the reviewer checks the card against the headings that item names, so a session that edits it chooses what it is reviewed against. A script check would bring back "card matches row" (finding 18). | Accepted as an instruction with its reason. Section 10.2, step 3; P-14. |
+| The scope says a row is "a few lines" | Rows of 7 to 15 items do part of the card's work early, and their lines name files no card has created, which is what goal 3 was written against. | Wording changed in the scope. No limit on a row: the lines are requirements, and `Touch` still comes from the code. The tension is a row of design section 18. |
+| The hard stop of design section 14 was not met | One card, from one row with no dependency, says nothing about it either way. | No change. |
+
+Found by the attack and not asked for by the spike:
+
+- **The reviewer could not see what coverage could not see.** Its steps start from the headings a row cites. For an outline at level 4, the user stories, edge cases and success criteria of the sample were at other levels: outside coverage and outside the reviewer's procedure. Step 5 of section 12.1 now reads those parts. P-12.
+- **Three of the four things the spike did not show** are now acceptance items of the hand runs, P-21: an interactive plan run, the maintainer's model, and a card written from a row that has a dependency. The fourth, a planner naming paths in code that exists, is left to the trial, which measures it (design section 14).
+- **Design section 11.3 still said the spike would confirm two layouts.** It ran one, and found it other than assumed. The section now says what was seen, and lists what lies outside coverage.
+
+The reviewer at this card's handoff, which did not write this pass, found no must-fix. It found that the bound on the reviewer did not say what follows an edit by the user, that the severity of the two new checks was stated three ways, that a note in P-14 turned a guess about a neighbouring row into the hard stop, and that the cost of a reviewer run was in no record. All four are fixed above and in the cards.
