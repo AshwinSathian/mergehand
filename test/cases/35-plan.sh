@@ -153,3 +153,85 @@ test_plan_with_an_unknown_subcommand_is_a_usage_error() {
   card help
   assert_contains "$OUT" '  plan  '
 }
+
+# --- ids and sizes ---
+
+test_plan_reports_a_malformed_row_id() {
+  local id
+  for id in auth-01 AUTH01 AUTH-1x2 AUTH-; do
+    deck; edit "$O" "s/^## AUTH-01 /## $id /"
+    plan_fails "row id $id is not valid (expected something like AUTH-03)"
+  done
+  # An id of any length would reach the session that reads the findings.
+  id=AUTH-0000000000000000000000000000000000000001
+  deck; edit "$O" "s/^## AUTH-02 /## $id /"
+  plan_fails 'line 14: a row id is longer than 40 characters'
+  assert_not_contains "$ERR" "$id"
+  assert_eq 1 "$(printf '%s\n' "$ERR" | grep -c '^card: ')" 'findings'
+}
+
+test_plan_reports_a_row_id_that_carries_a_letter() {
+  deck; edit "$O" 's/^## AUTH-02 /## AUTH-02b /'
+  plan_fails 'row id AUTH-02b carries a letter'
+  assert_not_contains "$ERR" 'is not valid'
+  # Two faults in one id are both reported.
+  deck; edit "$O" 's/^## AUTH-02 /## PAY-02b /'
+  plan_fails 'row id PAY-02b carries a letter'
+  assert_contains "$ERR" 'row id PAY-02b does not start with the prefix AUTH'
+}
+
+test_plan_reports_a_row_id_with_another_prefix() {
+  deck; edit "$O" 's/^## AUTH-02 /## PAY-02 /'
+  plan_fails 'row id PAY-02 does not start with the prefix AUTH'
+  assert_not_contains "$ERR" 'AUTH-01'
+  # A prefix the format check refused is not held against the rows.
+  deck; edit "$O" 's/^prefix: AUTH$/prefix: auth/'
+  plan_fails 'prefix is not valid'
+  assert_eq 1 "$(printf '%s\n' "$ERR" | grep -c '^card: ')" 'findings'
+}
+
+test_plan_reports_an_id_in_two_rows() {
+  deck; edit "$O" 's/^## AUTH-02 /## AUTH-01 /'
+  plan_fails 'id AUTH-01 is in two rows'
+  assert_eq 1 "$(printf '%s\n' "$ERR" | grep -c '^card: ')" 'findings'
+  # Once for an id, however many rows have it.
+  deck; edit "$O" 's/^## AUTH-02 /## AUTH-01 /'; printf '\n## AUTH-01 Third\n- size: S\n- does: A thing\n' >> "$O"
+  plan_fails 'id AUTH-01 is in two rows'
+  assert_eq 1 "$(printf '%s\n' "$ERR" | grep -c '^card: ')" 'findings'
+  # Ids are one set across outlines.
+  deck; sed 's/^prefix: AUTH$/prefix: PAY/' "$O" > cards/plan/pay.md
+  plan_fails "id AUTH-01 is in two rows (the other is in $O)" cards/plan/pay.md
+  assert_contains "$ERR" 'card: cards/plan/pay.md: id AUTH-02 is in two rows'
+  assert_not_contains "$ERR" "card: $O: "
+}
+
+test_plan_reports_two_outlines_that_share_a_prefix() {
+  # Only an outline that also breaks the file name rule can share a prefix.
+  deck; sed 's/-0\([12]\)/-1\1/' "$O" > cards/plan/tokens.md
+  plan_fails "prefix AUTH is also the prefix of $O" cards/plan/tokens.md
+  assert_contains "$ERR" 'card: cards/plan/tokens.md: file name is not the prefix in lowercase (expected auth.md)'
+  assert_not_contains "$ERR" "card: $O: "
+}
+
+test_plan_reports_the_prefix_q() {
+  new_repo; mk_conf; mk_outline Q
+  plan_fails 'prefix Q is the prefix of the quick lane' cards/plan/q.md
+}
+
+test_plan_reports_a_size_with_no_budget() {
+  deck; edit "$O" '1,/^- size: S$/s/^- size: S$/- size: L/'
+  plan_fails 'row AUTH-01: size L has no budget in workdeck.conf'
+  assert_not_contains "$ERR" 'AUTH-02'
+  # A size of any length that has a budget passes.
+  new_repo; mk_conf 'budget.EXTRALARGE = 200000'; mk_outline; edit "$O" 's/^- size: S$/- size: EXTRALARGE/'
+  card plan
+  assert_silent
+  # A size that is not a size at all is reported too. The order is the
+  # format check, then the ids, then the sizes.
+  deck; edit "$O" 's/^## AUTH-02 /## AUTH-01 /'; edit "$O" 's/^- size: S$/- size: big one/'; edit "$O" '/^level:/d'
+  plan_fails 'row AUTH-01: size is not a size (capitals and digits, like S)'
+  assert_eq 'format,two rows,size,size' "$(printf '%s\n' "$ERR" | sed -e 's/.*has no level.*/format/' -e 's/.*two rows.*/two rows/' -e 's/.*is not a size.*/size/' | paste -sd, -)" 'order'
+  new_repo; mk_conf 'budget.L = 150000'; mk_outline; edit "$O" 's/^- size: S$/- size: L/'
+  card plan
+  assert_silent
+}
