@@ -3,7 +3,7 @@ id: P-07
 title: card show for a row
 size: S
 depends: P-06
-done: false
+done: true
 ---
 
 ## Read
@@ -16,6 +16,7 @@ done: false
 ## Touch
 - bin/card
 - test/cases/12-show.sh
+- docs/development/review-0.2.md (added at handoff: the record of the second review)
 
 ## Tests
 - test_show_prints_a_row_that_has_no_card_file
