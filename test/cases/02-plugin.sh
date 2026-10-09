@@ -220,6 +220,14 @@ test_docs_have_one_design_file_and_a_development_folder() {
   ! git grep -n -E 'docs/(specs|plans)/|docs/(findings|later)\.md' -- . ':!test/cases/02-plugin.sh' || fail 'a file names an old docs path'
 }
 
+test_development_records_for_0_2_are_listed_and_exist() {
+  local f idx="$ROOT/docs/development/README.md"
+  for f in scope-0.2.md review-0.2.md ../design-0.2.md; do
+    [ -s "$ROOT/docs/development/$f" ] || fail "docs/development/$f is missing"
+    grep -q "^| \[\`$f\`\]($f) |" "$idx" || fail "docs/development/README.md has no row for $f"
+  done
+}
+
 test_nothing_claims_evals_that_do_not_exist() {
   cd "$ROOT" || exit 1
   [ -d evals ] && return 0
