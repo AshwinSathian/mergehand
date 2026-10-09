@@ -1265,7 +1265,35 @@ outlines() {
   done
 }
 
-# cmd_plan: the format check of every outline. Findings go to stderr.
+# Reads the lines of outlines. Prints the format findings as they are, then
+# the findings of the checks Ids and Sizes, in that order.
+PLAN_AWK='
+function err(f, s) { print "card: " f ": " s; bad = 1 }
+/^card: / { print; bad = 1; next }
+$1 == "R" { n++; rfile[n] = $2; rid[n] = $3; rsize[n] = $4 }
+$1 == "O" { m++; ofile[m] = $2; prefix[$2] = $5 }
+END {
+  for (i = 1; i <= n; i++) {
+    f = rfile[i]; id = rid[i]
+    if (id !~ /^[A-Z][A-Z0-9]*-[0-9]+[a-z]?$/) err(f, "row id " id " is not valid (expected something like AUTH-03)")
+    else if (id ~ /[a-z]$/) err(f, "row id " id " carries a letter, which is for a split remainder and is not written in an outline")
+    else if (prefix[f] != "" && substr(id, 1, index(id, "-") - 1) != prefix[f]) err(f, "row id " id " does not start with the prefix " prefix[f])
+    if (id in seen) err(f, "id " id " is in two rows")
+    seen[id] = 1
+  }
+  for (i = 1; i <= m; i++) {
+    f = ofile[i]; p = prefix[f]
+    if (p == "") continue
+    if (p in owner) err(f, "prefix " p " is also the prefix of " owner[p]); else owner[p] = f
+    if (p == "Q") err(f, "prefix Q is the prefix of the quick lane")
+  }
+  for (i = 1; i <= n; i++)
+    if (rsize[i] != "" && index(sizes, " " rsize[i] " ") == 0) err(rfile[i], "row " rid[i] ": size " rsize[i] " has no budget in workdeck.conf")
+  exit bad
+}'
+
+# cmd_plan: the checks of every outline, in the order of the table in
+# section 11.1 of the design. Findings go to stderr.
 cmd_plan() {
   local out
   # Like lint, this runs where there is no base branch: a first commit not
@@ -1281,7 +1309,7 @@ cmd_plan() {
     printf 'no outline in %s/plan\n' "$CARDS_DIR"
     return 0
   fi
-  if printf '%s\n' "$out" | grep '^card: ' >&2; then return 1; fi
+  printf '%s\n' "$out" | awk -F '\t' -v sizes=" $(sizes | tr '\n' ' ')" "$PLAN_AWK" >&2
 }
 
 # --- main ---

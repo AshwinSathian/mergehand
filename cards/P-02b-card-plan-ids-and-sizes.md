@@ -3,7 +3,7 @@ id: P-02b
 title: card plan: ids and sizes
 size: S
 depends: P-02
-done: false
+done: true
 ---
 
 ## Read
@@ -25,7 +25,6 @@ done: false
 - test_plan_reports_two_outlines_that_share_a_prefix
 - test_plan_reports_the_prefix_q
 - test_plan_reports_a_size_with_no_budget
-- test_plan_reports_a_prefix_that_a_card_of_another_outline_uses
 
 ## Acceptance
 - A row's id fails when it is malformed, carries a letter, does not start with the outline's prefix, or appears in two rows.
@@ -42,3 +41,4 @@ done: false
 ## Notes
 - The file name rule means two outlines can share a prefix only when one of them also breaks that rule. The check is still in the table; keep both messages.
 - This card was cut from P-02 after the review of the deck: 21 tests in one card was twice the largest card of 0.1.
+- 2026-10-09: the test `test_plan_reports_a_prefix_that_a_card_of_another_outline_uses` was removed from `Tests` on the maintainer's answer. No acceptance line and no row of the table in section 11.1 names a rule about cards, and `card plan new` (P-04) already refuses a prefix that a card uses.
