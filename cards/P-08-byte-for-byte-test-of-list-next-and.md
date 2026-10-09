@@ -3,7 +3,7 @@ id: P-08
 title: Byte-for-byte test of list, next and status against card 0.1.3
 size: S
 depends: P-06, S-04
-done: false
+done: true
 ---
 
 ## Read
@@ -22,6 +22,7 @@ done: false
 - test/cases/70-compat.sh (new)
 - test/lib.sh (a helper that writes `card` 0.1.3 into the case's temporary directory)
 - .github/workflows/ci.yml (a step that fetches the tag)
+- docs/development/review-0.2.md (added at handoff: the record of the second review)
 
 ## Tests
 - test_list_next_and_status_match_card_0_1_3_when_there_is_no_outline

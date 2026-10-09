@@ -17,6 +17,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      # The checkout is shallow and has no tags. test/cases/70-compat.sh reads
+      # bin/card of this release and fails in CI without it.
+      - name: Fetch the v0.1.3 tag
+        run: git fetch --depth 1 origin tag v0.1.3
       - name: Install shellcheck
         run: command -v shellcheck || brew install shellcheck
       - name: Install Claude Code
