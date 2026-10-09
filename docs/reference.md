@@ -26,6 +26,7 @@ usage: card <command> [arguments]
   plan new <spec path> <PREFIX> [--level N]
                             create an outline with no rows
   plan accept <PREFIX>      set spec_blob to the specification's hash
+  plan start <id>           create the card file for a row
   conf <key>                print one configuration value
   help, version
 

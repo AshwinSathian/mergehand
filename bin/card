@@ -46,6 +46,7 @@ usage: card <command> [arguments]
   plan new <spec path> <PREFIX> [--level N]
                             create an outline with no rows
   plan accept <PREFIX>      set spec_blob to the specification's hash
+  plan start <id>           create the card file for a row
   conf <key>                print one configuration value
   help, version
 
@@ -62,7 +63,7 @@ synopsis() {
   case $1 in
     next | list | status) echo "card $1 [--fetch]" ;;
     lint | stats) echo "card $1" ;;
-    plan) echo 'card plan [new <spec path> <PREFIX> [--level N] | accept <PREFIX>]' ;;
+    plan) echo 'card plan [new <spec path> <PREFIX> [--level N] | accept <PREFIX> | start <id>]' ;;
     show | done | touched | tests) echo "card $1 <id>" ;;
     new) echo 'card new <id> <title> [--size XS|S|M] [--depends ID,ID]' ;;
     tokens) echo 'card tokens [transcript]' ;;
@@ -845,7 +846,7 @@ cmd_status() {
 # The template lives here, not in templates/, because card must work as a
 # single downloaded file.
 cmd_new() {
-  local id="" title="" have=0 size=S depends="" slug path existing d
+  local id="" title="" have=0 size=S depends=""
   while [ "$#" -gt 0 ]; do
     case $1 in
       --size | --depends)
@@ -866,20 +867,41 @@ cmd_new() {
     esac
   done
   [ "$have" -eq 2 ] || usage_die new
-  need_id "$id"
-  [ -n "$title" ] || die 2 "the title is empty"
-  [ "${#title}" -le 80 ] || die 2 "the title is longer than 80 characters (${#title})"
-  case $title in
-    *[[:cntrl:]]*) die 2 "the title has a control character or a line break" ;;
-    \"* | \'*) die 2 "the title starts with a quote, which card lint rejects" ;;
-    "["* | "{"*) die 2 "the title starts with [ or {, which card lint rejects as a nested value" ;;
-    "|" | ">" | [\|\>][+-]) die 2 "the title is a multi-line marker, which card lint rejects" ;;
+  write_card "$id" "$title" "$size" "$depends"
+}
+
+# title_fault <title>: prints why card lint would reject the title, or
+# nothing.
+title_fault() {
+  [ -n "$1" ] || { echo "the title is empty"; return; }
+  [ "${#1}" -le 80 ] || { echo "the title is longer than 80 characters (${#1})"; return; }
+  case $1 in
+    *[[:cntrl:]]*) echo "the title has a control character or a line break" ;;
+    \"* | \'*) echo "the title starts with a quote, which card lint rejects" ;;
+    "["* | "{"*) echo "the title starts with [ or {, which card lint rejects as a nested value" ;;
+    "|" | ">" | [\|\>][+-]) echo "the title is a multi-line marker, which card lint rejects" ;;
   esac
+}
+
+# depends_list <text>: the ids of a comma-separated list, one per line. Exit
+# 1 when one of them is not a card id.
+depends_list() {
+  local d
+  printf '%s' "$1" | tr ',' '\n' | sed 's/^ *//; s/ *$//; /^$/d' | while IFS= read -r d || [ -n "$d" ]; do
+    valid_id "$d" || exit 1
+    printf '%s\n' "$d"
+  done
+}
+
+# write_card <id> <title> <size> <depends>: checks the four values, creates
+# the card file with empty sections and prints its path.
+write_card() {
+  local id=$1 title=$2 size=$3 depends=$4 slug path existing fault
+  need_id "$id"
+  fault=$(title_fault "$title")
+  [ -z "$fault" ] || die 2 "$fault"
   sizes | grep -qxF -- "$size" || die 2 "size $size has no budget in workdeck.conf"
-  depends=$(printf '%s' "$depends" | tr ',' '\n' | sed 's/^ *//; s/ *$//; /^$/d')
-  printf '%s\n' "$depends" | while IFS= read -r d; do
-    [ -z "$d" ] || valid_id "$d" || exit 1
-  done || die 2 "--depends takes card ids separated by commas"
+  depends=$(depends_list "$depends") || die 2 "--depends takes card ids separated by commas"
   depends=$(printf '%s' "$depends" | tr '\n' ',' | sed 's/,/, /g')
 
   existing=$(wt_cards | ID="$id" awk -F '\t' '$1 == ENVIRON["ID"] { print $2; exit }')
@@ -892,6 +914,8 @@ cmd_new() {
       print
     }')
   path="$CARDS_DIR/$id${slug:+-$slug}.md"
+  # A link is not followed: it could point outside the repository.
+  [ ! -L "$path" ] || die 1 "$path is a symbolic link"
   mkdir -p "$CARDS_DIR" || die 2 "cannot create $CARDS_DIR"
   {
     printf -- '---\nid: %s\ntitle: %s\nsize: %s\ndepends:%s\ndone: false\n---\n' \
@@ -1651,6 +1675,57 @@ cmd_plan_accept() {
   [ "$rc" -eq 0 ] || die 2 "$path: cannot write"
 }
 
+# cmd_plan_start <id>: the card file for a row (section 7 of the design):
+# what card new writes, with the specification under Read, the does lines
+# under Acceptance and the not lines under Out of scope. The row is the one
+# deck_table lists: the first of that id, in the order of the outline paths.
+# The row's text is written as it is in the outline and is never evaluated.
+cmd_plan_start() {
+  local existing row file title size depends fault path body
+  [ "$#" -eq 1 ] || usage_die plan
+  need_id "$1"
+  plan_refs
+  existing=$({ wt_cards; base_cards; } | ID="$1" awk -F '\t' '$1 == ENVIRON["ID"] { print $2; exit }')
+  [ -z "$existing" ] || die 1 "$existing: card $1 already exists"
+  # Five lines: the outline, the size, the title, the dependencies and the
+  # specification. Then the items, "<key><TAB><text>".
+  row=$(outlines | ID="$1" awk -F '\t' '
+    $1 == "I" { if ($3 == ENVIRON["ID"]) buf = buf $4 "\t" $5 "\n"; next }
+    $1 == "R" { if (file == "" && $3 == ENVIRON["ID"]) { file = $2; head = $4 "\n" $5 "\n" $6; items = buf } buf = ""; next }
+    $1 == "O" && $2 == file { spec = $3 }
+    END { if (file != "") printf "%s\n%s\n%s\n%s", file, head, spec, items }')
+  [ -n "$row" ] || die 1 "no row $1 in $CARDS_DIR/plan"
+  file=$(printf '%s\n' "$row" | sed -n 1p)
+  size=$(printf '%s\n' "$row" | sed -n 2p)
+  title=$(printf '%s\n' "$row" | sed -n 3p)
+  depends=$(printf '%s\n' "$row" | sed -n 4p)
+  spec_ok "$(printf '%s\n' "$row" | sed -n 5p)" ||
+    die 1 "$file: spec is not a relative path inside the repository; run card plan"
+  # A fault in the row is a refusal that names the outline, not the usage
+  # error write_card would make of it.
+  fault=$(title_fault "$title")
+  [ -z "$fault" ] || die 1 "$file: row $1: $fault; run card plan"
+  sizes | grep -qxF -- "$size" || die 1 "$file: row $1 has no size that has a budget; run card plan"
+  depends_list "$depends" > /dev/null || die 1 "$file: row $1: depends is not a list of card ids; run card plan"
+  path=$(write_card "$1" "$title" "$size" "$depends") || exit $?
+  body=$(ROW="$row" ID="$1" awk '
+    BEGIN {
+      n = split(ENVIRON["ROW"], line, "\n")
+      for (i = 6; i <= n; i++) {
+        t = index(line[i], "\t"); k = substr(line[i], 1, t - 1); v = substr(line[i], t + 1)
+        if (k == "spec") heads = heads (heads == "" ? ": " : "; ") v
+        else if (k == "does") does = does "- " v "\n"
+        else if (k == "not") nots = nots "- " v "\n"
+      }
+    }
+    { print }
+    $0 == "## Read" { print "- " line[5] " (row " ENVIRON["ID"] heads ")" }
+    $0 == "## Acceptance" { printf "%s", does }
+    $0 == "## Out of scope" { printf "%s", nots }' "$path") || die 2 "$path: cannot read"
+  printf '%s\n' "$body" > "$path" || die 2 "$path: cannot write"
+  printf '%s\n' "$path"
+}
+
 # plan_branch_check: on a plan/* branch, a finding for each file that differs
 # from the fork point and is not an outline: <cards_dir>/plan/<name>.md, as
 # outline_files reads them, so not a name that starts with a dot and nothing
@@ -1679,7 +1754,7 @@ cmd_plan() {
   local out facts rc=0 sub
   case ${1--} in
     -) [ "$#" -eq 0 ] || usage_die plan ;;
-    new | accept)
+    new | accept | start)
       sub=$1
       shift
       "cmd_plan_$sub" "$@"

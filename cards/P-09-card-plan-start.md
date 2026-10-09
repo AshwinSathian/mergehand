@@ -3,7 +3,7 @@ id: P-09
 title: card plan start
 size: S
 depends: P-06
-done: false
+done: true
 ---
 
 ## Read
