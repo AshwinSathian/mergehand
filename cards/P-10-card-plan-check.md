@@ -18,6 +18,9 @@ done: true
 - bin/card
 - test/cases/38-plan-check.sh (new)
 - docs/reference.md (the argument line, if `card help` gains one)
+- test/cases/32-touched.sh (one case: `touch_patterns` came out of `cmd_touched`)
+- docs/design-0.2.md (sections 7, 9, 11.3 and 15, after the second review)
+- docs/development/review-0.2.md (the thirteenth pass)
 
 ## Tests
 - test_plan_check_passes_a_card_whose_paths_exist
@@ -52,3 +55,4 @@ done: true
 - A `Touch` entry is used only as a `case` pattern, as in 0.1. matches_any holds the rules for a trailing `/` and a leading `./`.
 - This card reads no outline. It depends on P-02 only for the `plan` command it hangs under.
 - `git ls-files` and `git ls-files --others --exclude-standard` give the files the scope gate sees. A `(new)` path is tested on disk.
+- Decided after the second review, in the thirteenth pass of docs/development/review-0.2.md: a `Read` path that is absolute or has a `..` segment is refused; a `(new)` path may escape a pattern character, has no empty, `.` or `..` segment, is not a tracked file gone from the disk, and is not one git would ignore.

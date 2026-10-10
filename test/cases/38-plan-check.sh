@@ -110,7 +110,7 @@ test_plan_check_does_not_count_an_ignored_file_for_a_touch_entry() {
 test_plan_check_reports_a_new_entry_that_is_not_a_full_path() {
   local e
   deck
-  for e in 'src/*.ts' 'lib/' 'src/[cd].ts' 'src/?.go' 'src/a\.ts'; do
+  for e in 'src/*.ts' 'lib/' 'src/[cd].ts' 'src/?.go' "src/b.ts\\" '/' './' '../b.ts' 'src/../b.ts' 'src//b.ts' 'src/./b.ts' 'src/..'; do
     body Touch "$e (new)"
     card plan check A-1
     finding "Touch: $e is marked (new) and is not a full path"
@@ -146,7 +146,7 @@ test_plan_check_refuses_an_id_with_no_card_file() {
   deck; mk_outline; commit_all
   card plan check A-9
   assert_rc 1
-  assert_contains "$ERR" 'card: no card A-9 in cards'
+  assert_eq 'card: no card A-9 in cards; cards with prefix A: A-1' "$ERR" stderr
   # A row is not a card file.
   card plan check AUTH-01
   assert_rc 1
@@ -173,4 +173,105 @@ test_plan_check_is_not_run_by_lint_or_by_card_plan() {
   card plan
   assert_rc 0
   assert_not_contains "$ERR" 'gone.md'
+}
+
+# A section with no item is not a finding of this command: card lint has
+# the rule for an empty Touch.
+test_plan_check_passes_a_card_with_no_read_and_no_touch_item() {
+  deck; body Read; body Touch
+  card plan check A-1
+  passes
+}
+
+test_plan_check_removes_every_anchor_of_a_read_entry() {
+  deck; body Read 'docs/design.md#a#b' '#anchor'
+  card plan check A-1
+  assert_rc 1
+  assert_eq "card: $C: Read: #anchor does not exist" "$ERR" stderr
+}
+
+# A card can arrive in someone else's pull request, and a session reads what
+# Read names.
+test_plan_check_reports_a_read_path_that_leaves_the_repository() {
+  local e
+  deck; mkdir -p "$T/out"; echo x > "$T/out.md"
+  for e in '/etc' "$T/out.md" '../out.md' 'docs/../../out.md' '..'; do
+    body Read "$e (a note)"
+    card plan check A-1
+    finding "Read: $e is not a path inside the repository"
+  done
+  # Two dots in a name are not a segment.
+  echo x > 'docs/a..b.md'; body Read 'docs/a..b.md'
+  card plan check A-1
+  passes
+}
+
+test_plan_check_reads_the_new_mark_at_the_start_of_the_comment() {
+  deck
+  body Touch 'src/b.ts  (new)' 'src/c.ts (new), with the cases'
+  card plan check A-1
+  passes
+  body Touch 'src/gone.ts (not (new) here)' '(new)'
+  card plan check A-1
+  assert_rc 1
+  assert_eq "card: $C: Touch: src/gone.ts matches no file
+card: $C: Touch: (new) matches no file" "$ERR" stderr
+}
+
+test_plan_check_tests_a_new_path_on_disk_without_its_leading_slash() {
+  deck; ln -s nowhere dangling
+  body Touch '/src/a.ts (new)' 'dangling (new)'
+  card plan check A-1
+  finding 'Touch: /src/a.ts is marked (new) and exists'
+  assert_contains "$ERR" "card: $C: Touch: dangling is marked (new) and exists"
+}
+
+# The escape is the one spelling the scope gate matches such a file with.
+test_plan_check_accepts_a_new_path_with_an_escaped_pattern_character() {
+  deck; mkdir -p 'app/[id]'; echo x > 'app/[id]/page.tsx'; commit_all
+  body Touch 'app/\[id\]/new.tsx (new)' 'app/\[id\]/page.tsx' '\src/\b.ts (new)'
+  card plan check A-1
+  passes
+  body Touch 'app/\[id\]/page.tsx (new)' 'src/a\.ts (new)' 'app/[id]/new.tsx (new)'
+  card plan check A-1
+  assert_rc 1
+  assert_eq "card: $C: Touch: app/\\[id\\]/page.tsx is marked (new) and exists
+card: $C: Touch: src/a\\.ts is marked (new) and exists
+card: $C: Touch: app/[id]/new.tsx is marked (new) and is not a full path" "$ERR" stderr
+}
+
+# The scope gate still lists a tracked file that is gone from the disk.
+test_plan_check_reports_a_new_path_that_is_a_tracked_file_removed_from_disk() {
+  deck; rm src/a.ts
+  body Touch 'src/a.ts (new)'
+  card plan check A-1
+  finding 'Touch: src/a.ts is marked (new) and is a tracked file'
+  body Touch 'src/a.ts'
+  card plan check A-1
+  passes
+}
+
+test_plan_check_reports_a_new_path_that_git_would_ignore() {
+  deck
+  printf '%s\n' 'build/' '*.log' > .gitignore; commit_all ignore
+  body Touch 'build/out.js (new)' 'src/run.log (new)' 'src/run.ts (new)'
+  card plan check A-1
+  assert_rc 1
+  assert_eq "card: $C: Touch: build/out.js is marked (new) and git ignores it
+card: $C: Touch: src/run.log is marked (new) and git ignores it" "$ERR" stderr
+}
+
+test_plan_check_exits_2_when_the_files_cannot_be_listed() {
+  deck; echo garbage > .git/index
+  card plan check A-1
+  assert_rc 2
+  assert_contains "$ERR" 'card: cannot list the files of the repository'
+}
+
+test_plan_check_exits_2_for_a_card_file_that_cannot_be_read() {
+  deck; chmod 000 "$C"
+  [ ! -r "$C" ] || return 0 # root reads it anyway
+  card plan check A-1
+  assert_rc 2
+  assert_eq "card: $C: cannot be read" "$ERR" stderr
 }

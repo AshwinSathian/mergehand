@@ -1756,19 +1756,27 @@ card: $file: "*) die 1 "$file: the outline has a fault; run card plan" ;;
 # card against the working tree. Every failure is a line on stderr. It is
 # true when it runs and not after the work starts, so no gate calls it.
 cmd_plan_check() {
-  local path files e p note f rc=0
+  local path files e p note f lit hit rc=0
   [ "$#" -eq 1 ] || usage_die plan
   need_id "$1"
   path=$(card_path "$1") || exit $?
+  [ -r "$path" ] || die 2 "$path: cannot be read"
 
   while IFS= read -r e; do
     [ -n "$e" ] || continue
     p=${e%% *}
     p=${p%%#*}
-    if [ -z "$p" ] || [ ! -e "$p" ]; then
-      printf 'card: %s: Read: %s does not exist\n' "$path" "${p:-$e}" >&2
-      rc=1
-    fi
+    # A card arrives in someone else's pull request, and a session reads
+    # what Read names: a path that leaves the repository is refused, as the
+    # spec of an outline is.
+    case /$p/ in
+      //?* | */../*) printf 'card: %s: Read: %s is not a path inside the repository\n' "$path" "$p" >&2 ;;
+      *)
+        [ -z "$p" ] || [ ! -e "$p" ] || continue
+        printf 'card: %s: Read: %s does not exist\n' "$path" "${p:-$e}" >&2
+        ;;
+    esac
+    rc=1
   done <<READ
 $(section_items "$path" Read)
 READ
@@ -1782,26 +1790,49 @@ READ
     note=${note#"${note%%[! ]*}"}
     e=${e%% *}
     p=$(printf '%s\n' "$e" | touch_patterns)
+    hit=0
+    while IFS= read -r f; do
+      [ -n "$f" ] || continue
+      # shellcheck disable=SC2254
+      case $f in $p)
+        hit=1
+        break
+        ;;
+      esac
+    done <<FILES
+$files
+FILES
     case $note in
       '(new)'*)
-        # A path, tested on disk, so that an ignored file is seen too. A
-        # backslash is a pattern character as well: a\.ts matches a.ts.
-        case $p in
-          '' | *[\*\?\[\\]*) printf 'card: %s: Touch: %s is marked (new) and is not a full path\n' "$path" "$e" >&2 ;;
+        # A full path is a pattern that matches one name: no pattern
+        # character outside an escape, such as app/\[id\]/page.tsx, and no
+        # segment the scope gate would never print. It is tested on disk,
+        # so that an ignored file is seen too.
+        lit=$(printf '%s\n' "$p" | sed 's/\\\(.\)/\1/g')
+        case /$(printf '%s\n' "$p" | sed 's/\\.//g')/ in
+          // | *[\*\?\[\\]* | *//* | */./* | */../*)
+            printf 'card: %s: Touch: %s is marked (new) and is not a full path\n' "$path" "$e" >&2
+            ;;
           *)
-            if [ ! -e "$p" ] && [ ! -L "$p" ]; then continue; fi
-            printf 'card: %s: Touch: %s is marked (new) and exists\n' "$path" "$e" >&2
+            if [ -e "$lit" ] || [ -L "$lit" ]; then
+              printf 'card: %s: Touch: %s is marked (new) and exists\n' "$path" "$e" >&2
+            elif [ "$hit" -eq 1 ]; then
+              printf 'card: %s: Touch: %s is marked (new) and is a tracked file\n' "$path" "$e" >&2
+            else
+              # The scope gate cannot see a change to a file git ignores,
+              # and a path git cannot answer for is not one it will list.
+              g check-ignore -q -- "$lit" 2> /dev/null
+              case $? in
+                1) continue ;;
+                0) printf 'card: %s: Touch: %s is marked (new) and git ignores it\n' "$path" "$e" >&2 ;;
+                *) printf 'card: %s: Touch: %s is marked (new) and git cannot track it\n' "$path" "$e" >&2 ;;
+              esac
+            fi
             ;;
         esac
         ;;
       *)
-        while IFS= read -r f; do
-          [ -n "$f" ] || continue
-          # shellcheck disable=SC2254
-          case $f in $p) continue 2 ;; esac
-        done <<FILES
-$files
-FILES
+        [ "$hit" -eq 0 ] || continue
         printf 'card: %s: Touch: %s matches no file\n' "$path" "$e" >&2
         ;;
     esac
