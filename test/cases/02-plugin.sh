@@ -466,6 +466,8 @@ test_reference_names_every_card_command() {
 
 # doc_section <file> <heading>: the text of one second-level section. A line
 # inside a code fence is not a heading: a card and an outline have their own.
+# It knows only a fence of backticks at the start of a line, which is every
+# fence README.md and docs/reference.md have.
 doc_section() {
   awk -v h="## $2" '/^```/ { fence = !fence } !fence && /^## / { on = $0 == h } on' "$ROOT/$1"
 }
@@ -485,6 +487,16 @@ test_readme_names_the_plan_skill_and_warns_about_an_untrusted_specification() {
   assert_contains "$(printf '%s\n' "$s" | grep -F '| `/workdeck:handoff [split]` |')" 'since it was approved'
   assert_contains "$(printf '%s\n' "$s" | grep -F '| `/workdeck:init` |')" 'already set up'
   assert_contains "$(readme_section Roadmap)" 'built on the main branch and not yet released'
+  # The card's notes from P-17, P-11 and P-16: init on a repository that is set
+  # up, the 0.2 condition of the stop hook, and what the permission rules leave.
+  s=$(readme_section 'Quick start')
+  assert_contains "$s" 'on a repository that already has `workdeck.conf` no longer stops'
+  assert_contains "$s" 'It does not offer the pull request template, the CI workflow or the settings for teammates there'
+  assert_contains "$(readme_section 'What the plugin runs')" 'a commit that changes only the cards directory does not count'
+  assert_contains "$(readme_section 'When it stops')" 'the commits must change something outside the cards directory'
+  s=$(readme_section 'Known limits')
+  assert_contains "$s" '`git push -u origin plan/<name> 2>&1`'
+  assert_contains "$s" 'read from the entries, not from a run'
 }
 
 # Design 0.2, section 8, the rows for a 0.1 user, and the limits of section 11.3.
@@ -509,7 +521,7 @@ test_reference_names_every_plan_subcommand() {
   s=$(doc_section docs/reference.md '`card plan`')
   [ -n "$s" ] || fail 'docs/reference.md has no section for card plan'
   while IFS= read -r c; do
-    printf '%s\n' "$s" | grep -F "| \`$c\` |" | grep 'Exit 0 ' | grep -q 'Exit 1 ' || fail "docs/reference.md gives no row with exit 0 and exit 1 for $c"
+    printf '%s\n' "$s" | grep -F "| \`$c\` |" | grep 'Exit 0 ' | grep 'Exit 1 ' | grep -q 'Exit 2 ' || fail "docs/reference.md gives no row with exit 0, 1 and 2 for $c"
   done <<'COMMANDS'
 card plan
 card plan new <spec path> <PREFIX> [--level N]

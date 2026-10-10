@@ -20,7 +20,7 @@ done: false
 - bin/card (the version, in the header comment and in VERSION)
 - .claude-plugin/plugin.json
 - CHANGELOG.md
-- README.md (the download line, the Upgrade section and the Roadmap line)
+- README.md (the download line, the Upgrade section and the Roadmap line; and every line that says 0.2 is not released, as the last note lists them)
 - templates/workdeck.yml (the step that runs `card plan`)
 - test/cases/02-plugin.sh
 
@@ -50,3 +50,4 @@ Has the maintainer read the trial record in docs/evidence.md and decided to rele
 - Merging this card is the release for plugin users: they receive the main branch as it is at that commit, whatever the tag is on. Read the main branch, not only this diff, before handoff.
 - Between this merge and the tag, the README's download line and a workflow written by init name a tag that does not exist. Make the tag right after the merge.
 - The claim is read again through Context7 (`/websites/code_claude`), pages `plugins/host-marketplace` and `plugins/loading`.
+- From the second review of P-19 (`docs/development/review-0.2.md`, twenty-second pass): the README marks what is not released with "in 0.2", "0.2 is released", "not yet released" and, in the plan skill's row, "0.2:". Each is rewritten at the release; `grep -n -i -E 'in 0\.2|0\.2 is released|not yet released|\| 0\.2:' README.md` lists them, 20 lines when the note was written. The paragraph of Install on what a new install receives goes, with its sentence that two `card` files print `card 0.1.3`. The Requirements table says "Built and run on 2.1.261 through 2.1.290", and the spike ran on 2.1.291.

@@ -8,7 +8,7 @@
 
 WorkDeck is a plugin for [Claude Code](https://code.claude.com/docs/en/). A card is a small markdown file that describes one unit of work: what to read, which files may change, which tests must exist, and what must be true at the end. A session takes one card, implements it, passes your project's check command, gets a review from a separate agent, and opens one pull request. A person merges.
 
-It suits a project where you review every pull request and want agent work in pieces small enough to review. The released version, 0.1, runs cards. You write them by hand, or use the quick lane, which writes a small one from a sentence. A planner that cuts a specification into cards is 0.2: it is built on the main branch and not yet released, and [Skills](#skills) says what it adds. A new install takes the main branch as it is, so until the release it receives the planner's skill and agent before they are released. What has been measured, and what has not, is in [`docs/evidence.md`](docs/evidence.md).
+It suits a project where you review every pull request and want agent work in pieces small enough to review. The released version, 0.1, runs cards. You write them by hand, or use the quick lane, which writes a small one from a sentence. A planner that cuts a specification into cards is 0.2: it is built on the main branch and not yet released, and [Skills](#skills) says what it adds. A new install already receives it; [Install](#install) says what that means. What has been measured, and what has not, is in [`docs/evidence.md`](docs/evidence.md).
 
 **Contents:** [What it looks like](#what-it-looks-like) · [Why](#why) · [How it compares](#how-it-compares) · [Install](#install) · [Quick start](#quick-start) · [The loop](#the-loop) · [A card](#a-card) · [Skills](#skills) · [The `card` command and configuration](#the-card-command-and-configuration) · [What the plugin runs](#what-the-plugin-runs) · [Requirements and limits](#requirements-and-limits) · [Evidence](#evidence) · [Known limits](#known-limits) · [When it stops](#when-it-stops) · [Upgrade](#upgrade) · [FAQ](#faq) · [Roadmap](#roadmap) · [How this was built](#how-this-was-built) · [Contributing](#contributing) · [License](#license)
 
@@ -61,7 +61,7 @@ WorkDeck sizes work to fit one session. Each card has a size, each size has a bu
 These descriptions are from each project's README in October 2026.
 
 - [Backlog.md](https://github.com/MrLesk/Backlog.md) recommends the same practice: one task, one agent session, one pull request. It gives you a task board and a command-line tool for it. WorkDeck enforces the practice. A gate fails when a file outside the card changes or a named test is missing, a hook stops a session that committed without a log, and each session's context growth is measured and recorded.
-- [Spec Kit](https://github.com/github/spec-kit), [OpenSpec](https://github.com/Fission-AI/OpenSpec) and [BMAD](https://github.com/bmad-code-org/BMAD-METHOD) start earlier. They turn an idea into a specification and a plan. WorkDeck starts where they end, with work already cut into pieces, and 0.1 does not write the cards for you. The planner of 0.2, not yet released, writes them from a specification in one markdown file.
+- [Spec Kit](https://github.com/github/spec-kit), [OpenSpec](https://github.com/Fission-AI/OpenSpec) and [BMAD](https://github.com/bmad-code-org/BMAD-METHOD) start earlier. They turn an idea into a specification and a plan. WorkDeck starts where they end, with work already cut into pieces, and 0.1 does not write the cards for you. The planner of 0.2, not yet released, cuts a specification in one markdown file into rows, and next-card writes a card from each.
 - [Superpowers](https://github.com/obra/superpowers) is a set of skills that the agent applies by itself during development. WorkDeck is two commands that you type, and its checks are scripts.
 - [Taskmaster](https://github.com/eyaltoledano/claude-task-master) and [beads](https://github.com/gastownhall/beads) track tasks and their dependencies for agents, across several tools. WorkDeck works only in Claude Code, and its pull request step only on GitHub.
 
@@ -74,7 +74,7 @@ In Claude Code:
 /plugin install workdeck@workdeck
 ```
 
-The plugin puts `card` on the PATH of the commands Claude runs. Until 0.2 is released, a new install receives the main branch, which holds the unreleased planner; the `card` of the download line below is 0.1.3 and has no `plan` command. To use `card` yourself, or in CI, download the one file:
+The plugin puts `card` on the PATH of the commands Claude runs. A new install takes the main branch as it is. So until 0.2 is released, a person who installs today receives everything this README marks "In 0.2": the plan skill and its reviewer, the changed init, next-card and handoff, the changed end-of-turn hook, and a `card` that has the `plan` command. A person who installed earlier keeps 0.1 until the version changes. The `card` at the tag `v0.1.3`, which the line below downloads, has no `plan` command, though both print `card 0.1.3` as their version. To use `card` yourself, or in CI, download the one file:
 
 ```
 curl -fsSL https://raw.githubusercontent.com/AshwinSathian/workdeck/v0.1.3/bin/card -o card && chmod +x card
@@ -86,7 +86,7 @@ From 0.1.1, each [release](https://github.com/AshwinSathian/workdeck/releases) a
 
 In a git repository with at least one commit:
 
-1. `/workdeck:init`. It finds your check command (for example `make check` or `npm test`) and your base branch, asks you to confirm both, and writes `workdeck.conf`, `cards/REVIEW.md`, a pull request template and a short section in `CLAUDE.md`. It shows you permission entries before adding them to `.claude/settings.json`. It also offers a CI workflow that runs `card lint` on pull requests, and to turn the plugin on for teammates in the project settings. Each teammate still installs it once.
+1. `/workdeck:init`. It finds your check command (for example `make check` or `npm test`) and your base branch, asks you to confirm both, and writes `workdeck.conf`, `cards/REVIEW.md`, a pull request template and a short section in `CLAUDE.md`. It shows you permission entries before adding them to `.claude/settings.json`. It also offers a CI workflow that runs `card lint` on pull requests, and to turn the plugin on for teammates in the project settings. Each teammate still installs it once. In 0.2 a first run also offers `touch_ignore` entries for tracked lockfiles and generated files, and review rules taken from the project's own files.
 2. Review what it wrote and **commit it on your base branch**. The next step stops if the working tree is dirty.
 3. `/workdeck:quick "fix the typo in the greeting"`. Claude reads the relevant code, writes a small card, and shows it to you. Say yes, and it creates a branch, writes the test, and makes it pass.
 4. `/workdeck:handoff`. Claude runs your check command, the gates and the reviewer, writes the session log, commits, pushes, and opens the pull request.
@@ -96,7 +96,7 @@ The session needs permission to edit files: in a permission mode that refuses wr
 
 With no remote, handoff stops after the commit and tells you what is left. Merge the branch yourself and delete it. With no `gh`, it stops after the push and prints the URL for opening the pull request.
 
-To plan more than one step ahead, write cards. `card new AUTH-03 "Token refresh" --size S` creates the file. Fill in its sections, then commit and push it on the base branch. `/workdeck:next-card` starts the first card that is ready.
+To plan more than one step ahead, write cards, or in 0.2 plan a specification with `/workdeck:plan`. `card new AUTH-03 "Token refresh" --size S` creates the file. Fill in its sections, then commit and push it on the base branch. `/workdeck:next-card` starts the first card that is ready.
 
 In 0.2, `/workdeck:init` on a repository that already has `workdeck.conf` no longer stops. It offers four things and asks before each: the permission entries the settings file lacks, `touch_ignore` entries for tracked lockfiles and generated files, review rules taken from the project's own files, and the current text of the protocol section in `CLAUDE.md`, shown as a difference before it replaces yours. It does not offer the pull request template, the CI workflow or the settings for teammates there. A first run that was interrupted after `workdeck.conf` was written does not get them from a second run.
 
@@ -117,7 +117,7 @@ flowchart LR
   K --> A
 ```
 
-You type the two skills and merge the pull request. The agent does the rest.
+You type the two skills and merge the pull request. The agent does the rest. In 0.2, for a row of an outline, you also say yes to the card before any code is written.
 
 ## A card
 
@@ -225,13 +225,13 @@ The main results, from [`docs/evidence.md`](docs/evidence.md):
 
 - The tests gate checks that a name is present. It does not check what the test asserts; the reviewer does. In a trial on sixteen test declarations in four languages it gave seven false failures, all on nested or reworded names, and two false passes. Each false failure costs one edit to the card line.
 - The permission entries are not a sandbox. They match commands as written. Protect your base branch on the git host.
-- The deny rules for a further argument after the branch name, such as `git push origin plan/* *`, do not match the plain push. Whether they refuse a push with a redirect after the branch name, `git push -u origin plan/<name> 2>&1`, has not been run.
-- Some commands are not pre-approved: `git checkout`, `git pull`, `git add` and `git commit`. Claude asks before each, so an unattended next-card or handoff stops at the first one. A plan session in 0.2 uses those four and also `gh pr edit` and `rm`, which are not pre-approved either.
+- Not run: whether the deny rules for a further argument after the branch name, such as `git push origin plan/* *`, refuse a push with a redirect after it, `git push -u origin plan/<name> 2>&1`. By Claude Code's documentation they do not match the plain push.
+- Some commands are not pre-approved: `git checkout`, `git pull`, `git add` and `git commit`. Claude asks before each, so an unattended next-card or handoff stops at the first one. In 0.2 a plan session and next-card run further commands that have no permission entry, `git ls-files`, `rm` and `gh pr edit` among them. That is read from the entries, not from a run: which of them Claude asks about has not been recorded, and Claude Code may allow a command that only reads without an entry.
 - In 0.2, `card plan` checks that every heading of the specification is planned, and it works at one heading level, chosen per outline. Text that sits under no heading at that level is outside the check. It is a net for a section nobody planned, not a count of requirements; the plan reviewer reads for those.
 - Only `#` headings count. A heading underlined with `=` or `-` is not seen. Two headings with the same letters and digits count as one.
-- `card plan` is not a handoff gate. A fault in an outline does not make a card's work wrong, so it does not stop a handoff. It does stop `/workdeck:next-card` from writing the card for a row of that outline. CI, if you add the step, and the next plan run report it.
+- `card plan` is not a handoff gate. A fault in an outline does not make a card's work wrong, so it does not stop a handoff. Two faults do stop `/workdeck:next-card` from writing a card for a row, because `card plan start` refuses it: a fault in the format of the row's outline, and a row whose title, size or `depends` line a card cannot have. A heading that no row cites does not. CI, if you add the step, and the next plan run report it.
 - `card plan check` is true when it runs, before you approve a card written from a row. No gate runs it again.
-- Token measurement reads the session transcript, which is not a documented format. If it changes, `card tokens` prints `unknown` and nothing else breaks. Subagent turns are not counted, so the reviewer's tokens are in no figure here.
+- Token measurement reads the session transcript, which is not a documented format. If it changes, `card tokens` prints `unknown` and nothing else breaks. Subagent turns are not counted, so the tokens of the reviewer and of the plan reviewer are in no figure here.
 - A resumed session keeps its transcript, so its baseline is the first turn of the original session and growth is counted from there.
 - A budget is a warning. It does not stop the model.
 - `review` needs `--fetch`. Without it a card with an open pull request shows as `active`.
@@ -243,7 +243,7 @@ The main results, from [`docs/evidence.md`](docs/evidence.md):
 
 ## When it stops
 
-- **next-card or quick stops on a dirty tree.** Commit or stash first. Right after init, this means committing what init wrote.
+- **next-card, quick or plan stops on a dirty tree.** Commit or stash first. Right after init, this means committing what init wrote.
 - **The pull is not a fast-forward.** Your local base branch has commits the remote does not. Push them, or land them through a pull request.
 - **`card lint` fails on a new card.** `card new` writes empty sections. Fill in `Touch`, `Tests` and `Acceptance`.
 - **"No card is ready" and a card shows `active`.** A branch named `card/<id>` or `card/<id>-<slug>` holds it. Delete the branch to release the card.
@@ -266,11 +266,11 @@ Restart Claude Code afterwards. If you downloaded `card` with `curl`, or use the
 
 **Context windows keep growing. Does sizing still matter?** Less, for compaction. Budgets are configuration, so raise them. The scope gate, the review by a separate agent, the pull request per card and the measured record do not depend on window size.
 
-**What does it cost in context?** In every session, the descriptions of the two agents: the reviewer and, in 0.2, the plan reviewer. Claude cannot start a WorkDeck skill itself, and such a skill adds nothing to a session until you type it. `claude plugin details workdeck` projects about 340 tokens without the planner and about 470 with it, but that projection counts the skills. Measured once, the first turn of a session was 83 tokens larger with the plan skill and the plan reviewer than without them; the record is in [`docs/development/spike-0.2.md`](docs/development/spike-0.2.md). A skill's full text loads only when you run it: in 0.1.1, about 810 tokens for quick and 1,200 to 1,400 for each of the others, and about 880 for the reviewer. The skills that 0.2 adds or changes have not been measured. The hooks add nothing until they print. In a WorkDeck project the session-start hook adds the `card status` lines.
+**What does it cost in context?** In every session, the descriptions of the two agents: the reviewer and, in 0.2, the plan reviewer. Claude cannot start a WorkDeck skill itself, and such a skill adds nothing to a session until you type it. `claude plugin details workdeck` projected about 340 tokens without the planner and about 470 with it, but that projection counts the skills. Measured once, with drafts of the plan skill and the plan reviewer, the first turn of a session was 83 tokens larger with them than without. The plan reviewer's description is shorter now, and the figure was not taken again. The record is in [`docs/development/spike-0.2.md`](docs/development/spike-0.2.md). A skill's full text loads only when you run it: in 0.1.1, about 810 tokens for quick and 1,200 to 1,400 for each of the others, and about 880 for the reviewer. The skills that 0.2 adds or changes have not been measured. The hooks add nothing until they print. In a WorkDeck project the session-start hook adds the `card status` lines.
 
-**I set up my repository with 0.1. What do I do to plan?** Once 0.2 is released, update the plugin and run `/workdeck:init` again. It offers the permission entries for `plan/*` branches, and the current protocol section, which has two new lines. It asks before each. A yes to the second replaces the whole section, with any change you made to it, after showing you the difference. Nothing else has to change: a 0.1 repository that does not use the planner works as before.
+**I set up my repository with 0.1. What do I do to plan?** Once 0.2 is released, update the plugin and run `/workdeck:init` again. It offers the permission entries your settings file lacks, those for `plan/*` branches among them, and the current protocol section, which has two new lines. It asks before each. A yes to the second replaces the whole section, with any change you made to it, after showing you the difference. Commit what it wrote before you type `/workdeck:plan`, which stops on a dirty tree. Nothing else has to change: a 0.1 repository that does not use the planner works as before.
 
-**How do I run `card plan` in CI?** Once 0.2 is released, change the tag in the workflow and add the step that runs `card plan`. A workflow pinned to `card` 0.1.3 keeps passing on a planned deck, because `card lint` does not read outlines.
+**How do I run `card plan` in CI?** Once 0.2 is released, change the tag in the workflow and add the step that runs `card plan`. In a pull request's job the HEAD is detached, and there `card plan` does not run its check that a `plan/*` branch changes only outlines; the other checks run. A workflow that stays on the `card` at the tag `v0.1.3` keeps passing on a planned deck, because `card lint` does not read outlines. One thing fails it, in 0.1.3 and in 0.2: a card written by hand that depends on a row with no card file.
 
 **Why bash?** So `card` is one file with nothing to install, which CI can fetch with `curl`. The cost is no native Windows. A single binary with the same commands would remove that limit. It is not built.
 
@@ -280,7 +280,7 @@ Restart Claude Code afterwards. If you downloaded `card` with `curl`, or use the
 
 ## Roadmap
 
-- **0.2**: a planner that writes cards from a specification, and init for a repository that is already set up. It is built on the main branch and not yet released. How planned cards hold up has not been measured. The design is [`docs/design-0.2.md`](docs/design-0.2.md).
+- **0.2**: a planner that cuts a specification into rows, from which next-card writes cards, and init for a repository that is already set up. It is built on the main branch and not yet released. How planned cards hold up has not been measured. The design is [`docs/design-0.2.md`](docs/design-0.2.md).
 - **0.3**: claiming cards, worktrees and parallel sessions. The file formats already allow it. Not built.
 
 To ask for something or argue against one of these, [open an issue](https://github.com/AshwinSathian/workdeck/issues).

@@ -26,6 +26,7 @@ done: true
 - docs/reference.md
 - docs/design.md (one pointer to docs/design-0.2.md at the top; no rule changes)
 - test/cases/02-plugin.sh
+- docs/development/review-0.2.md (the record of the second review, the twenty-second pass)
 
 ## Tests
 - test_readme_names_the_plan_skill_and_warns_about_an_untrusted_specification
