@@ -3,7 +3,7 @@ id: P-13
 title: Plan skill
 size: M
 depends: P-01, P-02b, P-03, P-04, P-05, P-12
-done: false
+done: true
 ---
 
 ## Read
@@ -24,6 +24,8 @@ done: false
 ## Touch
 - skills/plan/SKILL.md (new)
 - test/cases/60-skills.sh
+- docs/design-0.2.md (sections 10.1 and 15, amended from the two reviews of this card: a resumed pull request, a run with nothing to plan, the path, and `card plan` before the branch)
+- docs/development/review-0.2.md (the record of the second review of this card, its sixteenth pass)
 
 ## Tests
 - test_plan_skill_is_typed_by_the_user_and_does_not_fork
