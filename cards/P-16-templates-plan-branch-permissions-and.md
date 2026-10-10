@@ -20,6 +20,8 @@ done: true
 - templates/settings-permissions.json
 - templates/claude-md-section.md
 - test/cases/02-plugin.sh
+- docs/design-0.2.md (section 19, row 12: what the second review read on the `permissions` page)
+- docs/development/review-0.2.md (the record of the second review)
 
 ## Tests
 - test_permission_template_allows_the_plan_branch_push
