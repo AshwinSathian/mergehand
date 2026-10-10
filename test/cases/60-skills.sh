@@ -501,3 +501,105 @@ test_plan_skill_writes_no_card_and_no_code() {
   ! grep -n 'reference/implement.md' "$f" || fail 'the plan skill points at the implementation steps'
   assert_contains "$(plan_step 9)" 'the outline is the only file that changed. If anything else changed, revert it first'
 }
+
+INIT_SKILL="$ROOT/skills/init/SKILL.md"
+
+# init_step <n>: the text of one numbered step of init, above the section for
+# a repository that is already set up.
+init_step() {
+  awk -v n="$1." '/^## / { exit } /^[0-9]+\. / { on = $1 == n } on' "$INIT_SKILL"
+}
+
+# init_again_step <n>: one of the four steps for a repository that is already
+# set up. With no <n>, the whole section.
+init_again_step() {
+  awk -v n="${1:-}" '
+    /^## / { sec = $0 == "## A repository that is already set up"; on = sec && n == ""; next }
+    sec && n != "" && /^[0-9]+\. / { on = $1 == n "." }
+    sec && n != "" && /^[^ 0-9]/ { on = 0 }
+    on' "$INIT_SKILL"
+}
+
+test_init_continues_when_workdeck_conf_exists() {
+  local s
+  s=$(init_step 1)
+  assert_contains "$s" 'If `workdeck.conf` exists at the repository root, say so and continue'
+  assert_contains "$s" 'do the four steps under "A repository that is already set up"'
+  assert_contains "$s" 'If this is not a git repository, say that WorkDeck needs one and stop'
+  ! grep -n 'say so and stop' "$INIT_SKILL" || fail 'init still stops on a workdeck.conf'
+  assert_eq 1 "$(grep -c '^## A repository that is already set up$' "$INIT_SKILL")" 'sections for a repository that is already set up'
+  assert_eq 4 "$(init_again_step | grep -c '^[0-9]\. \*\*')" 'steps for a repository that is already set up'
+  assert_contains "$(init_again_step)" 'Then do step 10'
+  assert_eq 10 "$(awk '/^## / { exit } /^[0-9]+\. \*\*/' "$INIT_SKILL" | grep -c .)" 'steps for a new repository'
+  # Steps 2, 3, 6 and 7 are as they were in 0.1. A card that changes one changes this sum.
+  assert_eq '384225754 2327' "$( (init_step 2; init_step 3; init_step 6; init_step 7) | cksum)" 'steps 2, 3, 6 and 7'
+}
+
+test_init_asks_before_each_step_and_overwrites_nothing() {
+  local s f="$INIT_SKILL"
+  s=$(init_again_step)
+  assert_contains "$s" 'Each one asks first and writes nothing without a yes'
+  # Steps 5, 8 and 9 end with "go on", which must not lead to step 6 here.
+  assert_contains "$s" 'go on to the next of these four, not to the step numbered after it'
+  grep -q -F 'Never overwrite a file that exists: show the user what you would add and merge it in.' "$f" || fail 'init may overwrite a file'
+  grep -q -F 'There is one exception: the protocol section of `CLAUDE.md` is replaced after the user has seen the difference and said yes.' "$f" || fail 'init does not state its one exception'
+  grep -q -F 'Do not commit anything' "$f" || fail 'init may commit'
+  assert_contains "$(init_step 5)" 'Merge them in when the user approves'
+  assert_contains "$(init_step 8)" 'show the list and ask which to add'
+  assert_contains "$(init_step 9)" 'Show the list and ask which to add'
+  assert_contains "$(init_again_step 4)" 'Replace it on a yes, and leave every line outside the section as it is'
+}
+
+test_init_offers_the_permission_entries_that_are_missing() {
+  local s
+  s=$(init_again_step 1)
+  assert_contains "$s" 'Do step 5, with what `card conf check` prints as the check command'
+  assert_contains "$s" 'Show only the entries `.claude/settings.json` lacks'
+  s=$(init_step 5)
+  assert_contains "$s" 'keep everything already in it, add only entries that are missing'
+  # No test parses the template, so the merge is where a fault in it shows.
+  assert_contains "$s" 'If the template or `.claude/settings.json` does not parse as JSON, name the file, write nothing to the settings file'
+}
+
+test_init_offers_touch_ignore_entries_for_lockfiles_and_generated_files() {
+  local s p
+  s=$(init_step 8)
+  for p in package-lock.json yarn.lock pnpm-lock.yaml Cargo.lock go.sum '*.snap' linguist-generated .gitattributes; do
+    assert_contains "$s" "$p"
+  done
+  assert_contains "$s" 'Leave out what `card conf touch_ignore` already covers'
+  # `card` 0.1.3 reads only one touch_ignore line.
+  assert_contains "$s" 'add to it and never write a second one'
+  assert_contains "$(init_again_step 2)" 'Do step 8'
+}
+
+test_init_proposes_at_most_ten_review_rules_each_with_its_source() {
+  local s
+  s=$(init_step 9)
+  assert_contains "$s" 'Read `CLAUDE.md`, the contributing guide, the linter configuration and the CI workflows'
+  assert_contains "$s" 'Propose at most ten rules'
+  assert_contains "$s" 'Each rule is one sentence that a reviewer can check against a diff, and each is shown with the file it was taken from'
+  assert_contains "$s" 'under the existing heading that fits best'
+  assert_contains "$s" 'Leave the rules already in the file as they are'
+  assert_contains "$(init_again_step 3)" 'Do step 9'
+}
+
+test_init_replaces_a_protocol_section_that_differs_from_the_template() {
+  local s
+  s=$(init_again_step 4)
+  assert_contains "$s" 'templates/claude-md-section.md'
+  assert_contains "$s" 'from the `## WorkDeck session protocol` heading to the line before the next line that starts with `# ` or `## `, or to the end of the file'
+  assert_contains "$s" 'If the section is the same as the template, say so and change nothing'
+  assert_contains "$s" 'If it differs, show the difference as a diff'
+  assert_contains "$s" 'with the directories replaced as step 4 says'
+  # The section names the default directories (review 0.2, nineteenth pass).
+  assert_contains "$(init_step 4)" 'Where `card conf cards_dir` prints something other than `cards`, write that directory in place of `cards` in `cards/` and `cards/plan/`'
+}
+
+test_init_no_longer_says_that_cards_are_not_written_from_a_specification() {
+  local s
+  s=$(init_step 10)
+  ! grep -n -i 'does not write them from a specification\|WorkDeck 0\.1' "$INIT_SKILL" || fail 'init still says that WorkDeck does not write cards from a specification'
+  assert_contains "$s" 'type `/workdeck:plan <spec path>`'
+  assert_contains "$s" 'Nothing is committed, and the next skill stops on a dirty tree'
+}

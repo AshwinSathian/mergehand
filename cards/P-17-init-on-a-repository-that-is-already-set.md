@@ -3,7 +3,7 @@ id: P-17
 title: Init on a repository that is already set up
 size: M
 depends: P-16
-done: false
+done: true
 ---
 
 ## Read
