@@ -3,7 +3,7 @@ id: P-14
 title: next-card writes the card for a row
 size: M
 depends: P-07, P-09, P-10, P-11
-done: false
+done: true
 ---
 
 ## Read
@@ -24,6 +24,7 @@ done: false
 - skills/next-card/SKILL.md
 - reference/implement.md
 - test/cases/60-skills.sh
+- docs/development/review-0.2.md (the seventeenth pass: the two reviews of this card and what was decided)
 
 ## Tests
 - test_next_card_writes_the_card_for_a_row_before_the_branch_exists
