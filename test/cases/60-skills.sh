@@ -186,7 +186,9 @@ test_next_card_writes_the_card_for_a_row_before_the_branch_exists() {
   local prev=0 n p
   for p in '`card plan start <id>`' 'the code the work concerns' 'Fill in the card' 'cannot be done as it was cut' '`card plan check <id>`' 'Show the card to the user'; do
     n=$(grep -n -F -e "$p" "$NEXT_SKILL" | head -1 | cut -d: -f1)
-    [ -n "$n" ] && [ "$n" -gt "$prev" ] || fail "out of order: $p"
+    if [ -z "$n" ] || [ "$n" -le "$prev" ]; then
+      fail "out of order: $p"
+    fi
     prev=$n
   done
   # A card left untracked by a session that ended early is not yet approved.
