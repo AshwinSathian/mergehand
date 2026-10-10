@@ -533,6 +533,10 @@ test_init_continues_when_workdeck_conf_exists() {
   assert_eq 10 "$(awk '/^## / { exit } /^[0-9]+\. \*\*/' "$INIT_SKILL" | grep -c .)" 'steps for a new repository'
   # Steps 2, 3, 6 and 7 are as they were in 0.1. A card that changes one changes this sum.
   assert_eq '384225754 2327' "$( (init_step 2; init_step 3; init_step 6; init_step 7) | cksum)" 'steps 2, 3, 6 and 7'
+  # The rest of the file is held whole, from its first line: of 50 mutations of
+  # the skill, 41 passed the fragments in the tests below (review 0.2,
+  # twentieth pass).
+  assert_eq '1201528225 7362' "$( (awk '/^2\. / { exit } 1' "$INIT_SKILL"; init_step 4; init_step 5; init_step 8; init_step 9; init_step 10; init_again_step) | cksum)" 'the file without steps 2, 3, 6 and 7'
 }
 
 test_init_asks_before_each_step_and_overwrites_nothing() {

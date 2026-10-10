@@ -22,6 +22,7 @@ done: true
 ## Touch
 - skills/init/SKILL.md
 - test/cases/60-skills.sh
+- docs/development/review-0.2.md (the record of the second review, twentieth pass)
 
 ## Tests
 - test_init_continues_when_workdeck_conf_exists
