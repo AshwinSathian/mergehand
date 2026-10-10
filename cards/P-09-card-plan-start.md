@@ -3,7 +3,7 @@ id: P-09
 title: card plan start
 size: S
 depends: P-06
-done: false
+done: true
 ---
 
 ## Read
@@ -19,6 +19,9 @@ done: false
 - bin/card
 - test/cases/37-plan-start.sh (new)
 - docs/reference.md (the argument line, if `card help` gains one)
+- test/cases/30-new.sh (added at handoff: `cmd_new` was split, and its dependency list and the link refusal had no case)
+- docs/design-0.2.md (added at handoff: the rows of sections 9 and 15 for what the second review decided)
+- docs/development/review-0.2.md (added at handoff: the record of the second review)
 
 ## Tests
 - test_plan_start_creates_the_card_file_from_the_row
