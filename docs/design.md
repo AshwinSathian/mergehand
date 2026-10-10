@@ -2,6 +2,8 @@
 
 This is the design the build followed. Sections 19, 19.1 and 19.2 list every change made to it and why. How the build went is in [`development/`](development/).
 
+This file is the design of release 0.1. [`design-0.2.md`](design-0.2.md) adds to it for release 0.2; where that file is silent, this one holds.
+
 Date: 2026-10-05
 Status: implemented. Approved 2026-10-05 after adversarial review; amended during the build (sections 19 to 19.2)
 Scope: release 0.1 (core, runner, quick lane). The planner (0.2) and team features (0.3) get their own specs.
