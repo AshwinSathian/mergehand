@@ -71,6 +71,21 @@ test_claude_md_section_is_short() {
   grep -q '/workdeck:handoff' "$f" || fail 'the section does not point at handoff'
 }
 
+# Design 0.2, section 10.3, last paragraph: the two lines the section gains.
+test_claude_md_section_names_plan_branches_and_the_card_for_a_row() {
+  local f="$ROOT/templates/claude-md-section.md" s
+  s=$(grep '^- .*`plan/\*` branch' "$f") || fail 'no line for plan/* branches'
+  assert_contains "$s" 'changes only outlines'
+  # The plan skill has no handoff: its commit, push and pull request are its own.
+  assert_contains "$s" 'commits, pushes and opens its pull request itself'
+  s=$(grep '^- For a row' "$f") || fail 'no line for the card of a row'
+  assert_contains "$s" '`/workdeck:next-card` writes the card'
+  assert_contains "$s" 'waits for a yes before any code'
+  # The approval commit is the one commit before handoff; the line above says "Do not commit".
+  assert_contains "$s" 'card as approved'
+  assert_contains "$s" "the one commit on a card's branch before handoff"
+}
+
 test_reviewer_agent_is_read_only() {
   local f="$ROOT/agents/reviewer.md"
   assert_eq 'name: reviewer' "$(sed -n 2p "$f")" 'agent name'
@@ -249,6 +264,28 @@ test_permission_template_does_not_deny_the_handoff_push() {
   done
   matches deny 'gh pr create --base main --title x --body-file body.md' && fail 'gh pr create is denied'
   return 0
+}
+
+# Design 0.2, section 10.3, step 1: the plan skill pushes a plan/* branch, and
+# the deny list closes the second refspec as it does for card/* (finding 9).
+test_permission_template_allows_the_plan_branch_push() {
+  local c
+  for c in 'git push -u origin plan/2610091200' 'git push origin plan/2610091200'; do
+    matches deny "$c" && fail "denied: $c"
+    matches allow "$c" || fail "not allowed: $c"
+  done
+  assert_contains "$(rules allow)" 'git push -u origin plan/*'
+  assert_contains "$(rules allow)" 'git push origin plan/*'
+}
+
+test_permission_template_denies_a_plan_branch_push_with_a_further_argument() {
+  local c
+  for c in 'git push origin plan/* *' 'git push -u origin plan/* *'; do
+    rules deny | grep -qxF "$c" || fail "no deny rule: $c"
+  done
+  for c in 'git push origin plan/2610091200 main' 'git push -u origin plan/2610091200 main' 'git push origin plan/2610091200:main'; do
+    matches deny "$c" || fail "not denied: $c"
+  done
 }
 
 test_permission_template_denies_known_bad_pushes() {

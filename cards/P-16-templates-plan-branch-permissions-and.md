@@ -3,7 +3,7 @@ id: P-16
 title: Templates: plan branch permissions and protocol lines
 size: S
 depends: P-02
-done: false
+done: true
 ---
 
 ## Read
