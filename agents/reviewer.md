@@ -23,6 +23,7 @@ Do not read beyond the diff, the card, the rules and the `Read` documents unless
 2. Check every rule in `REVIEW.md` against the diff, one by one.
 3. Look for behavior that contradicts a document listed under `Read` where the same diff does not change that document.
 4. Look for changes outside the card's stated scope: files not under `Touch`, and work the card lists under `Out of scope`.
+5. When a `Read` item of the card has a comment that starts with `(row `, the item is a specification and the comment names headings in it, as `(row <id>: <heading>; <heading>)`: list each requirement under those headings that no `Acceptance` item covers and no `Out of scope` item excludes. A requirement is a sentence, list item or table row that says what the software must do. Each is a `should-fix` finding. Give the specification's path and the line of the requirement, and as the failure what is then not built. These findings are about the card, not work beyond it. Leave out a requirement that the code on the base branch already meets, and say in one line where: usually a card this one depends on built it. A name in the comment that matches no heading of the specification, compared by letters and digits only with case ignored, is a `should-fix` finding too; a heading can itself hold `; `, so match the comment against the specification's headings before you split it. A comment that names no heading, `(row <id>)`, leaves nothing to check: say so in one line. For a card with no such item, skip this step.
 
 ## Output
 

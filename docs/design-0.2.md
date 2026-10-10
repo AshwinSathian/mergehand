@@ -231,6 +231,8 @@ The template's section gains two lines: a `plan/*` branch changes only outlines,
 
 One addition in step 7. When the card's branch has an `<id>: card as approved` commit, the pull request body gains a part headed "Changes to the card since it was approved" with the output of `git diff <that commit> HEAD -- <card file>`, leaving out the `done` line. In 0.1 a hand-written card was on the base branch, so a file added to `Touch` showed in the pull request's diff. A card written in its own pull request is new in that diff from top to bottom; the commit and this part of the body are what keep scope growth visible.
 
+The diff is taken straight after handoff's commit, so it holds every change, and before the two places where step 7 can stop short of a pull request, no remote and no `gh`. There handoff prints the part and the user puts it in the body. A lookup of the commit that fails stops handoff: it is not read as a card with no approval commit. (Amended by the second review of P-15, the eighteenth pass of the review record.)
+
 Split mode is as in 0.1. The remainder is a card with a file, and section 6 makes rows wait for it.
 
 `quick` does not change.
@@ -298,6 +300,8 @@ Output is in the form the 0.1 reviewer uses: `must-fix`, `should-fix` or `nit`, 
 ### 12.2 Reviewer
 
 One step is added to `agents/reviewer.md`. When a `Read` item of the card has a comment that starts with `(row `, the item is a specification and the comment names headings in it: list each requirement under those headings that no `Acceptance` item covers and no `Out of scope` item excludes. Each is a `should-fix` finding. This is the review of a card body by an agent that did not write it. It comes after the work, not before it, which is the cost of section 3's choice.
+
+Three things the second review of P-15 added (the eighteenth pass of the review record). A requirement is what step 2 of the plan reviewer calls one, a sentence, list item or table row that says what the software must do, and one that the code on the base branch already meets is left out, as that step leaves it out: usually a card this one depends on built it, and without the exception each such requirement is a finding that the pull request has to answer. A name in the comment that matches no heading of the specification, compared as section 5 compares headings, by letters and digits with case ignored, is a finding too, or a renamed heading reads as a card that covers everything. And a heading can hold `; `, which the comment of section 7 also uses between headings, so the reviewer matches the comment against the specification's headings before it splits it.
 
 ## 13. Hooks
 

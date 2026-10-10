@@ -81,6 +81,34 @@ test_reviewer_agent_is_read_only() {
   return 0
 }
 
+# Design 0.2, section 12.2: the review of a card body that next-card wrote
+# from a row, by an agent that did not write it. The step is held sentence by
+# sentence: the second review of P-15 changed 14 of them and no test saw it.
+test_reviewer_checks_a_planned_card_against_its_specification_headings() {
+  local f="$ROOT/agents/reviewer.md" s want='' line
+  s=$(awk '/^## / { on = $0 == "## Procedure" } on && /^5\. /' "$f")
+  while IFS= read -r line; do
+    assert_contains "$s" "$line"
+    want="$want $line"
+  done <<'SENTENCES'
+When a `Read` item of the card has a comment that starts with `(row `, the item is a specification and the comment names headings in it, as `(row <id>: <heading>; <heading>)`: list each requirement under those headings that no `Acceptance` item covers and no `Out of scope` item excludes.
+A requirement is a sentence, list item or table row that says what the software must do.
+Each is a `should-fix` finding.
+Give the specification's path and the line of the requirement, and as the failure what is then not built.
+These findings are about the card, not work beyond it.
+Leave out a requirement that the code on the base branch already meets, and say in one line where: usually a card this one depends on built it.
+A name in the comment that matches no heading of the specification, compared by letters and digits only with case ignored, is a `should-fix` finding too; a heading can itself hold `; `, so match the comment against the specification's headings before you split it.
+A comment that names no heading, `(row <id>)`, leaves nothing to check: say so in one line.
+For a card with no such item, skip this step.
+SENTENCES
+  # Nothing before, between or after them.
+  assert_eq "5.$want" "$s" 'step 5'
+  # It is the last of five, and the rest of the agent is what it was in 0.1.
+  assert_eq '1. 2. 3. 4. 5. ' "$(awk '/^## / { on = $0 == "## Procedure" } on && /^[0-9]+\. / { printf "%s ", $1 }' "$f")" 'steps of the procedure'
+  assert_eq 1 "$(grep -c '^5\. ' "$f")" 'lines that start with 5.'
+  assert_eq '156200674 2751' "$(grep -v '^5\. ' "$f" | cksum)" 'the reviewer without the step'
+}
+
 PLAN_REVIEWER="$ROOT/agents/plan-reviewer.md"
 
 # plan_reviewer_step <n>: the text of one numbered step of the procedure.
