@@ -24,6 +24,8 @@ done: true
 ## Touch
 - skills/plan/SKILL.md (new)
 - test/cases/60-skills.sh
+- docs/design-0.2.md (sections 10.1 and 15, amended from the two reviews of this card: a resumed pull request, a run with nothing to plan, the path, and `card plan` before the branch)
+- docs/development/review-0.2.md (the record of the second review of this card, its sixteenth pass)
 
 ## Tests
 - test_plan_skill_is_typed_by_the_user_and_does_not_fork
