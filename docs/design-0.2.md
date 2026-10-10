@@ -149,8 +149,8 @@ A planned card is an ordinary 0.1 card that next-card created from a row. It has
 
 The session then fills in the rest (section 10.2), and `card plan check <id>` checks the result against the tree:
 
-- **Its paths exist.** Each `Read` entry, taken up to the first space and with any `#anchor` removed, names a file or directory. Each `Touch` entry whose comment does not start with `(new)` matches at least one file, tracked or untracked.
-- **What it creates is not there yet.** A `Touch` entry marked `(new)` is a full path and matches no file.
+- **Its paths exist.** Each `Read` entry, taken up to the first space and with any `#anchor` removed, names a file or directory. An absolute path and one with a `..` segment are refused: a card can arrive in someone else's pull request, and a session reads what `Read` names. Each `Touch` entry whose comment does not start with `(new)` matches at least one file, tracked or untracked. A file that git ignores does not count, because the scope gate cannot see a change to it.
+- **What it creates is not there yet.** A `Touch` entry marked `(new)` is a full path and matches no file. A full path has no pattern character outside an escape, so `app/\[id\]/page.tsx` is one and `src/*` is not, and no empty, `.` or `..` segment. Nothing is at that path on disk, an ignored file included; it is not a tracked file that is gone from the disk; and git would not ignore a file created there.
 - **`Out of scope` has an item.**
 
 These are true when the body is written and stop being true as soon as the work starts: the new file exists, a file the card removes is gone. So the check runs once, before the user is asked, and is not a handoff gate and not a CI step.
@@ -179,7 +179,7 @@ No key is added to `workdeck.conf`. `budget.PLAN` would have been accepted by `c
 | `card plan new <spec path> <PREFIX> [--level N]` | Creates the outline file with its front matter filled in and no rows. `level` defaults to 2. Refuses a prefix that an outline or a card already uses, `Q`, an existing file, a specification that is not tracked, and one with no heading at that level. The path is from the root of the repository. A prefix is at most 30 characters, because a row id is at most 40. |
 | `card plan accept <PREFIX>` | Sets `spec_blob` to the specification's current value and changes no other byte of the outline. The outline is `<cards_dir>/plan/<prefix in lowercase>.md` in the working tree. Exit 1 when there is none, when its front matter has no `spec_blob` line, or when its `spec` is not a tracked, regular file inside the repository. |
 | `card plan start <id>` | Creates the card file for a row (section 7) and prints its path. Refuses an id with no row, one that already has a card file, a row in an outline that the outline reader has a finding for, and a row whose title, size or dependencies a card cannot have. It does not run the other checks of `card plan`, and does not look at the row's state. |
-| `card plan check <id>` | Checks one card against the tree (section 7). Exit 1 on any failure. |
+| `card plan check <id>` | Checks one card against the working tree (section 7), planned or written by hand. Prints every failure with the card file, then exits 1. Exit 2 when the card file cannot be read or git cannot list the files. No other command and no gate runs it. |
 | `card list`, `card next`, `card status`, `card show` | Include rows (section 6). Unchanged for a repository with no outline. |
 
 Exit codes and message conventions are those of 0.1.
@@ -274,6 +274,7 @@ Known limits:
 - Only `#` headings count. A heading underlined with `=` or `-` is not seen. A code fence is three or more backticks or tildes at the start of a line, and ends at a line of the same mark, at least as many of them, with nothing after. Up to three spaces may come before a heading or a fence, as in Markdown. A fence inside a list item or a quotation that is indented further, and an HTML comment, are not recognized: a `#` line there counts as a heading, which fails toward a finding and not toward silence.
 - Two headings with the same text count as one. So do two that differ only in punctuation, `C++` and `C#`, and two that differ only in the case of a letter outside ASCII are two.
 - `card plan check` is true when it runs. A file may move between the yes and the first edit; that is minutes, not days.
+- `card plan check` sees the files as the scope gate does, so it shares the gate's limits. A file whose name git quotes, one with a `"`, a backslash or a control character, matches no `Touch` entry in either. A tracked file that is gone from the disk still counts for an entry not marked `(new)`: checking the disk would fail honest entries in a sparse checkout. A tab does not end an entry; only a space does. A symbolic link in `Read` is followed, wherever it points.
 - No script checks that a revision left alone the rows that already have a card or a branch, or that a removed id is not used again. Both show in the plan pull request's diff.
 - The plan branch check runs only where the branch is checked out by name. With a detached HEAD, which is what a CI job for a pull request has, and during a rebase, it does not run. It reads the working tree and not the index, so a file that is staged and then removed from the tree is not seen until it is committed. The same holds for `card touched`.
 - `card plan` is not a handoff gate. A fault in an outline does not make a card's work wrong, and a 0.1 `card` on the PATH would stop every handoff with `unknown command`. CI and the next plan run report it.
@@ -348,6 +349,8 @@ The maintainer reads the record and decides whether to tag. The version in `plug
 | `<cards_dir>/plan` is a symbolic link | `card plan new` and `card plan accept` exit 1 and write nothing |
 | `card plan start` for an id with a card file, or with no row | Exit 1 with the reason |
 | `card plan start` for a row in an outline with a format fault, or a row whose title, size or dependencies a card cannot have | Exit 1 and no file. The message names the outline, and `card plan` where that command reports the fault |
+| `card plan check` for an id with no card file | Exit 1 with the reason. A row is not a card file |
+| `card plan check` for a card that fails a rule of section 7 | One line per failure on stderr, each with the card file, then exit 1 |
 | The path of the new card is a symbolic link | `card new` and `card plan start` exit 1 and write nothing |
 | The user says no to a card that next-card wrote | The card file is deleted. Nothing was committed and no branch exists |
 | A row cannot be done as cut | next-card deletes the card file and names the plan skill |

@@ -154,6 +154,7 @@ test_touch_pattern_double_star_needs_a_directory() { assert_eq miss "$(verdict '
 test_touch_pattern_double_star_in_a_directory() { assert_eq match "$(verdict '**/a.ts' src/x/a.ts)"; }
 test_touch_pattern_leading_slash_is_ignored() { assert_eq match "$(verdict '/src/a.ts' src/a.ts)"; }
 test_touch_pattern_leading_dot_slash_is_ignored() { assert_eq match "$(verdict './src/a.ts' src/a.ts)"; }
+test_touch_pattern_leading_dot_slash_goes_before_the_slash() { assert_eq match "$(verdict './/src/' src/a.ts)"; }
 test_touch_pattern_negation_is_literal() { assert_eq miss "$(verdict '!src/gen.ts' src/gen.ts)"; }
 test_touch_pattern_bare_extension_matches_any_depth() { assert_eq match "$(verdict '*.ts' src/x/y.ts)"; }
 test_touch_pattern_directory_star() { assert_eq match "$(verdict 'src/*' src/x/y.ts)"; }
