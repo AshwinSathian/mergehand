@@ -3,7 +3,7 @@ id: P-18
 title: Compatibility test: card 0.1.3 lint on a planned deck
 size: S
 depends: P-02b, P-03, P-08, P-09, S-04
-done: false
+done: true
 ---
 
 ## Read
