@@ -92,11 +92,16 @@ test_plan_reviewer_agent_is_read_only() {
   local f="$PLAN_REVIEWER"
   assert_eq 'name: plan-reviewer' "$(sed -n 2p "$f")" 'agent name'
   assert_eq 'tools: Read, Grep, Glob, Bash' "$(grep '^tools:' "$f")" tools
-  # The description is in every session's context: one sentence.
+  # No field beyond these: one that plugin agents ignore would suggest it works,
+  # and one such as background changes how the agent runs.
+  assert_eq 'name description tools ' "$(awk '/^---$/ { n++; next } n == 1 { sub(/:.*/, ""); printf "%s ", $0 }' "$f")" 'front matter fields'
+  # The description is in every session's context: one sentence, and short.
   assert_eq 1 "$(grep '^description: ' "$f" | grep -o '\. \|\.$' | grep -c .)" 'sentences in the description'
+  [ "$(grep '^description: ' "$f" | wc -c)" -le 200 ] || fail 'the description is longer than 200 characters'
   grep -q 'do not edit, create or delete files' "$f" || fail 'the plan reviewer is not told to change nothing'
-  grep -Eq '^(hooks|mcpServers|permissionMode):' "$f" && fail 'field ignored for plugin agents'
-  return 0
+  grep -q 'do not commit, stash, check out, reset or push' "$f" || fail 'the plan reviewer is not told to leave git alone'
+  # Bash is the one tool of the four that can write.
+  grep -q 'never to change the repository' "$f" || fail 'Bash is not limited to reading'
 }
 
 test_plan_reviewer_is_told_to_assume_the_outline_is_wrong() {
@@ -126,6 +131,11 @@ test_plan_reviewer_uses_the_severities_of_the_reviewer() {
   assert_eq "$(awk "$form" "$ROOT/agents/reviewer.md")" "$(awk "$form" "$PLAN_REVIEWER")" 'severities of the output form'
   grep -q 'the outline.s line and a failure scenario' "$PLAN_REVIEWER" || fail 'a finding does not need a line and a failure scenario'
   grep -q '`must-fix: none`' "$PLAN_REVIEWER" || fail 'no line for a category with no findings'
+  # The closing lines are what tell "read and found nothing" from "not read".
+  grep -q 'print nothing after them' "$PLAN_REVIEWER" || fail 'the report does not end at its closing lines'
+  for s in 'searched:' 'no spec item:' 'outside the level:'; do
+    grep -q "\`$s\`" "$PLAN_REVIEWER" || fail "no closing line '$s'"
+  done
 }
 
 test_plan_reviewer_looks_for_joined_does_lines_and_lines_about_tests() {
@@ -134,6 +144,9 @@ test_plan_reviewer_looks_for_joined_does_lines_and_lines_about_tests() {
   assert_contains "$s" 'joins two statements'
   assert_contains "$s" 'only says that tests exist'
   assert_contains "$s" 'Neither is a `must-fix` finding by itself'
+  # "Neither" refers to the two bullets before it.
+  assert_contains "$(printf '%s\n' "$s" | awk '/Neither is a/ { print prev } { prev = $0 }')" 'only says that tests exist'
+  grep '^- `must-fix`: ' "$PLAN_REVIEWER" | grep -q '`does` line' && fail 'the must-fix definition names a does line'
   # One example of each, as the spike's reviewer raised neither.
   assert_eq 2 "$(printf '%s\n' "$s" | grep -c 'For example')" 'examples in step 3'
 }
@@ -158,7 +171,7 @@ test_plan_reviewer_reads_what_lies_outside_the_level_of_the_outline() {
 test_plan_reviewer_gives_paths_relative_to_the_repository() {
   grep -q 'Every path you print is relative to the repository' "$PLAN_REVIEWER" || fail 'the plan reviewer is not told to print relative paths'
   # The example findings show one.
-  awk '/^```$/ { on = !on; next } on && $2 !~ /^cards\/plan\/[a-z0-9]*\.md:[0-9]*$/ { bad = 1 } END { exit bad }' "$PLAN_REVIEWER" || fail 'an example finding has no relative path'
+  awk '/^```$/ { on = !on; next } on && $2 !~ /^cards\/plan\/[a-z0-9]*\.md:[0-9][0-9]*$/ { bad = 1 } END { exit bad }' "$PLAN_REVIEWER" || fail 'an example finding has no relative path'
 }
 
 test_templates_are_complete() {

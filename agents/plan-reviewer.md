@@ -42,4 +42,4 @@ nit        cards/plan/auth.md:3   ...
 
 Every finding has the outline's line and a failure scenario. If you cannot describe how it goes wrong, it is not a finding. Every path you print is relative to the repository, also where you were given or found an absolute one. Do not praise, summarize the outline or propose work the specification does not ask for.
 
-When a category has no findings, print one line for it, for example `must-fix: none`. End with these lines, one each: what you searched in the code, and what you found it already does; for each row with no `spec` item, whether the specification calls for the work; and the parts outside the outline's level that you read, or that there are none.
+When a category has no findings, print one line for it, for example `must-fix: none`. End with three lines, each starting with its label, and print nothing after them: `searched:` what you searched in the code and what you found it already does; `no spec item:` for each row with no `spec` item, whether the specification calls for the work, or `none`; `outside the level:` the parts outside the outline's level that you read, or `none`.
