@@ -114,6 +114,9 @@ test_stop_card_only_commit_respects_cards_dir() {
   stop; assert_silent
   mkdir cards; echo x > cards/a.md; commit_all 'not the cards directory'
   stop; assert_blocked
+  git reset -q --hard HEAD~1
+  echo x > work/other.md; commit_all 'beside the cards directory'
+  stop; assert_blocked
 }
 
 test_stop_counts_commits_from_the_root_when_run_in_a_subdirectory() {
@@ -131,4 +134,54 @@ test_stop_counts_commits_from_the_root_when_run_in_a_subdirectory() {
 test_stop_counts_a_nested_directory_named_like_the_cards_directory() {
   deck; mkdir -p src/cards; echo x > src/cards/a.md; commit_all 'code under src/cards'
   stop; assert_blocked
+}
+
+test_stop_counts_a_directory_whose_name_starts_like_the_cards_directory() {
+  deck; mkdir cards-old; echo x > cards-old/a.md; commit_all 'code under cards-old'
+  stop; assert_blocked
+}
+
+test_stop_counts_a_commit_that_adds_only_a_log_for_another_card() {
+  deck; mk_log A-2; commit_all 'a log, not for this card'
+  stop; assert_blocked
+}
+
+test_stop_passes_after_a_merge_of_the_base_into_a_card_only_branch() {
+  deck; echo note >> cards/A-1-thing.md; commit_all 'approve the card'
+  git checkout -q main; echo m > main.txt; commit_all 'on the base'
+  git checkout -q card/A-1-thing; git merge -q --no-ff -m merge main
+  stop; assert_silent
+}
+
+test_stop_blocks_after_a_merge_commit_that_changes_code() {
+  deck; echo note >> cards/A-1-thing.md; commit_all 'approve the card'
+  git checkout -q main; echo m > main.txt; commit_all 'on the base'
+  git checkout -q card/A-1-thing; git merge -q --no-ff --no-commit main
+  echo x >> src.txt; commit_all 'merge, with a change of its own'
+  stop; assert_blocked
+}
+
+test_stop_finds_the_log_when_run_in_a_subdirectory() {
+  new_repo; mk_conf; mk_card A-1; mkdir sub; echo keep > sub/keep.txt; commit_all
+  git checkout -q -b card/A-1-thing; work; mk_log A-1; commit_all handoff
+  cd sub || exit 1
+  stop; assert_silent
+}
+
+test_stop_reads_its_pathspecs_as_pathspecs_when_git_is_told_they_are_literal() {
+  deck; echo note >> cards/A-1-thing.md; commit_all 'approve the card'
+  GIT_LITERAL_PATHSPECS=1 stop; assert_silent
+  work
+  GIT_LITERAL_PATHSPECS=1 stop; assert_blocked
+  mk_log A-1; commit_all handoff
+  GIT_LITERAL_PATHSPECS=1 stop; assert_silent
+}
+
+test_stop_exits_zero_when_git_cannot_count_the_commits() {
+  local real
+  deck; work
+  real=$(command -v git); mkdir "$T/bin"
+  printf '#!/bin/sh\ncase " $* " in *" rev-list "*) echo fatal >&2; exit 128 ;; esac\nexec "%s" "$@"\n' "$real" > "$T/bin/git"
+  chmod +x "$T/bin/git"
+  PATH="$T/bin:$PATH" stop; assert_silent
 }

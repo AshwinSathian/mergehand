@@ -15,6 +15,8 @@ done: true
 ## Touch
 - hooks/stop.sh
 - test/cases/52-hook-stop.sh
+- docs/design-0.2.md (section 13, after the second review: what is given up)
+- docs/development/review-0.2.md (the fourteenth pass)
 
 ## Tests
 - test_stop_passes_after_a_commit_that_changes_only_the_cards_directory
@@ -41,3 +43,4 @@ done: true
 - Given up, by decision: a commit that only adds a `## Blocked` section to the card no longer trips the guard.
 - `card conf cards_dir` is one more process per stop. The hook already calls `card conf` twice.
 - It can be done at any point after S-04 and before P-14.
+- After the second review: the search for the session log is anchored too, and both commands carry `--no-literal-pathspecs`. Neither is in the acceptance above. The reasons are in the fourteenth pass of docs/development/review-0.2.md.
