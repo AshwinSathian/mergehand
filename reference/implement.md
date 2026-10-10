@@ -12,7 +12,7 @@ You are on the card's branch. The card is the contract: what to read, which file
 
 5. **Stay in scope.** Change only files that match the card's `Touch` list. If another file has to change, either revert it or add it to `Touch` with the reason after the path; the addition shows in the pull request. `card touched <id>` prints what the scope gate will say. `Touch` entries are shell patterns matched against the whole path: `src/` or `src/*` covers everything under `src`, `*.ts` matches at any depth, and a bare `a.ts` matches only a file at the repository root.
 
-6. **Do not commit, push or open a pull request.** Handoff does all three after the check, the gates and the review. For a card that next-card wrote from a row, the approved card is already committed, alone, as `<id>: card as approved`. Nothing else is committed before handoff. A commit made now that changes anything outside the cards directory leaves a clean tree with no session log, and the stop hook will block the end of every turn until one exists.
+6. **Do not commit, push or open a pull request.** Handoff does all three after the check, the gates and the review. For a card that next-card wrote from a row, the approved card is already committed, alone, as `<id>: card as approved`. Nothing else is committed before handoff, a later change to the card included. A commit made now that changes anything outside the cards directory leaves a clean tree with no session log, and the stop hook will block the end of every turn until one exists.
 
 7. **If a WorkDeck budget warning appears,** finish the step you are on, stop, and ask the user to run `/workdeck:handoff split`.
 

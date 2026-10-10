@@ -47,3 +47,4 @@ done: false
 - Init writes the workflow with the plugin's version as the tag, and until P-24 that tag's `card` has no `plan` command. That is why the workflow template does not change here.
 - The deny rules match a command as written and are not a security boundary. The README already says so.
 - test/cases/02-plugin.sh has `matches allow` and `matches deny`. Use them; do not grep the JSON.
+- From the second review of P-14 (`docs/development/review-0.2.md`, seventeenth pass): next-card now runs `git add <card file>` and `git commit -m "<id>: card as approved"` for a planned card, and the permission template allows neither, so each is prompted. `templates/claude-md-section.md` says "Do not commit, push or open a pull request", which that one commit contradicts. Decide both here.

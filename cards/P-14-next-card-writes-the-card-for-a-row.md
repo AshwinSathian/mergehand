@@ -24,6 +24,7 @@ done: true
 - skills/next-card/SKILL.md
 - reference/implement.md
 - test/cases/60-skills.sh
+- docs/development/review-0.2.md (the seventeenth pass: the two reviews of this card and what was decided)
 
 ## Tests
 - test_next_card_writes_the_card_for_a_row_before_the_branch_exists

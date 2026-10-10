@@ -34,7 +34,7 @@ Work through these steps in order. Stop where a step says stop.
 
    Other people's open pull requests do not prevent a start; only an unmerged dependency does.
 
-6. **Read the card** with `card show <id>`. If the output starts with `row:`, the card has no file yet: it is a row of an outline, and this session writes its card. Do these six steps in order, on the base branch, and then go on with the rest of this step. For a card that has a file, skip them.
+6. **Read the card** with `card show <id>`. If the output starts with `row:`, the card has no file yet: it is a row of an outline, and this session writes its card. Do these six steps in order, on the base branch (on the card's branch only if step 5 resumed it), and then go on with the rest of this step. For a card that has a file, skip them.
 
    1. Run `card plan start <id>`. It prints the path of the card file it created. If it fails, explain the error and stop.
    2. Read the specification headings the card lists in its first `Read` item, and the code the work concerns.
@@ -46,16 +46,18 @@ Work through these steps in order. Stop where a step says stop.
       - Change `size` if the row's guess no longer holds.
       - Where you have to guess what a neighbouring row owns, write the guess under `Notes` and say it to the user with the card. A guess is not a reason for the fourth of these steps.
    4. If the row cannot be done as it was cut (it needs code that no finished card provides, or it overlaps another row), delete the card file, tell the user to revise the outline with `/workdeck:plan <spec path>`, which the user types, and stop. Only these two cases end here.
-   5. Run `card lint` and `card plan check <id>`. Fix what they report.
-   6. Show the card to the user and ask for a yes or an edit. Do not write code before the answer. After an edit, make it and run `card lint` and `card plan check <id>` again. After a no, delete the card file and stop: nothing was committed and no branch exists.
+   5. Run `card lint` and `card plan check <id>`. Fix what they report about this card. If `card lint` reports another file, show the user and stop: that file is not this card's to change.
+   6. Show the card to the user and ask for a yes or an edit. Do not write code before the answer. After an edit, make it, run `card lint` and `card plan check <id>` again, then show the card and ask again: only a yes goes on. After a no, delete the card file and stop: nothing was committed and no branch exists.
 
    The file is untracked until the yes, as a quick card is, so a no leaves nothing behind.
+
+   A card file that exists and that git does not track (`git ls-files --error-unmatch <card file>` fails) was written from a row by a session that ended before the yes, or before the commit of step 7. Nobody has approved it. Do the fifth and sixth of these steps on it, and after the yes make the commit of step 7, also on a branch that step 5 resumed.
 
    For every card, run `card lint`. If lint reports an error in this card (an empty `Touch`, `Tests` or `Acceptance` section is the usual one, in a card that `card new` created and nobody filled in), stop and show the user the errors: an unfinished card is not started. If the card has a `## Blocked` section, ask the user that question and wait for the answer before writing any code. Once it is answered, remove the `## Blocked` section from the card and put the answer under `Notes`; a card that keeps the section shows as blocked as soon as its branch exists.
 
 7. **Create the branch.** Its name is `card/` followed by the card's file name without `.md`: the file `AUTH-03-token-refresh.md` gives `card/AUTH-03-token-refresh`. Take the name from the file in the cards directory (`card conf cards_dir`), not from the title. Only the `card/<id>` prefix matters to WorkDeck; the rest is for people. Run `git checkout -b <branch>`.
 
-   For a card this session wrote from a row, commit the card file alone, before step 8: run `git add <card file>` and `git commit -m "<id>: card as approved"`, with nothing else staged. That commit is the card the user approved, and handoff shows what changed in it since. Make no such commit for a card that had a file.
+   For a card this session wrote from a row, and for a card file that git did not track (step 6), commit the card file alone, before step 8: run `git add <card file>` and `git commit -m "<id>: card as approved"`, with nothing else staged. Do this on a resumed branch too, where the rest of this step is skipped. That commit is the card the user approved. If the commit fails, show the error and stop: do not start step 8. Make no such commit for a card that had a file git tracks.
 
 8. **Implement.** Read `${CLAUDE_PLUGIN_ROOT}/reference/implement.md` and follow it step by step.
 

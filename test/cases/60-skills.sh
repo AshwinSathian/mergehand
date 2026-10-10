@@ -149,7 +149,8 @@ test_init_tells_the_user_to_commit_before_the_next_command() {
 
 test_next_card_lints_the_card_before_it_starts() {
   local f="$ROOT/skills/next-card/SKILL.md" lint branch
-  lint=$(grep -n '`card lint`' "$f" | head -1 | cut -d: -f1)
+  # The lint every card gets, not the one inside the steps for a row.
+  lint=$(grep -n 'For every card, run `card lint`' "$f" | head -1 | cut -d: -f1)
   branch=$(grep -n 'git checkout -b' "$f" | head -1 | cut -d: -f1)
   [ -n "$lint" ] || fail 'next-card never runs card lint'
   [ "$lint" -lt "$branch" ] || fail 'next-card lints after it creates the branch'
@@ -179,8 +180,20 @@ test_next_card_writes_the_card_for_a_row_before_the_branch_exists() {
   branch=$(grep -n 'git checkout -b' "$NEXT_SKILL" | head -1 | cut -d: -f1)
   [ "$start" -lt "$branch" ] || fail 'next-card creates the branch before it writes the card'
   assert_contains "$s" 'untracked until the yes'
-  # Steps 1 to 5 are as they were in 0.1.
-  assert_eq 5 "$(awk '/^[0-9]+\. / && $1 + 0 < 6' "$NEXT_SKILL" | grep -c -v -i 'row\|plan')" 'steps 1 to 5 that say nothing of rows'
+  assert_contains "$s" 'on the base branch (on the card'"'"'s branch only if step 5 resumed it)'
+  assert_contains "$(row_step 1)" 'If it fails, explain the error and stop'
+  # The six are in this order in the file, whatever their numbers say.
+  local prev=0 n p
+  for p in '`card plan start <id>`' 'the code the work concerns' 'Fill in the card' 'cannot be done as it was cut' '`card plan check <id>`' 'Show the card to the user'; do
+    n=$(grep -n -F -e "$p" "$NEXT_SKILL" | head -1 | cut -d: -f1)
+    [ -n "$n" ] && [ "$n" -gt "$prev" ] || fail "out of order: $p"
+    prev=$n
+  done
+  # A card left untracked by a session that ended early is not yet approved.
+  assert_contains "$s" 'that git does not track (`git ls-files --error-unmatch <card file>` fails)'
+  assert_contains "$s" 'Nobody has approved it. Do the fifth and sixth of these steps on it'
+  # Steps 1 to 5 are as they were in 0.1. A card that changes one changes this sum.
+  assert_eq '675399525 1929' "$(awk '/^1\. /,/^6\. /' "$NEXT_SKILL" | sed '$d' | cksum)" 'steps 1 to 5'
 }
 
 test_next_card_fills_touch_tests_and_read_from_the_code() {
@@ -205,14 +218,14 @@ test_next_card_leaves_the_row_item_under_read_as_it_was_written() {
 
 test_next_card_runs_lint_and_plan_check_before_it_asks() {
   local check ask
-  assert_contains "$(row_step 5)" 'Run `card lint` and `card plan check <id>`. Fix what they report'
+  assert_contains "$(row_step 5)" 'Run `card lint` and `card plan check <id>`. Fix what they report about this card. If `card lint` reports another file, show the user and stop'
   check=$(grep -n '`card plan check <id>`' "$NEXT_SKILL" | head -1 | cut -d: -f1)
   ask=$(grep -n 'Show the card to the user' "$NEXT_SKILL" | head -1 | cut -d: -f1)
   if [ -z "$check" ] || [ -z "$ask" ] || [ "$check" -ge "$ask" ]; then
     fail "order is check=$check ask=$ask"
   fi
   # An edit is checked again before the user sees the card a second time.
-  assert_contains "$(row_step 6)" 'After an edit, make it and run `card lint` and `card plan check <id>` again'
+  assert_contains "$(row_step 6)" 'After an edit, make it, run `card lint` and `card plan check <id>` again, then show the card and ask again: only a yes goes on'
 }
 
 test_next_card_deletes_the_card_file_after_a_no() {
@@ -230,11 +243,16 @@ test_next_card_commits_the_approved_card_alone() {
   assert_contains "$s" 'git add <card file>'
   assert_contains "$s" 'git commit -m "<id>: card as approved"'
   assert_contains "$s" 'the card file alone'
+  assert_contains "$s" 'with nothing else staged'
+  assert_contains "$s" 'and for a card file that git did not track'
+  assert_contains "$s" 'Do this on a resumed branch too'
+  assert_contains "$s" 'If the commit fails, show the error and stop: do not start step 8'
   assert_contains "$s" 'before step 8'
-  assert_contains "$s" 'Make no such commit for a card that had a file'
+  assert_contains "$s" 'Make no such commit for a card that had a file git tracks'
+  assert_contains "$(next_step 9)" 'do not commit anything after step 7'
   [ "$(grep -n 'git checkout -b' "$NEXT_SKILL" | head -1 | cut -d: -f1)" -lt "$(grep -n 'git commit' "$NEXT_SKILL" | head -1 | cut -d: -f1)" ] || fail 'next-card commits before the branch exists'
   assert_eq 1 "$(grep -c 'git commit' "$NEXT_SKILL")" 'lines that commit'
-  ! grep -n -E 'git add -A|git add \.|git push|gh pr create' "$NEXT_SKILL" || fail 'next-card names a command it must not run'
+  ! grep -n -E 'git add (-A|--all|\.)|git commit -a|git push|gh pr create' "$NEXT_SKILL" || fail 'next-card names a command it must not run'
 }
 
 test_next_card_sends_the_user_to_revise_the_outline_when_a_row_cannot_be_done_as_cut() {
@@ -250,8 +268,8 @@ test_next_card_sends_the_user_to_revise_the_outline_when_a_row_cannot_be_done_as
 test_implement_reference_says_the_approved_card_is_already_committed() {
   local s
   s=$(awk '/^[0-9]+\. / { on = $1 == "6." } on' "$ROOT/reference/implement.md")
-  assert_contains "$s" 'the approved card is already committed'
-  assert_contains "$s" 'Nothing else is committed before handoff'
+  assert_contains "$s" 'the approved card is already committed, alone, as `<id>: card as approved`'
+  assert_contains "$s" 'Nothing else is committed before handoff, a later change to the card included'
   # Still true for a quick card, which has no such commit.
   assert_contains "$s" 'wrote from a row'
   assert_contains "$s" 'outside the cards directory'
