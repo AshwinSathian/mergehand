@@ -58,3 +58,4 @@ done: false
 - test_docs_have_one_design_file_and_a_development_folder fails on any tracked file, the README included, that names one of the old documentation directories; its pattern lists them.
 - The one-line entries in docs/reference.md that P-02, P-04, P-09 and P-10 added are replaced here by the full text.
 - From P-11: the README's line for the end-of-turn hook and its troubleshooting line "A card branch has commits and no session log" give the 0.1 condition. In 0.2 the commits must change something outside the cards directory.
+- From the second review of P-16 (`docs/development/review-0.2.md`, nineteenth pass): the README says the permission rules "match commands as written". Add what P-21 saw: whether a redirect after the branch name (`git push -u origin plan/<name> 2>&1`) is refused by the deny rule for a further argument, and which commands of a plan session are prompted (`git checkout`, `git pull`, `git add`, `git commit`, `gh pr edit`, `rm`).

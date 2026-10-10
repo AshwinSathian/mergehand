@@ -71,6 +71,17 @@ test_claude_md_section_is_short() {
   grep -q '/workdeck:handoff' "$f" || fail 'the section does not point at handoff'
 }
 
+# Design 0.2, section 10.3, last paragraph: the two lines the section gains.
+test_claude_md_section_names_plan_branches_and_the_card_for_a_row() {
+  local f="$ROOT/templates/claude-md-section.md"
+  # Each line whole, and where it stands: after the line for the card's branch.
+  # The second names the approval commit, which the line "Do not commit" below it would forbid.
+  assert_eq '- A `plan/*` branch changes only outlines, the files in `cards/plan/`. `/workdeck:plan` commits, pushes and opens its pull request itself.' "$(sed -n 7p "$f")" 'line 7'
+  assert_eq "- For a row of an outline, \`/workdeck:next-card\` writes the card and waits for a yes before any code, then commits that card alone as \`<id>: card as approved\`: the one commit on a card's branch before handoff." "$(sed -n 8p "$f")" 'line 8'
+  # The rest of the section is what it was in 0.1.
+  assert_eq '442516408 1364' "$(sed 7,8d "$f" | cksum)" 'the section without the two lines'
+}
+
 test_reviewer_agent_is_read_only() {
   local f="$ROOT/agents/reviewer.md"
   assert_eq 'name: reviewer' "$(sed -n 2p "$f")" 'agent name'
@@ -228,8 +239,10 @@ rules() {
     cur == want && match($0, /"Bash\(.*\)"/) { print substr($0, RSTART + 6, RLENGTH - 8) }' "$ROOT/templates/settings-permissions.json"
 }
 # matches <allow|deny> <command>: does any rule of the list match the whole
-# command, with * standing for any text? (Claude Code also lets a single
-# trailing " *" match the bare command; none of these cases depends on it.)
+# command, with * standing for any text? (Claude Code also lets a trailing
+# " *" match the bare command, but only when it is the rule's only wildcard,
+# so the "card/* *" and "plan/* *" deny rules do not match the plain push;
+# none of these cases depends on it.)
 matches() {
   local pat
   while IFS= read -r pat; do
@@ -243,12 +256,42 @@ RULES
 
 test_permission_template_does_not_deny_the_handoff_push() {
   local c
-  for c in 'git push -u origin card/AUTH-03-token-refresh' 'git push origin card/Q-2610061200' 'git push -u origin card/X-1-fix-foo'; do
+  for c in 'git push -u origin card/AUTH-03-token-refresh' 'git push origin card/Q-2610061200' 'git push -u origin card/X-1-fix-foo' 'git push -u origin card/X-2-add-d'; do
     matches deny "$c" && fail "denied: $c"
     matches allow "$c" || fail "not allowed: $c"
   done
   matches deny 'gh pr create --base main --title x --body-file body.md' && fail 'gh pr create is denied'
   return 0
+}
+
+# Design 0.2, section 10.3, step 1: the plan skill pushes a plan/* branch, and
+# the deny list closes the second refspec as it does for card/* (finding 9).
+test_permission_template_allows_the_plan_branch_push() {
+  local c
+  for c in 'git push -u origin plan/2610091200' 'git push origin plan/2610091200'; do
+    matches deny "$c" && fail "denied: $c"
+    matches allow "$c" || fail "not allowed: $c"
+  done
+  # The whole list of push rules, so nothing wider came with them. The approval
+  # commit is prompted: no rule for git add or git commit, in either spelling.
+  assert_eq 'git push -u origin card/*
+git push origin card/*
+git push -u origin plan/*
+git push origin plan/*' "$(rules allow | grep '^git push')" 'the allow rules for a push'
+  rules allow | grep -q -E '^git (add|commit)' && fail 'an allow rule for git add or git commit'
+  # rules reads only Bash(...) entries; a bare "Bash" allows every command.
+  grep -q -E '^ *"Bash",?$' "$ROOT/templates/settings-permissions.json" && fail 'a bare Bash entry'
+  return 0
+}
+
+test_permission_template_denies_a_plan_branch_push_with_a_further_argument() {
+  local c
+  for c in 'git push origin plan/* *' 'git push -u origin plan/* *'; do
+    rules deny | grep -qxF "$c" || fail "no deny rule: $c"
+  done
+  for c in 'git push origin plan/2610091200 main' 'git push -u origin plan/2610091200 main' 'git push origin plan/2610091200:main'; do
+    matches deny "$c" || fail "not denied: $c"
+  done
 }
 
 test_permission_template_denies_known_bad_pushes() {
@@ -269,6 +312,8 @@ git push origin --delete card/A-1-x
 git push --delete origin card/A-1-x
 git push -d origin card/A-1-x
 git push origin -d card/A-1-x
+git push origin main --delete
+git push origin main -d
 git reset --hard HEAD~1
 git branch -D card/A-1-x
 gh pr merge 42

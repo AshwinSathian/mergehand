@@ -55,3 +55,4 @@ done: false
 - The protocol section in an existing `CLAUDE.md` may have been edited by the project. That is why the step shows the difference and asks, where 0.1 left the section alone.
 - test_init_names_only_templates_that_exist counts six templates. The count stays six unless this card names a new one.
 - test_skills_never_tell_the_model_to_invoke_a_skill reads the closing line.
+- From the second review of P-16 (`docs/development/review-0.2.md`, nineteenth pass): the protocol section names `cards/` and `cards/plan/`. Where `cards_dir` is not `cards`, init writes the configured directory in their place when it adds or replaces the section, and the difference it shows in step 4 is against that text. `templates/settings-permissions.json` is not parsed by any test: the merge of step 1 is where a fault in it shows, so say what init does when the template or the settings file is not valid JSON.
