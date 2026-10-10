@@ -152,3 +152,172 @@ test_next_card_lints_the_card_before_it_starts() {
   [ -n "$lint" ] || fail 'next-card never runs card lint'
   [ "$lint" -lt "$branch" ] || fail 'next-card lints after it creates the branch'
 }
+
+PLAN_SKILL="$ROOT/skills/plan/SKILL.md"
+
+# plan_step <n>: the text of one numbered step of the plan skill, with its
+# indented sub-steps.
+plan_step() {
+  awk -v n="$1." '/^[0-9]+\. / { on = $1 == n } /^## / { on = 0 } on' "$PLAN_SKILL"
+}
+
+# plan_line <pattern>: the line number of the first match in the plan skill.
+plan_line() { grep -n -e "$1" "$PLAN_SKILL" | head -1 | cut -d: -f1; }
+
+test_plan_skill_is_typed_by_the_user_and_does_not_fork() {
+  local f="$PLAN_SKILL"
+  assert_eq plan "$(front "$f" name)" name
+  assert_eq true "$(front "$f" disable-model-invocation)" disable-model-invocation
+  assert_eq '"<spec path> [what to change]"' "$(front "$f" argument-hint)" argument-hint
+  # A forked skill runs in a subagent, which cannot ask the user (design 0.2,
+  # section 19, rows 1, 2 and 6).
+  ! grep -n -E '^(context|agent|background):' "$f" || fail 'the plan skill forks'
+  grep -q -F '$ARGUMENTS' "$f" || fail 'the plan skill never reads its arguments'
+  assert_eq 10 "$(grep -c '^[0-9][0-9]*\. \*\*' "$f")" 'numbered steps'
+}
+
+test_plan_skill_runs_the_check_the_review_and_the_approval_in_that_order() {
+  local check review ask commit
+  assert_contains "$(plan_step 6)" 'Run `card plan`'
+  assert_contains "$(plan_step 7)" 'wait for it'
+  assert_contains "$(plan_step 8)" 'Ask for a yes, an edit or a no'
+  assert_contains "$(plan_step 9)" 'git commit'
+  check=$(plan_line '^6\. ')
+  review=$(plan_line 'Launch the `workdeck:plan-reviewer`')
+  ask=$(plan_line 'Ask for a yes, an edit or a no')
+  commit=$(plan_line 'git commit')
+  if [ -z "$check" ] || [ -z "$review" ] || [ -z "$ask" ] || [ -z "$commit" ]; then
+    fail "a step is missing: check=$check review=$review ask=$ask commit=$commit"
+  fi
+  if [ "$check" -ge "$review" ] || [ "$review" -ge "$ask" ] || [ "$ask" -ge "$commit" ]; then
+    fail "order is check=$check review=$review ask=$ask commit=$commit"
+  fi
+  # Nothing before step 9 commits or pushes.
+  assert_eq "$(plan_line '^9\. ')" "$(plan_line 'git commit\|git push\|gh pr create')" 'first line that commits, pushes or opens a pull request'
+}
+
+test_plan_skill_names_the_plan_reviewer_by_its_scoped_name() {
+  local s
+  s=$(plan_step 7)
+  assert_contains "$s" '`workdeck:plan-reviewer` subagent'
+  assert_contains "$s" "the outline's path and the base branch"
+  [ -f "$ROOT/agents/plan-reviewer.md" ] || fail 'the agent the plan skill names does not exist'
+  # The bare name could be another plugin's agent.
+  ! grep -n 'plan-reviewer' "$PLAN_SKILL" | grep -v 'workdeck:plan-reviewer' || fail 'the plan reviewer is named without its plugin'
+}
+
+test_plan_skill_delegates_the_search_to_explore() {
+  local s
+  s=$(plan_step 5)
+  # The wording both runs of the spike followed (design 0.2, section 19, row 15).
+  assert_contains "$s" 'Do not read the code yourself: launch the built-in Explore subagent'
+  assert_contains "$s" 'wait for its answer'
+  assert_contains "$s" 'ask the user to confirm both'
+  assert_contains "$s" 'found none of the code'
+  assert_contains "$s" 'say so in the same question'
+  assert_contains "$s" 'do not stop a second time'
+  assert_contains "$s" 'card plan new <spec path> <PREFIX> --level <n>'
+}
+
+test_plan_skill_creates_a_plan_branch_named_by_the_time() {
+  local s
+  s=$(plan_step 4)
+  assert_contains "$s" 'date +%y%m%d%H%M'
+  assert_contains "$s" 'git checkout -b plan/<digits>'
+  # The path is checked before the branch exists: a branch cannot be deleted
+  # under the permission template.
+  [ "$(plan_line 'git ls-files --error-unmatch')" -lt "$(plan_line 'git checkout -b')" ] || fail 'the branch is created before the path is checked'
+  assert_contains "$(plan_step 1)" 'git status --porcelain'
+  assert_contains "$(plan_step 1)" 'git pull --ff-only'
+  assert_contains "$(plan_step 3)" 'not a tracked file'
+}
+
+test_plan_skill_offers_to_resume_an_open_plan_pull_request() {
+  local s
+  s=$(plan_step 2)
+  assert_contains "$s" 'gh pr list --author @me --state open --json number,headRefName'
+  assert_contains "$s" 'a `plan/` branch'
+  assert_contains "$s" 'git branch --list'
+  assert_contains "$s" 'offer to check it out'
+  assert_contains "$s" 'gh pr view <number> --comments'
+  assert_contains "$s" 'continue with step 6'
+  assert_contains "$s" 'Otherwise stop'
+  assert_contains "$s" 'If `gh` is missing or not signed in, say so and continue with step 3'
+}
+
+test_plan_skill_stops_when_card_has_no_plan_command() {
+  local s
+  s=$(plan_step 3)
+  assert_contains "$s" "unknown command 'plan'"
+  assert_contains "$s" 'must be updated, and stop'
+  # A path card plan new would refuse is refused here too, and a run with
+  # nothing to revise ends here: both before the branch.
+  assert_contains "$s" 'If it has a space in it'
+  assert_contains "$s" 'there is nothing to plan: say so and stop'
+  # Before the branch, so that an old card leaves no plan branch behind.
+  [ "$(plan_line "unknown command 'plan'")" -lt "$(plan_line 'git checkout -b')" ] || fail 'the plan command is first run after the branch is created'
+}
+
+test_plan_skill_runs_the_reviewer_again_after_a_must_fix_and_at_most_twice() {
+  local s
+  s=$(plan_step 7)
+  assert_contains "$s" 'Fix every `must-fix` finding and run step 6 again'
+  assert_contains "$s" 'If a fix changed the outline, launch the reviewer once more'
+  assert_contains "$s" 'at most twice'
+  assert_contains "$s" 'What the second run finds and you do not fix goes to the user in step 8'
+  assert_contains "$s" 'Keep every finding of both runs'
+  # An edit by the user is checked and reviewed again, under the same bound.
+  assert_contains "$(plan_step 8)" 'go back to step 6'
+  assert_contains "$s" 'under the same bound'
+}
+
+test_plan_skill_shows_the_readings_it_chose_and_the_requirements_it_left_out() {
+  local s
+  s=$(plan_step 8)
+  assert_contains "$s" 'as a table'
+  assert_contains "$s" 'each finding that was not fixed, with the reason'
+  assert_contains "$s" 'can be read two ways'
+  assert_contains "$s" 'which reading the rows follow'
+  assert_contains "$s" 'each requirement that is in no row'
+  assert_contains "$s" 'restore'
+  assert_contains "$s" 'Check out the base branch and stop'
+}
+
+test_plan_skill_puts_every_finding_in_the_pull_request_body() {
+  local s
+  s=$(plan_step 9)
+  assert_contains "$s" 'plan: <PREFIX>, <n> rows'
+  assert_contains "$s" 'id, size, dependencies and title'
+  assert_contains "$s" 'the `Not planned` list'
+  assert_contains "$s" 'every reviewer finding of both runs, with what was done about it'
+  assert_contains "$s" 'the readings chosen and the requirements left out'
+  assert_contains "$s" '`card tokens`'
+  assert_contains "$s" 'for a run that revised an outline'
+  assert_contains "$s" 'Do not copy the `does` and `not` lines'
+  assert_contains "$s" 'no remote'
+  assert_contains "$s" 'If `gh` is missing or not signed in, stop after the push'
+  # A resumed pull request exists already: gh pr create would fail on it.
+  assert_contains "$s" 'gh pr edit <number> --body-file <file>'
+  # A trailer is the user's setting: the skill says nothing for or against one.
+  ! grep -n -i 'trailer\|co-authored' "$PLAN_SKILL" || fail 'the plan skill speaks of a commit trailer'
+}
+
+test_plan_skill_never_reuses_the_id_of_a_removed_row() {
+  local s
+  s=$(plan_step 5)
+  assert_contains "$s" 'The id of a removed row is never given to another row'
+  assert_contains "$s" 'git diff <spec_blob> HEAD:<spec path>'
+  assert_contains "$s" 'no card file and no `card/<id>` branch'
+  assert_contains "$s" 'card plan accept <PREFIX>'
+  assert_contains "$s" 'Run `card plan`. If it says the specification differs from `spec_blob`'
+}
+
+test_plan_skill_writes_no_card_and_no_code() {
+  local f="$PLAN_SKILL"
+  grep -q 'It writes no card and no code' "$f" || fail 'the plan skill does not say what the session leaves alone'
+  assert_contains "$(plan_step 10)" 'no card and no code'
+  # The commands that create or finish a card belong to other skills.
+  ! grep -n -E 'card (new|done|log-new|plan start|plan check)' "$f" || fail 'the plan skill names a command that writes a card'
+  ! grep -n 'reference/implement.md' "$f" || fail 'the plan skill points at the implementation steps'
+  assert_contains "$(plan_step 9)" 'the outline is the only file that changed'
+}

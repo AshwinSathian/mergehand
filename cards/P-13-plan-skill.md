@@ -3,7 +3,7 @@ id: P-13
 title: Plan skill
 size: M
 depends: P-01, P-02b, P-03, P-04, P-05, P-12
-done: false
+done: true
 ---
 
 ## Read
