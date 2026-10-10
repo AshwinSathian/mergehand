@@ -3,7 +3,7 @@ id: P-11
 title: Stop hook: leave out commits that change only the cards directory
 size: XS
 depends: S-04
-done: false
+done: true
 ---
 
 ## Read

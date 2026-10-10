@@ -96,3 +96,39 @@ test_stop_blocks_on_a_branch_without_slug() {
   stop; assert_blocked
   git checkout -q -b card/A-1xy; stop; assert_silent
 }
+
+test_stop_passes_after_a_commit_that_changes_only_the_cards_directory() {
+  deck; echo note >> cards/A-1-thing.md; commit_all 'approve the card'
+  stop; assert_silent
+}
+
+test_stop_blocks_after_a_card_only_commit_and_a_code_commit() {
+  deck; echo note >> cards/A-1-thing.md; commit_all 'approve the card'; work
+  stop; assert_blocked
+}
+
+test_stop_card_only_commit_respects_cards_dir() {
+  new_repo; mk_conf 'cards_dir = work/cards'; CARDS_DIR=work/cards mk_card A-1; commit_all
+  git checkout -q -b card/A-1-thing
+  echo note >> work/cards/A-1-thing.md; commit_all 'approve the card'
+  stop; assert_silent
+  mkdir cards; echo x > cards/a.md; commit_all 'not the cards directory'
+  stop; assert_blocked
+}
+
+test_stop_counts_commits_from_the_root_when_run_in_a_subdirectory() {
+  new_repo; mk_conf; mk_card A-1; mkdir sub; echo keep > sub/keep.txt; commit_all
+  git checkout -q -b card/A-1-thing
+  echo note >> cards/A-1-thing.md; commit_all 'approve the card'
+  cd sub || exit 1
+  stop; assert_silent
+  cd .. || exit 1
+  work
+  cd sub || exit 1
+  stop; assert_blocked
+}
+
+test_stop_counts_a_nested_directory_named_like_the_cards_directory() {
+  deck; mkdir -p src/cards; echo x > src/cards/a.md; commit_all 'code under src/cards'
+  stop; assert_blocked
+}

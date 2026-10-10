@@ -20,15 +20,18 @@ id=${BASH_REMATCH[1]}
 card() { "${BASH:-bash}" "$(dirname "$0")/../bin/card" "$@" 2>/dev/null; }
 base=$(card conf base) || exit 0
 log_dir=$(card conf log_dir) || exit 0
+cards_dir=$(card conf cards_dir) || exit 0
 
 # Commits that belong to this branch: reachable from HEAD and from neither
-# the local nor the remote base branch.
+# the local nor the remote base branch. Those that change nothing outside
+# the cards directory are left out. Both pathspecs are anchored at the root:
+# the hook may run in a subdirectory.
 set --
 for ref in "refs/heads/$base" "refs/remotes/origin/$base"; do
   git rev-parse -q --verify "$ref" >/dev/null 2>&1 && set -- "$@" "$ref"
 done
 [ "$#" -gt 0 ] || exit 0
-ahead=$(git rev-list --count HEAD --not "$@" 2>/dev/null) || exit 0
+ahead=$(git rev-list --count HEAD --not "$@" -- ':(top)' ":(top,exclude)$cards_dir" 2>/dev/null) || exit 0
 [ "$ahead" -gt 0 ] || exit 0
 [ -z "$(git status --porcelain --untracked-files=normal 2>/dev/null)" ] || exit 0
 
