@@ -3,7 +3,7 @@ id: P-20
 title: Changelog entry for 0.2, not yet released
 size: XS
 depends: P-18, P-19
-done: false
+done: true
 ---
 
 ## Read

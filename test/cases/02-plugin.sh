@@ -358,6 +358,29 @@ test_changelog_says_what_0_1_3_renames() {
   grep -q '^\[0\.1\.3\]: .*/releases/tag/v0\.1\.3$' "$ROOT/CHANGELOG.md" || fail 'CHANGELOG has no link for 0.1.3'
 }
 
+# Design 0.2, section 21, item 11: the version waits for the trial. Until then
+# the planner's entry has no version and no date, and the manifest stays as it is.
+test_changelog_has_an_unreleased_entry_for_the_planner() {
+  local e
+  [ "$(grep -m1 '^## \[' "$ROOT/CHANGELOG.md")" = '## [Unreleased]' ] || fail 'the first entry of CHANGELOG is not headed [Unreleased]'
+  e=$(awk '/^## \[/ { on = index($0, "[Unreleased]") > 0 } on' "$ROOT/CHANGELOG.md")
+  assert_contains "$e" '### Added'
+  assert_contains "$e" '### Changed'
+  assert_contains "$e" '`/workdeck:plan'
+  assert_contains "$e" '`workdeck:plan-reviewer`'
+  assert_contains "$e" '`card plan`'
+  assert_contains "$e" '`card plan start <id>`'
+  assert_contains "$e" '`version = 1`'
+  assert_contains "$e" 'run `/workdeck:init` again'
+  assert_contains "$e" '### Upgrading from 0.1'
+  assert_contains "$e" 'card and session log formats do not change'
+  if printf '%s\n' "$e" | grep -q '0\.2\.[0-9]'; then fail 'the unreleased entry names a release of 0.2'; fi
+  if printf '%s\n' "$e" | grep -q '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'; then fail 'the unreleased entry has a date'; fi
+  if grep -q '^## \[0\.2\|^\[0\.2\|^\[Unreleased\]:' "$ROOT/CHANGELOG.md"; then fail 'CHANGELOG names a release of 0.2'; fi
+  assert_eq 'card 0.1.3' "$("$BASH" "$CARD" version)"
+  grep -q '"version": "0.1.3"' "$ROOT/.claude-plugin/plugin.json" || fail 'plugin.json is not at 0.1.3'
+}
+
 test_plugin_manifest_names_its_repository() {
   local f="$ROOT/.claude-plugin/plugin.json" k
   for k in displayName homepage repository; do
