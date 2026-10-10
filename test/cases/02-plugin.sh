@@ -81,6 +81,99 @@ test_reviewer_agent_is_read_only() {
   return 0
 }
 
+PLAN_REVIEWER="$ROOT/agents/plan-reviewer.md"
+
+# plan_reviewer_step <n>: the text of one numbered step of the procedure.
+plan_reviewer_step() {
+  awk -v n="$1." '/^[0-9]\. / { on = $1 == n } /^## / { on = 0 } on' "$PLAN_REVIEWER"
+}
+
+test_plan_reviewer_agent_is_read_only() {
+  local f="$PLAN_REVIEWER"
+  assert_eq 'name: plan-reviewer' "$(sed -n 2p "$f")" 'agent name'
+  assert_eq 'tools: Read, Grep, Glob, Bash' "$(grep '^tools:' "$f")" tools
+  # No field beyond these: one that plugin agents ignore would suggest it works,
+  # and one such as background changes how the agent runs.
+  assert_eq 'name description tools ' "$(awk '/^---$/ { n++; next } n == 1 { sub(/:.*/, ""); printf "%s ", $0 }' "$f")" 'front matter fields'
+  # The description is in every session's context: one sentence, and short.
+  assert_eq 1 "$(grep '^description: ' "$f" | grep -o '\. \|\.$' | grep -c .)" 'sentences in the description'
+  [ "$(grep '^description: ' "$f" | wc -c)" -le 200 ] || fail 'the description is longer than 200 characters'
+  grep -q 'do not edit, create or delete files' "$f" || fail 'the plan reviewer is not told to change nothing'
+  grep -q 'do not commit, stash, check out, reset or push' "$f" || fail 'the plan reviewer is not told to leave git alone'
+  # Bash is the one tool of the four that can write.
+  grep -q 'never to change the repository' "$f" || fail 'Bash is not limited to reading'
+}
+
+test_plan_reviewer_is_told_to_assume_the_outline_is_wrong() {
+  grep -q 'You did not write it\.' "$PLAN_REVIEWER" || fail 'the plan reviewer is not told it did not write the outline'
+  grep -q 'Assume the outline is wrong' "$PLAN_REVIEWER" || fail 'the plan reviewer is not told to assume the outline is wrong'
+}
+
+test_plan_reviewer_reads_the_outline_from_the_working_tree() {
+  local s
+  grep -q "You are given the outline's path and a base branch" "$PLAN_REVIEWER" || fail 'the plan reviewer does not say what it is given'
+  # The five steps of design section 12.1; the first is the reading step.
+  assert_eq '1. 2. 3. 4. 5. ' "$(grep -o '^[0-9]\. ' "$PLAN_REVIEWER" | tr -d '\n')" 'steps of the procedure'
+  s=$(plan_reviewer_step 1)
+  assert_contains "$s" 'from the working tree'
+  assert_contains "$s" 'not committed'
+  assert_contains "$s" 'specification'
+  s=$(plan_reviewer_step 2)
+  assert_contains "$s" 'A requirement with no `does` line is a finding'
+  assert_contains "$s" 'two rows both claim'
+}
+
+test_plan_reviewer_uses_the_severities_of_the_reviewer() {
+  local s form='/^```$/ { on = !on; next } on { print $1 }'
+  for s in must-fix should-fix nit; do
+    grep -q "^- \`$s\`: " "$PLAN_REVIEWER" || fail "the plan reviewer does not define $s"
+  done
+  assert_eq "$(awk "$form" "$ROOT/agents/reviewer.md")" "$(awk "$form" "$PLAN_REVIEWER")" 'severities of the output form'
+  grep -q 'the outline.s line and a failure scenario' "$PLAN_REVIEWER" || fail 'a finding does not need a line and a failure scenario'
+  grep -q '`must-fix: none`' "$PLAN_REVIEWER" || fail 'no line for a category with no findings'
+  # The closing lines are what tell "read and found nothing" from "not read".
+  grep -q 'print nothing after them' "$PLAN_REVIEWER" || fail 'the report does not end at its closing lines'
+  for s in 'searched:' 'no spec item:' 'outside the level:'; do
+    grep -q "\`$s\`" "$PLAN_REVIEWER" || fail "no closing line '$s'"
+  done
+}
+
+test_plan_reviewer_looks_for_joined_does_lines_and_lines_about_tests() {
+  local s
+  s=$(plan_reviewer_step 3)
+  assert_contains "$s" 'joins two statements'
+  assert_contains "$s" 'only says that tests exist'
+  assert_contains "$s" 'Neither is a `must-fix` finding by itself'
+  # "Neither" refers to the two bullets before it.
+  assert_contains "$(printf '%s\n' "$s" | awk '/Neither is a/ { print prev } { prev = $0 }')" 'only says that tests exist'
+  grep '^- `must-fix`: ' "$PLAN_REVIEWER" | grep -q '`does` line' && fail 'the must-fix definition names a does line'
+  # One example of each, as the spike's reviewer raised neither.
+  assert_eq 2 "$(printf '%s\n' "$s" | grep -c 'For example')" 'examples in step 3'
+}
+
+test_plan_reviewer_looks_for_a_missing_not_line_between_rows_of_one_heading() {
+  local s
+  s=$(plan_reviewer_step 4)
+  assert_contains "$s" 'two rows cite one heading'
+  assert_contains "$s" '`not` line'
+  assert_contains "$s" 'what the other owns'
+}
+
+test_plan_reviewer_reads_what_lies_outside_the_level_of_the_outline() {
+  local s
+  s=$(plan_reviewer_step 5)
+  assert_contains "$s" 'Not planned'
+  assert_contains "$s" 'no `spec` item'
+  assert_contains "$s" "under no heading at the outline's level"
+  assert_contains "$s" 'work that no row does'
+}
+
+test_plan_reviewer_gives_paths_relative_to_the_repository() {
+  grep -q 'Every path you print is relative to the repository' "$PLAN_REVIEWER" || fail 'the plan reviewer is not told to print relative paths'
+  # The example findings show one.
+  awk '/^```$/ { on = !on; next } on && $2 !~ /^cards\/plan\/[a-z0-9]*\.md:[0-9][0-9]*$/ { bad = 1 } END { exit bad }' "$PLAN_REVIEWER" || fail 'an example finding has no relative path'
+}
+
 test_templates_are_complete() {
   local f
   for f in REVIEW.md pull_request_template.md claude-md-section.md workdeck.conf workdeck.yml settings-permissions.json; do

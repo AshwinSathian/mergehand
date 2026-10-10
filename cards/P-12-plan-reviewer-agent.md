@@ -3,7 +3,7 @@ id: P-12
 title: Plan reviewer agent
 size: S
 depends: P-01, S-04
-done: false
+done: true
 ---
 
 ## Read
@@ -19,6 +19,7 @@ done: false
 ## Touch
 - agents/plan-reviewer.md (new)
 - test/cases/02-plugin.sh
+- docs/development/review-0.2.md (the record of the second review of this card, its fifteenth pass)
 
 ## Tests
 - test_plan_reviewer_agent_is_read_only
