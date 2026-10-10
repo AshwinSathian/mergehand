@@ -3,7 +3,7 @@ id: P-10
 title: card plan check
 size: S
 depends: P-02
-done: false
+done: true
 ---
 
 ## Read

@@ -47,6 +47,7 @@ usage: card <command> [arguments]
                             create an outline with no rows
   plan accept <PREFIX>      set spec_blob to the specification's hash
   plan start <id>           create the card file for a row
+  plan check <id>           check a card's paths against the working tree
   conf <key>                print one configuration value
   help, version
 
@@ -63,7 +64,7 @@ synopsis() {
   case $1 in
     next | list | status) echo "card $1 [--fetch]" ;;
     lint | stats) echo "card $1" ;;
-    plan) echo 'card plan [new <spec path> <PREFIX> [--level N] | accept <PREFIX> | start <id>]' ;;
+    plan) echo 'card plan [new <spec path> <PREFIX> [--level N] | accept <PREFIX> | start <id> | check <id>]' ;;
     show | done | touched | tests) echo "card $1 <id>" ;;
     new) echo 'card new <id> <title> [--size XS|S|M] [--depends ID,ID]' ;;
     tokens) echo 'card tokens [transcript]' ;;
@@ -990,6 +991,11 @@ changed_files() {
     index($0, ENVIRON["C"]) != 1 && index($0, ENVIRON["L"]) != 1'
 }
 
+# touch_patterns: reads Touch or touch_ignore entries, prints each as a
+# pattern. A trailing / covers the directory, and a leading / or ./ is
+# ignored.
+touch_patterns() { sed 's|^\./||; s|^/||; s|/$|/*|; /^$/d'; }
+
 # matches_any <path> <patterns, one per line>: shell case patterns, so "*"
 # also matches "/". The pattern is only ever a pattern; nothing is evaluated.
 matches_any() {
@@ -1010,10 +1016,9 @@ cmd_touched() {
   path=$(card_path "$1") || exit $?
   base_ref
   fp=$(fork_point) || exit $?
-  # The text after the first space of an entry is a comment. A trailing /
-  # covers the directory, and a leading / or ./ is ignored.
-  entries=$(section_items "$path" Touch | sed 's/ .*//' | sed 's|^\./||; s|^/||; s|/$|/*|; /^$/d')
-  ignore=$(conf_get touch_ignore | tr ',' '\n' | sed 's/^ *//; s/ *$//' | sed 's|^\./||; s|^/||; s|/$|/*|; /^$/d')
+  # The text after the first space of an entry is a comment.
+  entries=$(section_items "$path" Touch | sed 's/ .*//' | touch_patterns)
+  ignore=$(conf_get touch_ignore | tr ',' '\n' | sed 's/^ *//; s/ *$//' | touch_patterns)
   files=$(changed_files "$fp")
 
   while IFS= read -r f; do
@@ -1747,6 +1752,71 @@ card: $file: "*) die 1 "$file: the outline has a fault; run card plan" ;;
   printf '%s\n' "$path"
 }
 
+# cmd_plan_check <id>: the three rules of section 7 of the design, for one
+# card against the working tree. Every failure is a line on stderr. It is
+# true when it runs and not after the work starts, so no gate calls it.
+cmd_plan_check() {
+  local path files e p note f rc=0
+  [ "$#" -eq 1 ] || usage_die plan
+  need_id "$1"
+  path=$(card_path "$1") || exit $?
+
+  while IFS= read -r e; do
+    [ -n "$e" ] || continue
+    p=${e%% *}
+    p=${p%%#*}
+    if [ -z "$p" ] || [ ! -e "$p" ]; then
+      printf 'card: %s: Read: %s does not exist\n' "$path" "${p:-$e}" >&2
+      rc=1
+    fi
+  done <<READ
+$(section_items "$path" Read)
+READ
+
+  # The files the scope gate sees: an ignored file is not one of them.
+  files=$(g ls-files && g ls-files --others --exclude-standard) || die 2 "cannot list the files of the repository"
+  while IFS= read -r e; do
+    [ -n "$e" ] || continue
+    note=""
+    case $e in *' '*) note=${e#* } ;; esac
+    note=${note#"${note%%[! ]*}"}
+    e=${e%% *}
+    p=$(printf '%s\n' "$e" | touch_patterns)
+    case $note in
+      '(new)'*)
+        # A path, tested on disk, so that an ignored file is seen too. A
+        # backslash is a pattern character as well: a\.ts matches a.ts.
+        case $p in
+          '' | *[\*\?\[\\]*) printf 'card: %s: Touch: %s is marked (new) and is not a full path\n' "$path" "$e" >&2 ;;
+          *)
+            if [ ! -e "$p" ] && [ ! -L "$p" ]; then continue; fi
+            printf 'card: %s: Touch: %s is marked (new) and exists\n' "$path" "$e" >&2
+            ;;
+        esac
+        ;;
+      *)
+        while IFS= read -r f; do
+          [ -n "$f" ] || continue
+          # shellcheck disable=SC2254
+          case $f in $p) continue 2 ;; esac
+        done <<FILES
+$files
+FILES
+        printf 'card: %s: Touch: %s matches no file\n' "$path" "$e" >&2
+        ;;
+    esac
+    rc=1
+  done <<TOUCH
+$(section_items "$path" Touch)
+TOUCH
+
+  if [ -z "$(section_items "$path" 'Out of scope')" ]; then
+    printf 'card: %s: Out of scope has no item\n' "$path" >&2
+    rc=1
+  fi
+  return "$rc"
+}
+
 # plan_branch_check: on a plan/* branch, a finding for each file that differs
 # from the fork point and is not an outline: <cards_dir>/plan/<name>.md, as
 # outline_files reads them, so not a name that starts with a dot and nothing
@@ -1775,7 +1845,7 @@ cmd_plan() {
   local out facts rc=0 sub
   case ${1--} in
     -) [ "$#" -eq 0 ] || usage_die plan ;;
-    new | accept | start)
+    new | accept | start | check)
       sub=$1
       shift
       "cmd_plan_$sub" "$@"
