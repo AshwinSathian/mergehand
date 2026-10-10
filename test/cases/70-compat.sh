@@ -65,10 +65,22 @@ test_list_next_and_status_match_card_0_1_3_when_there_is_no_outline() {
 old() { run "$BASH" "$OLD_CARD" "$@"; }
 new() { run "$BASH" "$CARD" "$@"; }
 
+# fill <file> <section> <item>: one item under a section that has none. Not
+# for an item with a |, an & or a backslash, which sed would read.
+fill() {
+  edit "$1" "s|^## $2\$|&\\
+- $3|"
+}
+
+R=cards/AUTH-01b-token-store-rest.md
+P=cards/AUTH-02-token-refresh.md
+
 # planned_deck: on the base branch, the outline of mk_outline with a third
-# row; AUTH-01 done and its split remainder AUTH-01b; AUTH-02 as card plan
-# start of this version writes it, with Touch and Tests filled in. AUTH-03 is
-# a row with no card file.
+# row; AUTH-01 done, with its log; the remainder AUTH-01b as card new of this
+# version writes it for a split, filled in; Z-2, written by hand, which
+# depends on the remainder; and AUTH-02 as card plan start of this version
+# writes it, with Touch and Tests filled in. AUTH-03 is a row with no card
+# file.
 planned_deck() {
   new_repo; mk_conf; mk_outline
   edit cards/plan/auth.md 's/^## Not planned$/## AUTH-03 Refresh count\
@@ -78,14 +90,21 @@ planned_deck() {
 \
 &/'
   mk_card AUTH-01 S '' true token-store
-  mk_card AUTH-01b S AUTH-01 false token-store-rest
+  mk_log AUTH-01
+  assert_file log/2026-10-05-AUTH-01-1.md
+  new new AUTH-01b 'Token store rest' --size S --depends AUTH-01
+  assert_rc 0
+  assert_eq 'depends: AUTH-01' "$(grep '^depends:' "$R")" 'depends of the remainder'
+  fill "$R" Read README.md
+  fill "$R" Touch 'src/lookup.txt (new)'
+  fill "$R" Tests 'lookup finds a stored token'
+  fill "$R" Acceptance 'A stored token can be looked up by its hash'
+  mk_card Z-2 S AUTH-01b false after-the-rest
   commit_all
   new plan start AUTH-02
   assert_rc 0
-  edit cards/AUTH-02-token-refresh.md 's/^## Touch$/&\
-- src\/refresh.txt (new)/'
-  edit cards/AUTH-02-token-refresh.md 's/^## Tests$/&\
-- refresh rotates the token/'
+  fill "$P" Touch 'src/refresh.txt (new)'
+  fill "$P" Tests 'refresh rotates the token'
   commit_all
 }
 
@@ -93,8 +112,9 @@ test_card_0_1_3_lint_passes_a_deck_with_an_outline_a_planned_card_and_a_split_re
   need_old_card || return 0
   planned_deck
   assert_file cards/plan/auth.md
-  assert_file cards/AUTH-01b-token-store-rest.md
-  assert_contains "$(cat cards/AUTH-02-token-refresh.md)" '- specs/auth.md (row AUTH-02: Refresh; Errors)'
+  assert_file "$R"
+  assert_contains "$(cat "$P")" '- specs/auth.md (row AUTH-02: Refresh; Errors)'
+  assert_eq 'depends: AUTH-01' "$(grep '^depends:' "$P")" 'depends of the planned card'
   old lint
   assert_rc 0
   assert_empty "$ERR" stderr
@@ -102,6 +122,7 @@ test_card_0_1_3_lint_passes_a_deck_with_an_outline_a_planned_card_and_a_split_re
 
 test_card_0_1_3_next_offers_only_cards_that_have_a_file() {
   need_old_card || return 0
+  local f
   planned_deck
   # The row is there for this version to see, so its absence below is 0.1.3's.
   new list
@@ -109,43 +130,53 @@ test_card_0_1_3_next_offers_only_cards_that_have_a_file() {
   old list
   assert_rc 0
   assert_eq 'done     AUTH-01      S   Card AUTH-01
-ready    AUTH-01b     S   Card AUTH-01b
-ready    AUTH-02      S   Token refresh' "$OUT" 'list of 0.1.3'
+ready    AUTH-01b     S   Token store rest
+ready    AUTH-02      S   Token refresh
+waiting  Z-2          S   Card Z-2' "$OUT" 'list of 0.1.3'
   old next
   assert_rc 0
-  assert_eq 'AUTH-01b S Card AUTH-01b' "$OUT" 'next of 0.1.3'
+  assert_eq 'AUTH-01b S Token store rest' "$OUT" 'next of 0.1.3'
+  # With the remainder done, 0.1.3 takes Z-2's dependency on it as met.
+  edit "$R" 's/^done: false$/done: true/'
+  commit_all
+  old next
+  assert_eq 'AUTH-02 S Token refresh' "$OUT" 'next of 0.1.3, the remainder done'
+  old list
+  assert_contains "$OUT" 'ready    Z-2 '
   # With every card done, the row is all that is left, and 0.1.3 offers nothing.
-  edit cards/AUTH-01b-token-store-rest.md 's/^done: false$/done: true/'
-  edit cards/AUTH-02-token-refresh.md 's/^done: false$/done: true/'
+  for f in "$P" cards/Z-2-after-the-rest.md; do
+    edit "$f" 's/^done: false$/done: true/'
+  done
   commit_all
   new next
   assert_contains "$OUT" 'AUTH-03'
   old next
   assert_rc 1
-  assert_contains "$OUT$ERR" 'every card is done'
-  assert_not_contains "$OUT$ERR" 'AUTH-03'
-  assert_not_contains "$OUT$ERR" '[row]'
+  assert_eq 'every card is done' "$OUT$ERR" 'next of 0.1.3, nothing left'
 }
 
 test_card_0_1_3_lint_fails_a_card_that_depends_on_a_row_with_no_file() {
   need_old_card || return 0
   planned_deck
   mk_card Z-1 S AUTH-03
+  # AUTH-03 is a row here, not an id that nothing has.
+  new list
+  assert_contains "$OUT" 'AUTH-03      S   Refresh count [row]'
   old lint
   assert_rc 1
   assert_contains "$OUT$ERR" 'depends on AUTH-03, which is not a card'
-  card lint
+  new lint
   assert_rc 1
   assert_contains "$OUT$ERR" 'depends on AUTH-03, which is not a card'
 }
 
 test_planned_deck_passes_card_plan() {
   planned_deck
-  card plan
+  new plan
   assert_rc 0
   # The line for a deck with no outline would also exit 0.
   assert_empty "$OUT" stdout
   assert_empty "$ERR" stderr
-  card lint
+  new lint
   assert_rc 0
 }
