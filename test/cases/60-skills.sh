@@ -158,6 +158,34 @@ test_next_card_lints_the_card_before_it_starts() {
 
 NEXT_SKILL="$ROOT/skills/next-card/SKILL.md"
 
+# Design 0.2, section 10.4. A card written on its own branch is new from top
+# to bottom in the pull request's diff, so the body carries what changed in it.
+test_handoff_prints_the_changes_to_the_card_since_it_was_approved() {
+  local f="$ROOT/skills/handoff/SKILL.md" s commit diff pr
+  s=$(awk '/^[0-9]+\. / { on = $1 == "7." } on' "$f" | grep 'card as approved')
+  assert_eq 1 "$(printf '%s\n' "$s" | grep -c .)" 'lines of step 7 that name the approval commit'
+  assert_contains "$s" '<base>..HEAD'
+  assert_contains "$s" '<id>: card as approved'
+  assert_contains "$s" 'headed "Changes to the card since it was approved"'
+  assert_contains "$s" '`git diff <that commit> HEAD -- <card file>`'
+  assert_contains "$s" 'leaving out the `done` line'
+  # HEAD is the commit handoff has just made, so the diff holds every change.
+  assert_contains "$s" 'after the commit above'
+  assert_contains "$s" 'If it prints nothing, the body has no such part'
+  # --grep reads every line of a message, so a later commit can quote the line.
+  assert_contains "$s" 'that commit is the last hash printed, the earliest'
+  # The part is there when nothing changed: that is a result too.
+  assert_contains "$s" 'write "None"'
+  commit=$(grep -n 'git commit' "$f" | head -1 | cut -d: -f1)
+  diff=$(grep -n 'git diff <that commit>' "$f" | head -1 | cut -d: -f1)
+  pr=$(grep -n 'gh pr create' "$f" | head -1 | cut -d: -f1)
+  if [ -z "$diff" ] || [ "$commit" -ge "$diff" ] || [ "$diff" -ge "$pr" ]; then
+    fail "order is commit=$commit diff=$diff pr=$pr"
+  fi
+  # One addition: without that line the skill is what it was in 0.1, split mode included.
+  assert_eq '2145693172 4250' "$(grep -v 'card as approved' "$f" | cksum)" 'handoff without the addition'
+}
+
 # next_step <n>: the text of one numbered step of next-card, with its
 # indented sub-steps.
 next_step() {

@@ -81,6 +81,25 @@ test_reviewer_agent_is_read_only() {
   return 0
 }
 
+# Design 0.2, section 12.2: the review of a card body that next-card wrote
+# from a row, by an agent that did not write it.
+test_reviewer_checks_a_planned_card_against_its_specification_headings() {
+  local f="$ROOT/agents/reviewer.md" s
+  s=$(awk '/^## / { on = $0 == "## Procedure" } on && /^5\. /' "$f")
+  assert_contains "$s" 'a `Read` item of the card has a comment that starts with `(row `'
+  assert_contains "$s" 'the item is a specification and the comment names headings in it'
+  assert_contains "$s" 'list each requirement under those headings that no `Acceptance` item covers and no `Out of scope` item excludes'
+  assert_contains "$s" 'Each is a `should-fix` finding'
+  # Every finding needs a file, a line and a failure: the step says which.
+  assert_contains "$s" "the specification's path and the line of the requirement"
+  # A row with no spec item gives `(row <id>)`: the step fires and has nothing to check.
+  assert_contains "$s" 'names no heading'
+  assert_contains "$s" 'For a card with no such item, skip this step'
+  # The step is one line, and the rest of the agent is what it was in 0.1.
+  assert_eq 5 "$(awk '/^## / { on = $0 == "## Procedure" } on && /^[0-9]+\. /' "$f" | grep -c .)" 'steps of the procedure'
+  assert_eq '156200674 2751' "$(grep -v '^5\. ' "$f" | cksum)" 'the reviewer without the step'
+}
+
 PLAN_REVIEWER="$ROOT/agents/plan-reviewer.md"
 
 # plan_reviewer_step <n>: the text of one numbered step of the procedure.

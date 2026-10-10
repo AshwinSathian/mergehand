@@ -3,7 +3,7 @@ id: P-15
 title: Reviewer step for a planned card, and handoff's approved-card diff
 size: S
 depends: P-09, P-14
-done: false
+done: true
 ---
 
 ## Read
