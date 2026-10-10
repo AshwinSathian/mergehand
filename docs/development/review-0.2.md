@@ -639,3 +639,44 @@ The second reviewer then attacked these amendments in the working tree. It reran
 Held when run: with `touch_ignore = apps/?slug?/package-lock.json, x?y.snap`, `card touched` exits 0, and with the names as written it lists both files and exits 1; the question about the branch is in the section only, is asked once, and is asked on a detached HEAD; `card conf base` is the first `card conf` of the four steps, so a `workdeck.conf` that cannot be read stops init before anything is offered; `git status --porcelain CLAUDE.md` prints nothing for a file that is absent, clean or ignored; the filter prints only the marked files; `card lint`, `card touched P-17` and `card tests P-17` exit 0 on a copy.
 
 Not run: any Claude session; the whole suite and `make lint` by the reviewer; `git check-attr` on a large repository; the replacement of both directories.
+
+## Twenty-first pass, 2026-10-10: the reviews of P-18
+
+P-18 added four cases to `test/cases/70-compat.sh` for rows 2 to 4 of the table in design section 8, and `need_old_card` to `test/lib.sh`. Two agents that did not write it reviewed it. The handoff reviewer had no must-fix and no should-fix, and its two nits were fixed before the pull request was opened. The second reviewer was told to break it and to list what it would leave to the maintainer. In a copy it ran 20 mutations of `card` 0.1.3, one of them of two lines, and 30 of one line of this version against the four cases, deleted each assertion in turn, changed the deck twelve ways, and tried fourteen states of a planned deck on 0.1.3. It found no defect in `bin/card` or in 0.1.3. It had one must-fix finding. The maintainer left its nine decisions to the session that held the card.
+
+| Found | Decided | Why |
+|---|---|---|
+| The pull request's check was red on ubuntu-24.04. `need_old_card` called `old_card` with no argument in the file that defines it, and the runner's shellcheck reports SC2119 and SC2120 there. The shellcheck on the laptop, 0.11.0, does not. `make lint` stopped the job before `make test`, so the four cases had not run on Linux | `need_old_card [tag]` passes its arguments on: `old_card "$@"` | Of the three ways, a directive hides the next such call and the inline lines are what the helper replaced. The pull request said shellcheck was clean and did not mention the check. |
+| No card in the deck depended on the remainder. A 0.1.3 whose lint refuses `depends: AUTH-01b`, and one that reads that dependency as `?`, passed all four cases | The deck has Z-2, a card written by hand that depends on AUTH-01b, and the `list` of 0.1.3 is compared whole, with `waiting  Z-2`. The second is caught only once the remainder is done and Z-2 is not, so the case looks at that state too (see below) | A coverage gap. 0.1.3 handles the dependency. |
+| AUTH-01b was a card `mk_card` wrote, with no `Out of scope` and no `Notes` section | `card new` of this version writes it, as handoff's step 4 does for a split, and the case fills `Read`, `Touch`, `Tests` and `Acceptance` | The card's note asks this of the planned card, and it costs five lines. The deviation goes. |
+| The planned card's `depends: AUTH-01` was not asserted, so "the cards it depends on are done" was not put to 0.1.3's lint | One assertion | `37-plan-start` holds the line; this holds that the deck has it. |
+| The last `next` of 0.1.3 was held by two `assert_not_contains` that no mutation needed | What it prints is compared whole: `every card is done` | |
+| The third case passed when Z-1 depended on an id that is no row | The case first checks that this version lists AUTH-03 as a row | |
+| The deck had no session log, so a 0.1.3 that refuses every log passed | `mk_log AUTH-01` | A planned repository has logs, and CI lints them. |
+| The third and fourth cases ran `lint` and `plan` through the `card()` that compares, though `new` exists for one run | `new lint`, `new plan` | |
+| The first and third cases cannot tell 0.1.3 from this version: with `old` pointed at this card only the second fails | Left | The lint of the two differs by one line, and both print `card 0.1.3` as their version until P-24. The second case is the one that can tell. |
+| With the tag absent and CI not set, four cases print `ok` having run nothing, where one did | Left. The line in `later.md` now counts them | `test/run.sh` is not in the card's `Touch`, and the behaviour is P-08's. |
+| Handoff's step 4 does not name `Read`, and `card new` leaves it empty | `later.md` | As in 0.1, and the step's own `card lint` reports it. |
+| A specification inside the cards directory fails `card lint` in both versions, or is read as an outline | `later.md`. Run for this pass: `card plan new cards/spec.md AUTH` exits 0 | Not a difference between the versions, and `bin/card` is out of the card's scope. |
+| Verdicts on what the pull request listed: the third row AUTH-03, the checks added to the list case, a session with no plugin loaded | Kept. Each verdict was "accept" | |
+
+Held when run by the second reviewer: the whole suite in a clone with the tags, 537 passed; with the tag absent, the cases skip where P-08's does and fail with its message where CI is set; on 0.1.3, `lint`, `list` and `next` are unchanged by `done: true` in an outline, a row id with a letter, `cards_dir = work/cards`, a card on its own branch, a branch that holds only an outline, and a log that this version's `log-new` wrote; a planned card left empty fails both lints with the same two findings.
+
+Not run: anything on Linux by the reviewer; P-08's case under the mutations; a deck whose outline `card plan new` wrote.
+
+The second reviewer then attacked these amendments in the working tree. It reran the mutations that had passed and 15 new ones, and deleted each new assertion. It had no must-fix finding and overturned one decision in part. It ran `make lint` with shellcheck 0.9.0, a release binary: the commit of the pull request gives the two messages of the CI job, and the amended tree and the main branch exit 0.
+
+| Found | Decided | Why |
+|---|---|---|
+| A 0.1.3 that reads a dependency with a letter as `?` still passed. `list` does not print a dependency, and the case marked Z-2 done in the same step as the remainder, so the state where the two differ was never looked at. The row above said `list` prints the `?`, which it does not | The case marks the remainder done alone: `next` of 0.1.3 is then `AUTH-02 S Token refresh` and its `list` has `ready    Z-2`. The row above is corrected | The reviewer ran the lines against the mutation. |
+| The session log and the pull request body still said `mk_card` wrote the remainder, that no mutation was run and that shellcheck was clean | Both rewritten | As the fixes commit of P-17 did. |
+| The remainder's `--depends AUTH-01` and the log file were not asserted: a `card new` that drops the option, and a deck with no log, passed | One assertion each | |
+| `fill` writes the wrong text, or fails with nothing checking it, for an item with a `\|`, an `&` or a backslash | Its comment says so | The six items it is given hold none, and it is a helper of one file. |
+| A 0.1.3 whose log name pattern has no letter passes: no log is for the remainder's id. One whose `next` offers a waiting card passes, since AUTH-01b sorts first | Left | 0.1.3 is a tag and does not change. The cases hold the claims of section 8, not every line of it. |
+| `R` and `P` are one-letter globals in a file whose first case sources nine others | Left | Nothing under `test/` uses either name, and each case runs in its own process. |
+| The runner's shellcheck version is not in the job log | Left. The line in `later.md` | 0.9.0 gives its messages character for character. |
+| `docs/development/later.md` is under `touch_ignore`, so its line in the card's `Touch` is not needed | Kept | It says what the card changed. |
+
+Held when run: the whole suite on the amended tree, 537 passed; `need_old_card v9.9.9` names that tag in the skip line and in the failure; `fill` under bash 3.2 with the sed of macOS writes the six items of the deck.
+
+Not run: GNU sed and mawk before the push, which is where CI runs them; the Linux build of shellcheck 0.9.0.

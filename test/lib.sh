@@ -129,6 +129,16 @@ old_card() {
   GIT_NO_LAZY_FETCH=1 git -C "$ROOT" show "$tag:bin/card" > "$OLD_CARD" 2>/dev/null || { rm -f "$OLD_CARD"; return 1; }
 }
 
+# need_old_card [tag]: old_card, for a case that cannot run without it. Where
+# the file cannot be read it fails in CI, and elsewhere prints a skip line and
+# returns 1, for the case to return 0.
+need_old_card() {
+  old_card "$@" && return 0
+  [ -z "${CI-}" ] || fail "the ${1:-v0.1.3} tag is required in CI"
+  echo "skip: ${1:-v0.1.3}:bin/card cannot be read from this repository"
+  return 1
+}
+
 fail() {
   printf '  %s\n' "$1"
   printf '  rc=%s\n  stdout: %s\n  stderr: %s\n' "${RC-}" "${OUT-}" "${ERR-}"

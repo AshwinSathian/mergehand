@@ -3,7 +3,7 @@ id: P-18
 title: Compatibility test: card 0.1.3 lint on a planned deck
 size: S
 depends: P-02b, P-03, P-08, P-09, S-04
-done: false
+done: true
 ---
 
 ## Read
@@ -19,6 +19,8 @@ done: false
 ## Touch
 - test/cases/70-compat.sh (created by P-08)
 - test/lib.sh
+- docs/development/review-0.2.md (the record of the second review, the twenty-first pass)
+- docs/development/later.md (three lines from the second review)
 
 ## Tests
 - test_card_0_1_3_lint_passes_a_deck_with_an_outline_a_planned_card_and_a_split_remainder
