@@ -464,6 +464,89 @@ test_reference_names_every_card_command() {
   done
 }
 
+# doc_section <file> <heading>: the text of one second-level section. A line
+# inside a code fence is not a heading: a card and an outline have their own.
+doc_section() {
+  awk -v h="## $2" '/^```/ { fence = !fence } !fence && /^## / { on = $0 == h } on' "$ROOT/$1"
+}
+readme_section() { doc_section README.md "$1"; }
+
+# Design 0.2, section 16, last item: the warning stands beside the plan skill.
+test_readme_names_the_plan_skill_and_warns_about_an_untrusted_specification() {
+  local s row
+  s=$(readme_section Skills)
+  row=$(printf '%s\n' "$s" | grep -F '| `/workdeck:plan <spec path> [what to change]` |') || fail 'the Skills table has no row for the plan skill'
+  assert_contains "$row" 'built on the main branch and not yet released'
+  assert_contains "$s" 'A specification from an untrusted source is an instruction to that session'
+  assert_contains "$s" '`plan/*` branch'
+  assert_contains "$s" 'open a pull request'
+  # The rows for the three skills 0.2 changes say what changed.
+  assert_contains "$(printf '%s\n' "$s" | grep -F '| `/workdeck:next-card [id]` |')" 'row of an outline'
+  assert_contains "$(printf '%s\n' "$s" | grep -F '| `/workdeck:handoff [split]` |')" 'since it was approved'
+  assert_contains "$(printf '%s\n' "$s" | grep -F '| `/workdeck:init` |')" 'already set up'
+  assert_contains "$(readme_section Roadmap)" 'built on the main branch and not yet released'
+}
+
+# Design 0.2, section 8, the rows for a 0.1 user, and the limits of section 11.3.
+test_readme_says_a_0_1_repository_runs_init_again_to_plan() {
+  local s
+  s=$(readme_section FAQ)
+  assert_contains "$s" 'run `/workdeck:init` again'
+  assert_contains "$s" 'change the tag in the workflow and add the step that runs `card plan`'
+  # A skill the model cannot invoke costs nothing; the agents' descriptions do.
+  assert_contains "$s" 'adds nothing to a session'
+  assert_contains "$s" 'descriptions of the two agents'
+  assert_not_contains "$s" 'descriptions of the four skills'
+  s=$(readme_section 'Known limits')
+  assert_contains "$s" 'one heading level'
+  assert_contains "$s" 'Only `#` headings count'
+  assert_contains "$s" '`card plan` is not a handoff gate'
+}
+
+# Design 0.2, section 9: each form with its arguments and its exit codes.
+test_reference_names_every_plan_subcommand() {
+  local s c
+  s=$(doc_section docs/reference.md '`card plan`')
+  [ -n "$s" ] || fail 'docs/reference.md has no section for card plan'
+  while IFS= read -r c; do
+    printf '%s\n' "$s" | grep -F "| \`$c\` |" | grep 'Exit 0 ' | grep -q 'Exit 1 ' || fail "docs/reference.md gives no row with exit 0 and exit 1 for $c"
+  done <<'COMMANDS'
+card plan
+card plan new <spec path> <PREFIX> [--level N]
+card plan accept <PREFIX>
+card plan start <id>
+card plan check <id>
+COMMANDS
+  # Exit 2 is said once for every form.
+  assert_contains "$s" 'Every form exits 2 on a usage error'
+  # The arguments are the ones card itself prints.
+  card plan --help
+  assert_eq 'usage: card plan [new <spec path> <PREFIX> [--level N] | accept <PREFIX> | start <id> | check <id>]' "$OUT$ERR" 'usage of card plan'
+}
+
+# Design 0.2, sections 5 and 6.
+test_reference_describes_the_outline_format() {
+  local s k
+  s=$(doc_section docs/reference.md 'Outline format')
+  [ -n "$s" ] || fail 'docs/reference.md has no section for the outline format'
+  for k in spec spec_blob prefix level size depends does not; do
+    assert_contains "$s" "\`$k\`"
+  done
+  assert_contains "$s" '## Not planned'
+  assert_contains "$s" 'may be left out'
+  assert_contains "$s" 'never used again'
+  s=$(doc_section docs/reference.md 'Card states')
+  assert_contains "$s" 'A row with no card file has the same states'
+  assert_contains "$s" 'plus a letter'
+}
+
+test_design_points_to_the_0_2_design() {
+  local f="$ROOT/docs/design.md"
+  # At the top: before the first section.
+  awk '/^## / { exit } { print }' "$f" | grep -qF '[`design-0.2.md`](design-0.2.md) adds to it' || fail 'docs/design.md does not point to design-0.2.md at its top'
+  [ -s "$ROOT/docs/design-0.2.md" ] || fail 'docs/design-0.2.md is missing'
+}
+
 test_readme_install_line_matches_the_manifests() {
   local plugin market repo
   plugin=$(sed -n 's/^  "name": "\(.*\)",$/\1/p' "$ROOT/.claude-plugin/plugin.json" | head -1)

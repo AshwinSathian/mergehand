@@ -3,7 +3,7 @@ id: P-19
 title: README, reference and design pointer for the planner
 size: S
 depends: P-13, P-14, P-15, P-17
-done: false
+done: true
 ---
 
 ## Read
