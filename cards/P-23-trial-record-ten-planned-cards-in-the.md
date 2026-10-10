@@ -47,3 +47,4 @@ done: false
 - The second repository may be private. Then its figures are from its logs and cannot be checked from outside; say so, as the page does for the quick-card run of 0.1.
 - The measure "files added to `Touch` after approval" is read from the part of each pull request body that handoff writes (P-15). If a body lacks it, `git diff <approval commit> HEAD -- <card file>` on the merged branch gives the same.
 - With ten cards no count carries a threshold: a planner that misses a file on half its cards passes a "more than half" test 62 times in 100. Do not write one into the page.
+- From the second review of P-15 (`docs/development/review-0.2.md`, eighteenth pass): a card that had a review-fixes session has the part as its first handoff wrote it. Handoff does not write the body again, so a `Touch` line added while fixing review comments is missing from it. For such a card read `git diff <approval commit> HEAD -- <card file>` on the merged branch, not the body.

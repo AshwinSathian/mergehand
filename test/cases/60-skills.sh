@@ -160,29 +160,34 @@ NEXT_SKILL="$ROOT/skills/next-card/SKILL.md"
 
 # Design 0.2, section 10.4. A card written on its own branch is new from top
 # to bottom in the pull request's diff, so the body carries what changed in it.
+# The line is held sentence by sentence: the second review of P-15 changed 23
+# of them and no test saw it.
 test_handoff_prints_the_changes_to_the_card_since_it_was_approved() {
-  local f="$ROOT/skills/handoff/SKILL.md" s commit diff pr
+  local f="$ROOT/skills/handoff/SKILL.md" s want='' line commit part
   s=$(awk '/^[0-9]+\. / { on = $1 == "7." } on' "$f" | grep 'card as approved')
   assert_eq 1 "$(printf '%s\n' "$s" | grep -c .)" 'lines of step 7 that name the approval commit'
-  assert_contains "$s" '<base>..HEAD'
-  assert_contains "$s" '<id>: card as approved'
-  assert_contains "$s" 'headed "Changes to the card since it was approved"'
-  assert_contains "$s" '`git diff <that commit> HEAD -- <card file>`'
-  assert_contains "$s" 'leaving out the `done` line'
-  # HEAD is the commit handoff has just made, so the diff holds every change.
-  assert_contains "$s" 'after the commit above'
-  assert_contains "$s" 'If it prints nothing, the body has no such part'
-  # --grep reads every line of a message, so a later commit can quote the line.
-  assert_contains "$s" 'that commit is the last hash printed, the earliest'
-  # The part is there when nothing changed: that is a result too.
-  assert_contains "$s" 'write "None"'
+  while IFS= read -r line; do
+    assert_contains "$s" "$line"
+    want="$want $line"
+  done <<'SENTENCES'
+Straight after the commit above, run `git log --basic-regexp --format=%H --grep="^<id>: card as approved$" <base>..HEAD`.
+If the command fails, show the error and stop: a failure is not an empty result, and what remains is the push and the pull request.
+If it prints nothing, the card was not written from a row on this branch and the body has no such part.
+Otherwise that commit is the last hash printed, the earliest, when a later message quotes the line, and `<card file>` is the path in the cards directory that `git show --name-only --format= <that commit>` prints.
+The pull request body gains a last part headed "Changes to the card since it was approved": the output of `git diff <that commit> HEAD -- <card file>` in a code block fenced with four backticks, leaving out the two lines `-done: false` and `+done: true` and a hunk that then holds no change.
+HEAD is the commit just made, so the diff holds every change to the card since the user approved it, a file added to `Touch` and a reworded `Tests` line among them.
+If nothing else changed, write "None" under the heading.
+If `git show` prints more than one path, the commit was rewritten and is not the approval alone: say so in the part.
+Where a later line of this step stops before the pull request is opened, print the part to the user, who puts it in the body.
+SENTENCES
+  # Nothing before, between or after them.
+  assert_eq "   -$want" "$s" 'the line'
+  # The line after the commit: before the stop for no remote and the one for no gh.
   commit=$(grep -n 'git commit' "$f" | head -1 | cut -d: -f1)
-  diff=$(grep -n 'git diff <that commit>' "$f" | head -1 | cut -d: -f1)
-  pr=$(grep -n 'gh pr create' "$f" | head -1 | cut -d: -f1)
-  if [ -z "$diff" ] || [ "$commit" -ge "$diff" ] || [ "$diff" -ge "$pr" ]; then
-    fail "order is commit=$commit diff=$diff pr=$pr"
-  fi
+  part=$(grep -n 'card as approved' "$f" | head -1 | cut -d: -f1)
+  assert_eq "$((commit + 1))" "$part" 'line of the addition'
   # One addition: without that line the skill is what it was in 0.1, split mode included.
+  assert_eq 1 "$(grep -c 'card as approved' "$f")" 'lines that name the approval commit'
   assert_eq '2145693172 4250' "$(grep -v 'card as approved' "$f" | cksum)" 'handoff without the addition'
 }
 

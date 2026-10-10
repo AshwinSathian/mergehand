@@ -21,6 +21,8 @@ done: true
 - skills/handoff/SKILL.md
 - test/cases/02-plugin.sh
 - test/cases/60-skills.sh
+- docs/design-0.2.md (sections 10.4 and 12.2, amended by the second review: where the diff is taken, and three additions to the reviewer's step)
+- docs/development/review-0.2.md (the eighteenth pass: the second review and what was decided)
 
 ## Tests
 - test_reviewer_checks_a_planned_card_against_its_specification_headings
