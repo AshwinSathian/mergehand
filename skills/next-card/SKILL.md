@@ -34,10 +34,29 @@ Work through these steps in order. Stop where a step says stop.
 
    Other people's open pull requests do not prevent a start; only an unmerged dependency does.
 
-6. **Read the card** with `card show <id>`, and run `card lint`. If lint reports an error in this card (an empty `Touch`, `Tests` or `Acceptance` section is the usual one, in a card that `card new` created and nobody filled in), stop and show the user the errors: an unfinished card is not started. If the card has a `## Blocked` section, ask the user that question and wait for the answer before writing any code. Once it is answered, remove the `## Blocked` section from the card and put the answer under `Notes`; a card that keeps the section shows as blocked as soon as its branch exists.
+6. **Read the card** with `card show <id>`. If the output starts with `row:`, the card has no file yet: it is a row of an outline, and this session writes its card. Do these six steps in order, on the base branch, and then go on with the rest of this step. For a card that has a file, skip them.
+
+   1. Run `card plan start <id>`. It prints the path of the card file it created. If it fails, explain the error and stop.
+   2. Read the specification headings the card lists in its first `Read` item, and the code the work concerns.
+   3. Fill in the card. In every section an item is a line that starts with `- `.
+      - `Touch`: full paths taken from the code as read, with `(new)` on a file the card creates.
+      - `Tests`: one item per test, written as the innermost name the test will have, in the style of the tests it will sit beside.
+      - `Read`: the files a session must read first, after the specification. The first `Read` item, with its `(row ...)` comment, stays as `card plan start` wrote it, with no heading added and no anchor on the path: the reviewer checks the card against the headings it names, so the session that wrote the card must not be the one that chooses them.
+      - `Acceptance` and `Out of scope` start as the row's lines. Keep them unless they are wrong, and add to them.
+      - Change `size` if the row's guess no longer holds.
+      - Where you have to guess what a neighbouring row owns, write the guess under `Notes` and say it to the user with the card. A guess is not a reason for the fourth of these steps.
+   4. If the row cannot be done as it was cut (it needs code that no finished card provides, or it overlaps another row), delete the card file, tell the user to revise the outline with `/workdeck:plan <spec path>`, which the user types, and stop. Only these two cases end here.
+   5. Run `card lint` and `card plan check <id>`. Fix what they report.
+   6. Show the card to the user and ask for a yes or an edit. Do not write code before the answer. After an edit, make it and run `card lint` and `card plan check <id>` again. After a no, delete the card file and stop: nothing was committed and no branch exists.
+
+   The file is untracked until the yes, as a quick card is, so a no leaves nothing behind.
+
+   For every card, run `card lint`. If lint reports an error in this card (an empty `Touch`, `Tests` or `Acceptance` section is the usual one, in a card that `card new` created and nobody filled in), stop and show the user the errors: an unfinished card is not started. If the card has a `## Blocked` section, ask the user that question and wait for the answer before writing any code. Once it is answered, remove the `## Blocked` section from the card and put the answer under `Notes`; a card that keeps the section shows as blocked as soon as its branch exists.
 
 7. **Create the branch.** Its name is `card/` followed by the card's file name without `.md`: the file `AUTH-03-token-refresh.md` gives `card/AUTH-03-token-refresh`. Take the name from the file in the cards directory (`card conf cards_dir`), not from the title. Only the `card/<id>` prefix matters to WorkDeck; the rest is for people. Run `git checkout -b <branch>`.
 
+   For a card this session wrote from a row, commit the card file alone, before step 8: run `git add <card file>` and `git commit -m "<id>: card as approved"`, with nothing else staged. That commit is the card the user approved, and handoff shows what changed in it since. Make no such commit for a card that had a file.
+
 8. **Implement.** Read `${CLAUDE_PLUGIN_ROOT}/reference/implement.md` and follow it step by step.
 
-9. **Stop at handoff.** Tell the user the card is ready and that `/workdeck:handoff` is the next command for them to type. Do not run it, do not commit, and do not start a second card.
+9. **Stop at handoff.** Tell the user the card is ready and that `/workdeck:handoff` is the next command for them to type. Do not run it, do not commit anything after step 7, and do not start a second card.

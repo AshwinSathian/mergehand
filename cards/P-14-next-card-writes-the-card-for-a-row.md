@@ -3,7 +3,7 @@ id: P-14
 title: next-card writes the card for a row
 size: M
 depends: P-07, P-09, P-10, P-11
-done: false
+done: true
 ---
 
 ## Read

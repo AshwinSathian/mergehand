@@ -41,6 +41,8 @@ test_skills_name_only_card_commands_that_exist() {
           }
           line = out
         }
+        # The message of the approval commit is not a command.
+        gsub(/: card as approved/, "", line)
         while (match(line, /(^|[ \/"])card [a-z][a-z-]*/)) {
           word = substr(line, RSTART, RLENGTH); sub(/^.*card /, "", word)
           if (index(known, " " word " ") == 0) print FILENAME ":" FNR ": card " word
@@ -151,6 +153,108 @@ test_next_card_lints_the_card_before_it_starts() {
   branch=$(grep -n 'git checkout -b' "$f" | head -1 | cut -d: -f1)
   [ -n "$lint" ] || fail 'next-card never runs card lint'
   [ "$lint" -lt "$branch" ] || fail 'next-card lints after it creates the branch'
+}
+
+NEXT_SKILL="$ROOT/skills/next-card/SKILL.md"
+
+# next_step <n>: the text of one numbered step of next-card, with its
+# indented sub-steps.
+next_step() {
+  awk -v n="$1." '/^[0-9]+\. / { on = $1 == n } on' "$NEXT_SKILL"
+}
+
+# row_step <n>: one of the six indented steps of step 6, for a row.
+row_step() {
+  next_step 6 | awk -v n="$1." '/^   [0-9]+\. / { on = $1 == n } /^   [^ ]/ && !/^   [0-9]+\. / { on = 0 } on'
+}
+
+test_next_card_writes_the_card_for_a_row_before_the_branch_exists() {
+  local s start branch
+  s=$(next_step 6)
+  assert_contains "$s" 'If the output starts with `row:`'
+  assert_contains "$s" 'For a card that has a file, skip them'
+  assert_contains "$(row_step 1)" 'Run `card plan start <id>`'
+  assert_eq 6 "$(printf '%s\n' "$s" | grep -c '^   [0-9]\. ')" 'steps for a row'
+  start=$(grep -n '`card plan start <id>`' "$NEXT_SKILL" | head -1 | cut -d: -f1)
+  branch=$(grep -n 'git checkout -b' "$NEXT_SKILL" | head -1 | cut -d: -f1)
+  [ "$start" -lt "$branch" ] || fail 'next-card creates the branch before it writes the card'
+  assert_contains "$s" 'untracked until the yes'
+  # Steps 1 to 5 are as they were in 0.1.
+  assert_eq 5 "$(awk '/^[0-9]+\. / && $1 + 0 < 6' "$NEXT_SKILL" | grep -c -v -i 'row\|plan')" 'steps 1 to 5 that say nothing of rows'
+}
+
+test_next_card_fills_touch_tests_and_read_from_the_code() {
+  local s
+  assert_contains "$(row_step 2)" 'the code the work concerns'
+  s=$(row_step 3)
+  assert_contains "$s" '`Touch`: full paths taken from the code as read, with `(new)` on a file the card creates'
+  assert_contains "$s" '`Tests`: one item per test, written as the innermost name the test will have, in the style of the tests it will sit beside'
+  assert_contains "$s" '`Read`: the files a session must read first, after the specification'
+  assert_contains "$s" '`Acceptance` and `Out of scope` start as the row'"'"'s lines. Keep them unless they are wrong, and add to them'
+  assert_contains "$s" 'Change `size` if the row'"'"'s guess no longer holds'
+  assert_contains "$s" 'write the guess under `Notes`'
+}
+
+test_next_card_leaves_the_row_item_under_read_as_it_was_written() {
+  local s
+  s=$(row_step 3)
+  assert_contains "$s" 'The first `Read` item, with its `(row ...)` comment, stays as `card plan start` wrote it'
+  assert_contains "$s" 'no heading added and no anchor on the path'
+  assert_contains "$s" 'the reviewer checks the card against the headings it names'
+}
+
+test_next_card_runs_lint_and_plan_check_before_it_asks() {
+  local check ask
+  assert_contains "$(row_step 5)" 'Run `card lint` and `card plan check <id>`. Fix what they report'
+  check=$(grep -n '`card plan check <id>`' "$NEXT_SKILL" | head -1 | cut -d: -f1)
+  ask=$(grep -n 'Show the card to the user' "$NEXT_SKILL" | head -1 | cut -d: -f1)
+  if [ -z "$check" ] || [ -z "$ask" ] || [ "$check" -ge "$ask" ]; then
+    fail "order is check=$check ask=$ask"
+  fi
+  # An edit is checked again before the user sees the card a second time.
+  assert_contains "$(row_step 6)" 'After an edit, make it and run `card lint` and `card plan check <id>` again'
+}
+
+test_next_card_deletes_the_card_file_after_a_no() {
+  local s
+  s=$(row_step 6)
+  assert_contains "$s" 'ask for a yes or an edit'
+  assert_contains "$s" 'Do not write code before the answer'
+  assert_contains "$s" 'After a no, delete the card file and stop'
+  assert_contains "$s" 'nothing was committed and no branch exists'
+}
+
+test_next_card_commits_the_approved_card_alone() {
+  local s
+  s=$(next_step 7)
+  assert_contains "$s" 'git add <card file>'
+  assert_contains "$s" 'git commit -m "<id>: card as approved"'
+  assert_contains "$s" 'the card file alone'
+  assert_contains "$s" 'before step 8'
+  assert_contains "$s" 'Make no such commit for a card that had a file'
+  [ "$(grep -n 'git checkout -b' "$NEXT_SKILL" | head -1 | cut -d: -f1)" -lt "$(grep -n 'git commit' "$NEXT_SKILL" | head -1 | cut -d: -f1)" ] || fail 'next-card commits before the branch exists'
+  assert_eq 1 "$(grep -c 'git commit' "$NEXT_SKILL")" 'lines that commit'
+  ! grep -n -E 'git add -A|git add \.|git push|gh pr create' "$NEXT_SKILL" || fail 'next-card names a command it must not run'
+}
+
+test_next_card_sends_the_user_to_revise_the_outline_when_a_row_cannot_be_done_as_cut() {
+  local s
+  s=$(row_step 4)
+  assert_contains "$s" 'it needs code that no finished card provides, or it overlaps another row'
+  assert_contains "$s" 'delete the card file'
+  assert_contains "$s" 'revise the outline with `/workdeck:plan <spec path>`, which the user types'
+  assert_contains "$s" 'and stop'
+  assert_contains "$s" 'Only these two cases'
+}
+
+test_implement_reference_says_the_approved_card_is_already_committed() {
+  local s
+  s=$(awk '/^[0-9]+\. / { on = $1 == "6." } on' "$ROOT/reference/implement.md")
+  assert_contains "$s" 'the approved card is already committed'
+  assert_contains "$s" 'Nothing else is committed before handoff'
+  # Still true for a quick card, which has no such commit.
+  assert_contains "$s" 'wrote from a row'
+  assert_contains "$s" 'outside the cards directory'
 }
 
 PLAN_SKILL="$ROOT/skills/plan/SKILL.md"
